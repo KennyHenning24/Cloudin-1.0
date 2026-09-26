@@ -18,16 +18,22 @@ from apps.dining.models import Table
 from apps.orders.models import Order, TableSession
 
 
-def panel_view(solo_admin=False, requiere_turno=True):
+def panel_view(solo_admin=False, requiere_turno=True, menu=False):
     """Resuelve el restaurante de la petición y controla quién puede entrar.
 
     En vez de un 404 seco, cada caso tiene su salida:
       - superusuario sin restaurante elegido -> lo mandamos al panel maestro,
       - usuario de otro restaurante o sin permiso -> página de "sin acceso",
+      - plan «Menú digital» en una pantalla del plan completo -> al Inicio,
       - sin turno abierto -> a la pantalla de turnos, a abrirlo. Nada de la
         plataforma funciona hasta que alguien abre el turno de caja; solo las
         pantallas marcadas con `requiere_turno=False` quedan disponibles.
+
+    `menu=True` marca las pantallas del menú digital (Mi menú, Personalizar,
+    Mesas y QR, Cuenta): existen en los dos planes y nunca exigen turno.
     """
+    if menu:
+        requiere_turno = False
 
     def decorador(vista):
         @wraps(vista)
@@ -53,6 +59,11 @@ def panel_view(solo_admin=False, requiere_turno=True):
 
             request.tenant = tenant
 
+            # El plan «Menú digital» solo tiene las pantallas del menú: lo demás
+            # (caja, cocina, facturación…) lleva al Inicio.
+            if tenant.es_plan_menu and not menu:
+                return redirect("panel:inicio")
+
             # Los términos y la política se aceptan una vez; sin eso no se entra.
             from .legal import ya_acepto
 
@@ -72,7 +83,7 @@ def panel_view(solo_admin=False, requiere_turno=True):
                     return redirect(f"{reverse('panel:soporte')}?tenant={tenant.slug}&next={quote(request.get_full_path())}")
                 request.modo_soporte = True
 
-            if requiere_turno:
+            if requiere_turno and not tenant.es_plan_menu:
                 from apps.shifts.services import MENSAJE_SIN_TURNO, turno_actual
 
                 if turno_actual() is None:
@@ -161,10 +172,25 @@ def configuracion(request):
     return render(request, "panel/configuracion.html", {"seccion": "config"})
 
 
-@panel_view()
+@panel_view(menu=True)
 def inicio(request):
-    """La portada del panel: cómo va el negocio de un vistazo, qué viene hoy y
-    qué conviene revisar."""
+    """La portada del panel. Con el plan «Menú digital», el Inicio del menú
+    (apps/panel/duenio.py); con el completo, cómo va el negocio de un vistazo,
+    qué viene hoy y qué conviene revisar (y eso sí exige turno abierto)."""
+    if request.tenant.es_plan_menu:
+        from .duenio import inicio_menu
+
+        return inicio_menu(request)
+
+    from apps.shifts.services import MENSAJE_SIN_TURNO, turno_actual
+
+    if turno_actual() is None:
+        messages.warning(request, MENSAJE_SIN_TURNO)
+        return redirect("panel:turnos")
+    return _inicio_completo(request)
+
+
+def _inicio_completo(request):
     from apps.control import services as cs
     from apps.control.recomendaciones import recomendaciones
     from apps.reservas import services as rs

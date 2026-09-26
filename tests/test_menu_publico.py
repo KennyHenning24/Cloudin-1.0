@@ -201,8 +201,13 @@ def test_menu_de_respaldo(client, restaurante):
     assert 'data-available="false"' in html and "Agotado" in html
     for molde in ("category-link", "category", "product", "variant", "tag"):
         assert f'data-cloudin-template="{molde}"' in html
-    # La configuración va escapada para JavaScript (escapejs), como debe ser.
-    assert escapejs("http://testserver/api/public/la-esquina/menu/") in html and "cloudin-menu.v1.js" in html
+    # La configuración va escapada para JavaScript (escapejs). Esta página la sirve el
+    # mismo Cloudin: la API y el runtime van con rutas relativas (la CSP connect-src 'self'
+    # funciona en cualquier dominio).
+    assert escapejs("/api/public/la-esquina/menu/") in html
+    assert '<script src="/static/cloudin-menu.v1.js" defer>' in html
+    # Fuera del panel no hay vista previa.
+    assert "cloudin-vista-base" not in html
     assert "https://wa.me/573001234567" in html
     assert "Mesa" in html
     assert "#B3261E" in html  # colores del restaurante, no los de Cloudin

@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% load static cloudin %}
+{% block title %}Sin conexión · Cloudin{% endblock %}
+{% block layout %}
+<main class="pantalla-sola">
+  <div class="card tarjeta-sola">
+    <img src="{% static 'img/cloudin-marca.png' %}" alt="" width="56" height="56">
+    <h1>Sin conexión</h1>
+    <p class="dim">No hay internet en este momento. Cuando vuelva, el panel sigue donde ibas: los cambios rápidos (agotados y precios) se guardan solos al reconectar.</p>
+    <button type="button" class="btn" onclick="location.reload()">{% icono "girar" %}Reintentar</button>
+  </div>
+</main>
+{% endblock %}

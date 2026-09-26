@@ -73,14 +73,14 @@ main{max-width:760px;margin:0 auto;padding:0 16px}
   {% if negocio.logo %}<img class="cab__logo" src="{{ negocio.logo }}" alt="Logo de {{ negocio.name }}" width="60" height="60">{% else %}<span class="cab__inicial" aria-hidden="true">{{ negocio.name|slice:":1"|upper }}</span>{% endif %}
   <div>
     <h1 data-cloudin-field="business.name">{{ negocio.name }}</h1>
-    {% if negocio.tagline %}<p data-cloudin-field="business.tagline">{{ negocio.tagline }}</p>{% endif %}
+    <p data-cloudin-field="business.tagline"{% if not negocio.tagline %} hidden{% endif %}>{{ negocio.tagline|default:'' }}</p>
     <p data-cloudin-field="business.hours_today">{{ hoy }}</p>
     {% if mesa %}<span class="mesa">Mesa <span data-cloudin-field="table.number">{{ mesa.number }}</span></span>{% endif %}
   </div>
 </header>
 
-{% if menu %}
-<section data-cloudin="menu" data-cloudin-menu="{{ menu.key }}" data-cloudin-state="static" aria-label="Menú">
+{% if menu or vista_panel %}
+<section data-cloudin="menu" data-cloudin-menu="{{ menu.key|default:'carta' }}" data-cloudin-state="static" aria-label="Menú">
   <nav class="nav" aria-label="Categorías">
     <div class="nav__lista" data-cloudin="category-nav">{% for c in menu.categories %}<a href="#cat-{{ c.key }}" data-cloudin-key="{{ c.key }}">{{ c.name }}</a>{% endfor %}<template data-cloudin-template="category-link"><a data-cloudin-href="category.anchor" data-cloudin-field="category.name"></a></template></div>
   </nav>
@@ -132,6 +132,94 @@ main{max-width:760px;margin:0 auto;padding:0 16px}
     document.addEventListener("cloudin:rendered", function () { enganchar(document); });
   })();
 </script>
+{% if vista_panel %}
+{{ datos_vista|json_script:"cloudin-vista-base" }}
+<style>.vista-foco{outline:3px solid var(--secundario);outline-offset:3px}</style>
+<script>
+  /* Vista previa del panel: el menú se vuelve a pintar con lo que el dueño está
+     editando (colores, datos, un producto), sin guardar nada. Solo acepta mensajes
+     del mismo origen (el panel de Cloudin). */
+  (function () {
+    if (window.parent === window) return;
+    var base = JSON.parse(document.getElementById("cloudin-vista-base").textContent);
+    var ultimo = null, listo = false, enfocado = null;
+    var copia = function (x) { return JSON.parse(JSON.stringify(x)); };
+    var COLOR = /^#[0-9a-f]{6}$/i;
+
+    function ponerLogo(url) {
+      var cab = document.querySelector(".cab");
+      var actual = cab && cab.querySelector(".cab__logo, .cab__inicial");
+      if (!actual) return;
+      if (url) {
+        var img = actual.tagName === "IMG" ? actual : document.createElement("img");
+        img.className = "cab__logo"; img.alt = ""; img.width = 60; img.height = 60; img.src = url;
+        if (img !== actual) actual.replaceWith(img);
+      }
+    }
+    function aplicar() {
+      if (!listo || !ultimo || !window.Cloudin || !window.Cloudin.render) return;
+      var m = ultimo, d = copia(base), estilo = document.documentElement.style;
+      if (m.colores) {
+        Object.keys(m.colores).forEach(function (k) {
+          if (COLOR.test(m.colores[k] || "")) estilo.setProperty("--" + k, m.colores[k]); else estilo.removeProperty("--" + k);
+        });
+      }
+      if (m.negocio) {
+        var n = d.business;
+        ["tagline", "description"].forEach(function (k) { if (k in m.negocio) n[k] = m.negocio[k]; });
+        if (m.negocio.contact) Object.assign(n.contact, m.negocio.contact);
+        if (m.negocio.hours) n.hours = m.negocio.hours;
+        if (m.negocio.logo) ponerLogo(m.negocio.logo);
+      }
+      if (m.producto) {
+        var donde = null;
+        d.menus.forEach(function (menu) { menu.categories.forEach(function (c) {
+          var i = c.products.findIndex(function (p) { return p.id === m.producto.id; });
+          if (i >= 0) { donde = { categoria: c.id, i: i }; c.products.splice(i, 1); }
+        }); });
+        var menu = d.menus.filter(function (x) { return x.key === m.menu; })[0] || d.menus[0];
+        if (!menu) { menu = { key: m.menu || "carta", name: "Carta", categories: [] }; d.menus.push(menu); }
+        var cat = menu.categories.filter(function (c) { return c.id === m.categoria.id; })[0];
+        if (!cat) {
+          cat = { id: m.categoria.id, key: m.categoria.key || "categoria", name: m.categoria.name || "Categoría", description: null, image: null, products: [] };
+          menu.categories.unshift(cat);
+        }
+        cat.products.splice(donde && donde.categoria === cat.id ? donde.i : 0, 0, m.producto);
+        document.querySelectorAll('[data-cloudin="menu"]').forEach(function (s) { s.setAttribute("data-cloudin-menu", menu.key); });
+      }
+      window.Cloudin.render(d);
+      document.querySelectorAll(".cab p").forEach(function (p) { p.hidden = !p.textContent.trim(); });
+      if (m.producto) {
+        var el = document.querySelector('[data-cloudin="products"] [data-cloudin-key="' + CSS.escape(m.producto.key) + '"]');
+        if (el) {
+          el.classList.add("vista-foco");
+          var r = el.getBoundingClientRect();
+          if (enfocado !== m.categoria.id || r.top < 0 || r.bottom > innerHeight) el.scrollIntoView({ block: "center" });
+          enfocado = m.categoria.id;
+        }
+      }
+    }
+    function avisarListo() {
+      if (listo) return;
+      listo = true;
+      parent.postMessage({ tipo: "cloudin:vista-lista" }, location.origin);
+      aplicar();
+    }
+    addEventListener("message", function (ev) {
+      if (ev.origin !== location.origin || !ev.data || ev.data.tipo !== "cloudin:vista") return;
+      ultimo = ev.data;
+      aplicar();
+    });
+    document.addEventListener("cloudin:ready", avisarListo);
+    addEventListener("load", function () { setTimeout(function () { if (window.Cloudin) avisarListo(); }, 1500); });
+    // En la vista previa los enlaces no se abren (WhatsApp, redes): es solo para mirar.
+    document.addEventListener("click", function (ev) {
+      var a = ev.target.closest("a[href]");
+      if (a && a.getAttribute("href").charAt(0) !== "#") ev.preventDefault();
+    }, true);
+  })();
+</script>
+{% endif %}
 <script src="{{ runtime }}" defer></script>
 </body>
 </html>

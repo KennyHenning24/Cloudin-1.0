@@ -1,0 +1,140 @@
+{% extends "panel/_base.html" %}
+{% load cloudin %}
+{% block title %}Cuenta · Cloudin{% endblock %}
+{% block titulo %}Cuenta{% endblock %}
+{% block subtitulo %}<div class="sub">{{ tenant.name }}{% if rol %} · {{ rol }}{% endif %}</div>{% endblock %}
+
+{% block content %}
+<div class="cuenta-cols">
+  <div class="stack">
+    {% if soporte %}
+    <section class="card"><h2 class="h-card">Tu cuenta</h2>
+      <p class="dim small" style="margin-top:6px">Estás en modo soporte con tu cuenta de Cloudin: el perfil y la contraseña se cambian desde el panel maestro.</p></section>
+    {% else %}
+    <section class="card" aria-labelledby="t-perfil">
+      <h2 class="h-card" id="t-perfil">Tu perfil</h2>
+      <form method="post" class="stack-sm" style="margin-top:12px">{% csrf_token %}
+        <input type="hidden" name="accion" value="perfil">
+        <div class="form-row">
+          {% include "components/campo.html" with nombre="first_name" etiqueta="Nombre" valor=user.first_name autocompletar="given-name" %}
+          {% include "components/campo.html" with nombre="last_name" etiqueta="Apellido" valor=user.last_name autocompletar="family-name" %}
+        </div>
+        {% include "components/campo.html" with nombre="email" etiqueta="Correo" tipo="email" valor=user.email autocompletar="email" ayuda="Con él entras al panel y recuperas tu contraseña." %}
+        <p class="dim small">Usuario: <code>{{ user.username }}</code></p>
+        <div><button class="btn" type="submit">{% icono "check" %}Guardar</button></div>
+      </form>
+    </section>
+
+    <section class="card" aria-labelledby="t-clave">
+      <h2 class="h-card" id="t-clave">Contraseña</h2>
+      <form method="post" class="stack-sm" style="margin-top:12px">{% csrf_token %}
+        <input type="hidden" name="accion" value="clave">
+        {% for campo in form_clave %}
+        <div class="campo{% if campo.errors %} con-error{% endif %}">
+          <label for="{{ campo.id_for_label }}">{{ campo.label }}</label>
+          <input type="password" name="{{ campo.html_name }}" id="{{ campo.id_for_label }}" autocomplete="{% if forloop.first %}current-password{% else %}new-password{% endif %}" required{% if campo.errors %} aria-invalid="true" aria-describedby="e-{{ campo.id_for_label }}"{% endif %}>
+          {% if campo.errors %}<div class="error" id="e-{{ campo.id_for_label }}">{% icono "alerta" "ico sm" %}<span>{{ campo.errors.0 }}</span></div>{% endif %}
+        </div>
+        {% endfor %}
+        <p class="dim small">Mínimo 8 caracteres, que no sea solo números ni se parezca a tu nombre.</p>
+        <div><button class="btn" type="submit">{% icono "llave" %}Cambiar contraseña</button></div>
+      </form>
+    </section>
+    {% endif %}
+
+    <section class="card" aria-labelledby="t-equipo">
+      <h2 class="h-card" id="t-equipo">Equipo</h2>
+      <p class="dim small">Quién entra al panel de {{ tenant.name }}.</p>
+      <ul class="lista-equipo">
+        {% for m in equipo %}
+        <li>
+          <span class="avatar sm" aria-hidden="true">{{ m.user.first_name|default:m.user.username|slice:":1"|upper }}</span>
+          <span class="quien"><strong>{{ m.user.get_full_name|default:m.user.username }}</strong>{% if m.user_id == user.pk %} <span class="dim">(tú)</span>{% endif %}
+            <span class="dim small">{{ m.user.email|default:m.user.username }}{% if not m.user.last_login and m.user_id != user.pk %} · aún no entra{% endif %}</span></span>
+          <span class="chip">{{ roles|get_item:m.role }}</span>
+          {% if es_admin and m.user_id != user.pk and m.role != "owner" %}
+          <details class="desplegable">
+            <summary class="btn fantasma icono sm" aria-label="Acciones para {{ m.user.get_full_name|default:m.user.username }}">{% icono "mas-opciones" %}</summary>
+            <div class="opciones">
+              {% if not m.user.last_login %}<form method="post">{% csrf_token %}<input type="hidden" name="accion" value="reenviar"><input type="hidden" name="miembro" value="{{ m.pk }}"><button type="submit">{% icono "mensaje" %}Reenviar invitación</button></form>{% endif %}
+              {% if es_dueno %}<form method="post">{% csrf_token %}<input type="hidden" name="accion" value="quitar"><input type="hidden" name="miembro" value="{{ m.pk }}"><button type="submit" class="peligro">{% icono "x" %}Quitar del equipo</button></form>{% endif %}
+            </div>
+          </details>
+          {% endif %}
+        </li>
+        {% endfor %}
+      </ul>
+      {% if es_admin %}
+      <details class="invitar">
+        <summary class="btn secundario">{% icono "mas" %}Invitar a alguien</summary>
+        <form method="post" class="stack-sm" style="margin-top:12px">{% csrf_token %}
+          <input type="hidden" name="accion" value="invitar">
+          <div class="form-row">
+            {% include "components/campo.html" with nombre="nombre" etiqueta="Nombre" requerido=True %}
+            {% include "components/campo.html" with nombre="correo" etiqueta="Correo" tipo="email" requerido=True %}
+          </div>
+          <fieldset class="opciones-chip"><legend>Qué puede hacer</legend>
+            <label class="chip-opcion"><input type="radio" name="rol" value="staff" checked><span>Equipo: marca agotados</span></label>
+            <label class="chip-opcion"><input type="radio" name="rol" value="admin"><span>Administrador: cambia todo el menú</span></label>
+          </fieldset>
+          <div><button class="btn" type="submit">{% icono "mensaje" %}Enviar invitación</button></div>
+        </form>
+      </details>
+      {% endif %}
+    </section>
+  </div>
+
+  <div class="stack">
+    <section class="card" aria-labelledby="t-tema">
+      <h2 class="h-card" id="t-tema">Apariencia del panel</h2>
+      <div class="segmento" role="group" aria-labelledby="t-tema" style="margin-top:12px" data-elegir-tema>
+        <button type="button" data-tema-opcion="claro">{% icono "sol" "ico sm" %}Claro</button>
+        <button type="button" data-tema-opcion="oscuro">{% icono "luna" "ico sm" %}Oscuro</button>
+        <button type="button" data-tema-opcion="sistema">{% icono "celular" "ico sm" %}Como el sistema</button>
+      </div>
+    </section>
+
+    <section class="card" aria-labelledby="t-plan">
+      <h2 class="h-card" id="t-plan">Tu plan</h2>
+      <dl class="kv" style="margin-top:12px">
+        <dt>Plan</dt><dd>{{ tenant.get_plan_display }}</dd>
+        <dt>Restaurante</dt><dd>{{ tenant.name }}</dd>
+        <dt>Tu menú</dt><dd><a class="enlace" href="{{ enlace }}" target="_blank" rel="noopener">Ver</a></dd>
+      </dl>
+      <p class="dim small" style="margin-top:12px">¿Quieres pedidos en la mesa, caja o facturación electrónica? Escríbele a Cloudin.</p>
+    </section>
+
+    <section class="card">
+      <form method="post" action="{% url 'panel:logout' %}">{% csrf_token %}
+        <button class="btn secundario block" type="submit">{% icono "salir" %}Cerrar sesión</button>
+      </form>
+    </section>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  (function () {
+    const grupo = document.querySelector("[data-elegir-tema]");
+    if (!grupo) return;
+    const pintar = () => {
+      let elegido = null;
+      try { elegido = localStorage.getItem("cloudin-tema"); } catch (e) {}
+      const actual = elegido || "sistema";
+      grupo.querySelectorAll("[data-tema-opcion]").forEach((b) => {
+        const si = b.dataset.temaOpcion === actual;
+        b.classList.toggle("on", si);
+        b.setAttribute("aria-pressed", String(si));
+      });
+    };
+    grupo.addEventListener("click", (ev) => {
+      const b = ev.target.closest("[data-tema-opcion]");
+      if (!b) return;
+      ponerTema(b.dataset.temaOpcion);
+      pintar();
+    });
+    pintar();
+  })();
+</script>
+{% endblock %}

@@ -112,6 +112,25 @@
     return cerrar;
   };
 
+  /* Un aviso para la PRÓXIMA pantalla (después de guardar y volver a la lista).
+     Con `deshacer: {url, metodo, datos}` el aviso ofrece «Deshacer». */
+  const PENDIENTE = "cloudin:aviso";
+  C.avisoPendiente = function (texto, { deshacer = null, tipo = "" } = {}) {
+    try { sessionStorage.setItem(PENDIENTE, JSON.stringify({ texto, deshacer, tipo })); } catch (e) { /* privado */ }
+  };
+  function mostrarPendiente() {
+    let a = null;
+    try { a = JSON.parse(sessionStorage.getItem(PENDIENTE)); sessionStorage.removeItem(PENDIENTE); } catch (e) { return; }
+    if (!a || !a.texto) return;
+    if (!a.deshacer) return C.aviso(a.texto, { tipo: a.tipo, ms: 6000 });
+    C.aviso(a.texto, {
+      accion: "Deshacer", ms: 8000,
+      alHacer: () => C.pedir(a.deshacer.url, { metodo: a.deshacer.metodo || "POST", datos: a.deshacer.datos })
+        .then(() => { C.avisoPendiente("Listo, lo devolvimos."); location.reload(); })
+        .catch((e) => C.aviso(e.detalle, { tipo: "error" })),
+    });
+  }
+
   // --------------------------------------------- modal, hoja y cajón lateral
   let ultimoFoco = null;
   C.abrir = function (dialogo) {
@@ -271,12 +290,46 @@
     });
   }
 
+  // --------------------------------------------- contador de caracteres
+  function engancharContador(marca) {
+    const campo = document.getElementById(marca.dataset.contadorDe);
+    if (!campo) return;
+    const tope = Number(campo.getAttribute("maxlength")) || 0;
+    const pintar = () => { marca.textContent = campo.value.length + (tope ? "/" + tope : ""); };
+    campo.addEventListener("input", pintar);
+    pintar();
+  }
+
+  // ------------------------------------- riel de la tablet: se despliega completo
+  document.addEventListener("click", (ev) => {
+    if (!ev.target.closest("[data-riel]")) return;
+    const abierto = document.body.classList.toggle("riel-abierto");
+    $$("button[data-riel]").forEach((b) => b.setAttribute("aria-expanded", String(abierto)));
+  });
+
+  // ------------------------------------------------ atajos de teclado (PC)
+  /* «/» busca y «N» crea un producto. Nunca mientras se escribe en un campo. */
+  document.addEventListener("keydown", (ev) => {
+    if (ev.key === "Escape") document.body.classList.remove("riel-abierto");
+    if (ev.ctrlKey || ev.metaKey || ev.altKey || ev.defaultPrevented) return;
+    const t = ev.target;
+    if (t.closest("input, textarea, select, [contenteditable=true], dialog[open]")) return;
+    if (ev.key === "/") {
+      const buscar = document.getElementById("buscar");
+      if (buscar) { ev.preventDefault(); buscar.focus(); buscar.select(); }
+      return;
+    }
+    const atajo = document.querySelector(`[data-atajo="${CSS.escape(ev.key.toLowerCase())}"]`);
+    if (atajo && atajo.offsetParent !== null) { ev.preventDefault(); atajo.click(); }
+  });
+
   // ------------------------------------------------------------- arranque
   C.enganchar = function (raiz = document) {
-    $$('[role="tablist"]', raiz).forEach((l) => { if (!l.dataset.listo) { l.dataset.listo = 1; engancharPestanas(l); } });
+    $$('[role="tablist"]', raiz).forEach((l) => { if (!l.dataset.listo && !l.matches("nav")) { l.dataset.listo = 1; engancharPestanas(l); } });
     $$("[data-precio]", raiz).forEach((i) => { if (!i.dataset.listo) { i.dataset.listo = 1; engancharPrecio(i); } });
     $$(".color", raiz).forEach((c) => { if (!c.dataset.listo) { c.dataset.listo = 1; engancharColor(c); } });
     $$("form[data-avisar-cambios]", raiz).forEach((f) => { if (!f.dataset.listo) { f.dataset.listo = 1; engancharAvisoDeCambios(f); } });
+    $$("[data-contador-de]", raiz).forEach((m) => { if (!m.dataset.listo) { m.dataset.listo = 1; engancharContador(m); } });
   };
-  document.addEventListener("DOMContentLoaded", () => { C.enganchar(); estadoConexion(); });
+  document.addEventListener("DOMContentLoaded", () => { C.enganchar(); estadoConexion(); mostrarPendiente(); });
 })();

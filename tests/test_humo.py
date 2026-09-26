@@ -22,12 +22,13 @@ SOLO_DEBUG = {"design-system"}
 # Pantallas principales: deben responder 200, no una redirección. («Nueva compra»
 # redirige a crear el proveedor mientras no haya uno: es lo esperado.)
 PRINCIPALES = {
-    "inicio", "tables", "kitchen", "mensajes", "configuracion", "mesas-qr", "producto-nuevo",
+    "inicio", "tables", "kitchen", "mensajes", "configuracion", "mesas-qr", "mi-menu", "carta-producto-nuevo",
     "menu-importar", "ventas", "turnos", "reservas", "reserva-nueva", "clientes", "reservas-config",
     "control", "control-ajustes", "propinas", "empleados", "empleado-nuevo", "meseros", "mesero-nuevo",
     "inventario", "insumos", "insumo-nuevo", "compras", "proveedores",
     "proveedor-nuevo", "recetas", "subreceta-nueva", "conteos", "inventario-reportes",
-    "inventario-maestros", "facturacion",
+    "inventario-maestros", "facturacion", "personalizar", "qr", "cuenta", "bienvenida", "manifest", "sw",
+    "sin-conexion",
 }
 
 
@@ -44,7 +45,7 @@ def _rutas_sin_parametros(espacio):
 
 @pytest.fixture
 def restaurante_listo(crear_restaurante, crear_usuario, abrir_turno, en_restaurante):
-    tenant = crear_restaurante("humo", modo_servicio="mixto")
+    tenant = crear_restaurante("humo", modo_servicio="mixto", plan="completo")
     user = crear_usuario(tenant)
     abrir_turno(tenant)
     with en_restaurante(tenant):
@@ -69,7 +70,8 @@ def test_todas_las_pantallas_del_panel_abren(client, restaurante_listo):
     # Pantallas con parámetros que se pueden armar con datos sencillos.
     for url in (
         reverse("panel:table-detail", args=[mesa.id]),
-        reverse("panel:producto-editar", args=[producto.id]),
+        reverse("panel:carta-producto", args=[producto.uuid]),
+        reverse("panel:carta-producto", args=[producto.uuid]) + "?fragmento=1",
         reverse("panel:receta-producto", args=[producto.id]),
     ):
         respuesta = client.get(url)

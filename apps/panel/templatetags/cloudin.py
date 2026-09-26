@@ -70,6 +70,39 @@ def get_item(diccionario, llave):
 
 
 @register.filter
+def telefono(numero):
+    """«+573001234567» -> «300 123 4567» (como la gente escribe y lee un celular)."""
+    digitos = "".join(ch for ch in str(numero or "") if ch.isdigit())
+    if len(digitos) == 12 and digitos.startswith("57"):
+        digitos = digitos[2:]
+    if len(digitos) == 10:
+        return f"{digitos[:3]} {digitos[3:6]} {digitos[6:]}"
+    return numero or ""
+
+
+@register.filter
+def hace(fecha):
+    """Cuánto hace, corto y en español: «hace un momento», «hace 5 min», «hace 2 h», «ayer», «hace 3 días»."""
+    from django.utils import timezone
+
+    if not fecha:
+        return ""
+    segundos = max(0, int((timezone.now() - fecha).total_seconds()))
+    if segundos < 60:
+        return "hace un momento"
+    if segundos < 3600:
+        return f"hace {segundos // 60} min"
+    if segundos < 86400:
+        return f"hace {segundos // 3600} h"
+    dias = segundos // 86400
+    if dias == 1:
+        return "ayer"
+    if dias < 30:
+        return f"hace {dias} días"
+    return f"el {timezone.localtime(fecha):%d/%m/%Y}"
+
+
+@register.filter
 def split_pares(texto):
     """«a:Uno,b:Dos» -> [("a", "Uno"), ("b", "Dos")], para armar opciones en la plantilla."""
     return [tuple(par.split(":", 1)) for par in str(texto).split(",") if ":" in par]

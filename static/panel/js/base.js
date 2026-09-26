@@ -25,11 +25,17 @@ function copiar(texto, boton) {
 
 /* ---------- tema claro / oscuro ---------- */
 function ponerTema(t) {
+  // "sistema" olvida la elección: el panel vuelve a seguir el tema del teléfono o del PC.
   const aplicar = () => {
-    document.documentElement.dataset.theme = t;
-    try { localStorage.setItem("cloudin-tema", t); } catch (e) {}
-    document.querySelectorAll("[data-tema]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.tema === t)));
-    window.dispatchEvent(new CustomEvent("cambio-tema", {detail: t}));
+    let tema = t;
+    try {
+      if (t === "sistema") localStorage.removeItem("cloudin-tema");
+      else localStorage.setItem("cloudin-tema", t);
+    } catch (e) {}
+    if (t === "sistema") tema = window.matchMedia && matchMedia("(prefers-color-scheme: dark)").matches ? "oscuro" : "claro";
+    document.documentElement.dataset.theme = tema;
+    document.querySelectorAll("[data-tema]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.tema === tema)));
+    window.dispatchEvent(new CustomEvent("cambio-tema", {detail: tema}));
   };
   // Con View Transitions el cambio de tema se funde suavemente.
   if (document.startViewTransition && !matchMedia("(prefers-reduced-motion: reduce)").matches) {

@@ -1,8 +1,8 @@
-"""La carta en el panel: productos con foto, toppings y observación, e importar
-la carta desde el sitio web del restaurante.
+"""La carta de antes en el panel: eliminar desde el menú rápido e importar la
+carta desde el sitio web del restaurante.
 
-El menú rápido (categorías y productos en una línea) sigue en Configuración →
-Menú; aquí viven la ficha completa del producto y la importación.
+La ficha del producto ahora es el editor de Mi menú (duenio.py); las rutas
+viejas llevan allá para no romper enlaces guardados.
 """
 
 from django.contrib import messages
@@ -12,7 +12,6 @@ from django.urls import reverse
 from django.views.decorators.http import require_POST
 
 from apps.catalog.formato import extraer, importar, leer_fuente
-from apps.catalog.forms import ProductoForm
 from apps.catalog.models import Category, Product
 
 from .views import panel_view
@@ -22,31 +21,20 @@ def _volver():
     return reverse("panel:configuracion") + "?paso=menu"
 
 
-@panel_view(solo_admin=True)
+@panel_view(solo_admin=True, menu=True)
 def producto_nuevo(request):
-    inicial = {}
-    if request.GET.get("categoria"):
-        inicial["category"] = Category.objects.filter(pk=request.GET["categoria"]).first()
-    form = ProductoForm(request.POST or None, request.FILES or None, initial=inicial, puede_todo=True)
-    if request.method == "POST" and form.is_valid():
-        producto = form.save()
-        messages.success(request, f"«{producto.name}» quedó en la carta.")
-        return redirect(_volver())
-    return render(request, "panel/producto_form.html",
-                  {"seccion": "config", "form": form, "es_nuevo": True})
+    """La ficha de antes: ahora los productos se crean en el editor de Mi menú."""
+    destino = reverse("panel:carta-producto-nuevo")
+    categoria = Category.objects.filter(pk=request.GET.get("categoria") or 0).first() \
+        if str(request.GET.get("categoria", "")).isdigit() else None
+    return redirect(f"{destino}?categoria={categoria.uuid}" if categoria else destino)
 
 
-@panel_view(solo_admin=True)
+@panel_view(solo_admin=True, menu=True)
 def producto_editar(request, producto_id):
+    """Los enlaces viejos (Configuración → Menú) abren el editor nuevo."""
     producto = get_object_or_404(Product, pk=producto_id, eliminado=False)
-    form = ProductoForm(request.POST or None, request.FILES or None, instance=producto,
-                        puede_todo=request.user.is_superuser)
-    if request.method == "POST" and form.is_valid():
-        form.save()
-        messages.success(request, f"«{producto.name}» actualizado.")
-        return redirect(_volver())
-    return render(request, "panel/producto_form.html",
-                  {"seccion": "config", "form": form, "producto": producto})
+    return redirect("panel:carta-producto", producto=producto.uuid)
 
 
 @panel_view(solo_admin=True)

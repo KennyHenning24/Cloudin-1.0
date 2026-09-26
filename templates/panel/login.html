@@ -179,20 +179,20 @@ body{overflow:hidden}
         </div>
 
         {% if form.errors %}
-          <div class="aviso malo">{% for e in form.non_field_errors %}{% if "Demasiados" in e %}{{ e }}{% else %}Usuario o contraseña incorrectos.{% endif %}{% empty %}Usuario o contraseña incorrectos.{% endfor %}</div>
+          <div class="aviso malo">{% for e in form.non_field_errors %}{% if "Demasiados" in e %}{{ e }}{% else %}Usuario, correo o contraseña incorrectos.{% endif %}{% empty %}Usuario, correo o contraseña incorrectos.{% endfor %}</div>
         {% endif %}
 
         <form method="post" id="form-entrar">
           {% csrf_token %}
           <div class="campo-ico">
             <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-            <input type="text" name="username" placeholder="Usuario" autocomplete="username"
+            <input type="text" name="username" placeholder="Usuario o correo" aria-label="Usuario o correo" autocomplete="username" autocapitalize="none" spellcheck="false"
                    autofocus required>
           </div>
 
           <div class="campo-ico">
             <svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-            <input type="password" name="password" id="clave" placeholder="Contraseña"
+            <input type="password" name="password" id="clave" placeholder="Contraseña" aria-label="Contraseña"
                    autocomplete="current-password" required>
             <button class="ojo" type="button" id="ver-clave" aria-label="Mostrar contraseña">
               <svg viewBox="0 0 24 24" id="ojo-abierto"><path d="M1.5 12S5 5.5 12 5.5 22.5 12 22.5 12 19 18.5 12 18.5 1.5 12 1.5 12z"/><circle cx="12" cy="12" r="3"/></svg>

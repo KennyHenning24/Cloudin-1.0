@@ -1,12 +1,16 @@
 from django.contrib.auth import views as auth_views
 from django.urls import path
 
-from . import control, design_system, inventario, menu, meseros, propinas, reservas, seguridad, turnos, views
+from . import control, design_system, duenio, inventario, menu, meseros, propinas, reservas, seguridad, turnos, views
 
 app_name = "panel"
 
 urlpatterns = [
     path("login/", seguridad.LoginSeguro.as_view(), name="login"),
+    # App instalable (PWA): manifiesto, service worker y la página sin conexión.
+    path("manifest.webmanifest", duenio.manifest, name="manifest"),
+    path("sw.js", duenio.service_worker, name="sw"),
+    path("sin-conexion/", duenio.sin_conexion, name="sin-conexion"),
     # Modo soporte: el superusuario confirma su clave antes de entrar a un restaurante.
     path("soporte/", seguridad.soporte, name="soporte"),
     path("soporte/salir/", seguridad.soporte_salir, name="soporte-salir"),
@@ -33,6 +37,16 @@ urlpatterns = [
     path("", views.inicio, name="inicio"),
     # Guía viva del sistema de diseño (solo con DEBUG=True)
     path("design-system/", design_system.pagina, name="design-system"),
+
+    # Panel del dueño: el menú digital (los dos planes; sin turno)
+    path("bienvenida/", duenio.bienvenida, name="bienvenida"),
+    path("mi-menu/", duenio.mi_menu, name="mi-menu"),
+    path("mi-menu/producto/nuevo/", duenio.producto, name="carta-producto-nuevo"),
+    path("mi-menu/producto/<uuid:producto>/", duenio.producto, name="carta-producto"),
+    path("personalizar/", duenio.personalizar, name="personalizar"),
+    path("mesas-y-qr/", duenio.mesas_y_qr, name="qr"),
+    path("cuenta/", duenio.cuenta, name="cuenta"),
+
     path("mesas/", views.tables, name="tables"),
     path("mesa/<int:table_id>/", views.table_detail, name="table-detail"),
     path("cocina/", views.kitchen, name="kitchen"),

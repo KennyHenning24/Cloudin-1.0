@@ -149,7 +149,7 @@
   <!-- ============================================================ TARJETAS -->
   <h2 class="seccion">Tarjetas y ProductCard</h2>
   <p class="muted">Sin foto, con nombre largo, agotado y sin precio: el dueño va a cargar cosas que no imaginamos.</p>
-  <ul class="lista-demo" data-ordenable="demo">{% for p in productos_demo %}{% include "components/producto_fila.html" with p=p %}{% endfor %}</ul>
+  <ul class="lista-demo" data-ordenable="demo">{% for p in productos_demo %}{% include "components/producto_fila.html" with p=p admin=True editar="#" %}{% endfor %}</ul>
   <div class="grid-cards" style="margin-top:var(--space-4)">
     {% for p in productos_demo %}
     <article class="ficha-producto" data-available="{{ p.is_available|yesno:'true,false' }}">

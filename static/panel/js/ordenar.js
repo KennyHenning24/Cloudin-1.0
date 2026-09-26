@@ -38,9 +38,11 @@
       if (lista.dataset.ordenListo) return;
       lista.dataset.ordenListo = "1";
       let antes = [];
+      // Listas anidadas (categorías con sus productos): cada una con su asa (data-asa).
+      const asa = lista.dataset.asa || ".asa";
       if (window.Sortable) {
         window.Sortable.create(lista, {
-          handle: ".asa", animation: 150, delay: 0, touchStartThreshold: 4,
+          handle: asa, animation: 150, delay: 0, touchStartThreshold: 4,
           draggable: "[data-id]", chosenClass: "arrastrando",
           onStart: () => { antes = ids(lista); },
           onEnd: (ev) => { if (ev.oldIndex !== ev.newIndex) guardar(lista, antes); },
@@ -48,7 +50,10 @@
       }
       lista.addEventListener("click", (ev) => {
         const boton = ev.target.closest("[data-mover]");
-        if (boton && lista.contains(boton)) mover(boton.closest("[data-id]"), boton.dataset.mover);
+        if (!boton) return;
+        const item = boton.closest("[data-id]");
+        // Solo las flechas de los hijos directos de ESTA lista (no las de una lista de adentro).
+        if (item && item.parentElement === lista) mover(item, boton.dataset.mover);
       });
     });
   };

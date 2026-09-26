@@ -133,6 +133,8 @@
       vista.alt = "Vista previa de la foto";
     }
     caja.classList.add("con-foto");
+    const texto = caja.querySelector(".texto-galeria");
+    if (texto) texto.textContent = "Cambiar";
     caja.foto = foto;
     if (!caja.dataset.url) {
       caja.dispatchEvent(new CustomEvent("foto-lista", { detail: { foto }, bubbles: true }));

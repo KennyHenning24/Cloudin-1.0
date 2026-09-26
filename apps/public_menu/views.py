@@ -17,6 +17,7 @@ from django.core.cache import cache
 from django.http import Http404, HttpResponseNotModified, JsonResponse
 from django.shortcuts import redirect, render
 from django.templatetags.static import static
+from django.urls import reverse
 from django.views.decorators.clickjacking import xframe_options_sameorigin
 from django.views.decorators.http import require_GET
 
@@ -90,7 +91,8 @@ def menu_api(request, slug=None):
         mesa = selectors.mesa_por_token_o_numero(request.GET.get("table", ""))
         version = selectors.ajustes().menu_version
         etag = f'W/"{tenant.slug}-{version}{f"-m{mesa.number}" if mesa else ""}"'
-        _marcar_visto(tenant)
+        if request.GET.get("vista") != "panel":  # la vista previa del dueño no es una visita
+            _marcar_visto(tenant)
         if etag in [e.strip() for e in request.headers.get("If-None-Match", "").split(",")]:
             respuesta = HttpResponseNotModified()
             respuesta["ETag"] = etag
@@ -136,21 +138,29 @@ def menu_page(request, slug=None):
     if tenant is None:
         raise Http404("Ese restaurante no existe o no está activo.")
     with tenant_context(tenant):
-        datos = _para_plantilla(datos_del_menu(tenant, request))
+        crudos = datos_del_menu(tenant, request)
+        datos = _para_plantilla(crudos)
         mesa = selectors.mesa_por_token_o_numero(request.GET.get("mesa", ""))
     negocio = datos["business"]
     menu = datos["menus"][0] if datos["menus"] else None
-    base, _ = _constructor_de_urls(request)
+    # Dentro del panel (iframe de la vista previa) el menú se vuelve a pintar con lo
+    # que el dueño está editando, sin guardar (ver la plantilla).
+    vista_panel = request.GET.get("vista") == "panel"
+    # Esta página la sirve el mismo Cloudin: rutas relativas (así la CSP connect-src 'self'
+    # funciona en cualquier dominio, con o sin subdominio).
+    api = reverse("public_menu:api", args=[tenant.slug]) + ("?vista=panel" if vista_panel else "")
     contexto = {
         "negocio": negocio,
         "menu": menu,
         "mesa": mesa,
         "hoy": horario_de_hoy(negocio["hours"]),
         "whatsapp_link": _whatsapp_link(negocio["contact"]["whatsapp"]),
-        "api": f"{base}/api/public/{tenant.slug}/menu/",
-        "runtime": base + static("cloudin-menu.v1.js"),
+        "api": api,
+        "runtime": static("cloudin-menu.v1.js"),
         "slug": tenant.slug,
         "sitio": tenant.site_url,
+        "vista_panel": vista_panel,
+        "datos_vista": crudos if vista_panel else None,
     }
     return render(request, "public_menu/menu.html", contexto)
 

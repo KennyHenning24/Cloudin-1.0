@@ -4,7 +4,6 @@ from decimal import Decimal
 
 import pytest
 from django.db import IntegrityError, transaction
-from django.urls import reverse
 
 from apps.business.models import RestaurantSettings, normalizar_telefono
 from apps.catalog.legacy import guardar_opciones_legacy
@@ -102,18 +101,16 @@ def test_tamanos_se_ven_como_primer_grupo_y_el_precio_sale_bien(restaurante, en_
 
 
 @pytest.mark.django_db
-def test_el_historial_guarda_quien_cambio_el_precio(client, restaurante, crear_usuario, abrir_turno, en_restaurante):
+def test_el_historial_guarda_quien_cambio_el_precio(client, restaurante, crear_usuario, en_restaurante):
     dueno = crear_usuario(restaurante, "ana", rol=TenantMembership.ROLE_OWNER, nombre="Ana Ruiz")
-    abrir_turno(restaurante)
     with en_restaurante(restaurante):
         cat = Category.objects.create(name="Platos")
         p = Product.objects.create(category=cat, name="Bandeja", price=Decimal("25000"))
     client.force_login(dueno)
-    respuesta = client.post(reverse("panel:producto-editar", args=[p.id]), {
-        "category": cat.id, "name": "Bandeja paisa", "price": "27000", "description": "",
-        "permite_observacion": "on", "is_available": "on", "opciones_json": "[]",
-    })
-    assert respuesta.status_code == 302, respuesta.content[:500]
+    # Así cambia el precio el editor del panel (sin turno abierto: la carta no lo exige).
+    respuesta = client.patch(f"/api/v1/staff/catalog/products/{p.uuid}/", {"name": "Bandeja paisa", "price": 27000},
+                             content_type="application/json")
+    assert respuesta.status_code == 200, respuesta.content[:500]
     with en_restaurante(restaurante):
         ultimo = Product.history.filter(id=p.id).latest("history_date")
         assert ultimo.price == Decimal("27000") and ultimo.name == "Bandeja paisa"

@@ -1,0 +1,6 @@
+{% load cloudin %}{# Las 5 secciones del plan «Menú digital» (barra lateral, riel y barra inferior). #}
+<a href="{% url 'panel:inicio' %}"{% if seccion == 'inicio' %} class="on" aria-current="page"{% endif %}>{% icono "inicio" %}<span>Inicio</span></a>
+<a href="{% url 'panel:mi-menu' %}"{% if seccion == 'mi-menu' %} class="on" aria-current="page"{% endif %}>{% icono "menu-lista" %}<span>Mi menú</span></a>
+<a href="{% url 'panel:personalizar' %}"{% if seccion == 'personalizar' %} class="on" aria-current="page"{% endif %}>{% icono "paleta" %}<span>Personalizar</span></a>
+<a href="{% url 'panel:qr' %}"{% if seccion == 'qr' %} class="on" aria-current="page"{% endif %}>{% icono "qr" %}<span>Mesas y QR</span></a>
+<a href="{% url 'panel:cuenta' %}"{% if seccion == 'cuenta' %} class="on" aria-current="page"{% endif %}>{% icono "usuario" %}<span>Cuenta</span></a>
