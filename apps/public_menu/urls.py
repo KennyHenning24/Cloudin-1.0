@@ -7,5 +7,4 @@ app_name = "public_menu"
 urlpatterns = [
     path("api/public/<slug:slug>/menu/", views.menu_api, name="api"),
     path("api/public/menu/", views.menu_api, name="api-subdominio"),
-    path("m/<slug:slug>/", views.menu_page, name="pagina"),
 ]

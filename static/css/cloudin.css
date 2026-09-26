@@ -1227,7 +1227,9 @@ body.vista-abierta::after{content:"";position:fixed;inset:0;background:var(--ove
 @media (min-width:1024px){.final-vista{display:grid;gap:var(--space-2)}.final-vista .telefono{height:640px}}
 
 /* ---------- ajustes de la revisión visual (capturas a 375, 768 y 1440) ---------- */
-.side-menu{color:var(--nav-text)}
+/* La barra lateral es ink en los dos temas: su texto también (el de afuera es oscuro en el tema claro). */
+.side,.barra-movil{color:var(--nav-text)}
+@media (max-width:639px){.app:has(> .fab) .content{padding-bottom:calc(var(--barra-inferior) + 120px + env(safe-area-inset-bottom))}}
 .guardar-barra .fin{flex:1}
 @media (hover:hover) and (pointer:fine){.solo-tactil{display:none!important}}
 .subir-foto .botones{gap:6px}

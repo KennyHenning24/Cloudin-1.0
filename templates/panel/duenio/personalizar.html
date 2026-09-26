@@ -136,8 +136,8 @@
       <strong>Vista previa en vivo</strong>
       <button type="button" class="btn fantasma icono sm cerrar-vista" data-cerrar-vista aria-label="Cerrar la vista previa">{% icono "x" %}</button>
     </div>
-    <div class="telefono"><iframe title="Vista previa de tu menú" src="{{ vista_previa }}" data-vista-previa loading="lazy"></iframe></div>
-    <a class="enlace small" href="{{ enlace }}" target="_blank" rel="noopener">Abrir mi menú en otra pestaña</a>
+    {% include "components/vista_previa.html" %}
+    {% if enlace %}<a class="enlace small" href="{{ enlace }}" target="_blank" rel="noopener">Abrir mi menú en otra pestaña</a>{% endif %}
   </aside>
 </div>
 

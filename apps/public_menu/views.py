@@ -1,9 +1,12 @@
-"""API pública del menú (`cloudin.menu/v1`) y menú de respaldo de Cloudin.
+"""API pública del menú (`cloudin.menu/v1`).
+
+Cloudin no crea ni sirve menús: cada restaurante tiene el suyo, diseñado aparte (su
+sitio en Cloudflare Pages), y dentro va el runtime `cloudin-menu.v1.js`, que lee esta
+API. Guía para conectar un menú: docs/CONECTAR-TU-MENU.md.
 
 Rutas (el restaurante va en la ruta; el subdominio funciona igual si hay dominio):
     GET /api/public/<slug>/menu/[?table=<token|número>]
     GET /api/public/menu/                 (en <slug>.<dominio>)
-    GET /m/<slug>/[?mesa=<token|número>]  menú listo para el QR si el restaurante no tiene sitio
 
 Sin autenticación y solo lectura. Con ETag (sube con cada cambio del menú), caché
 y CORS abierto: son datos públicos, sin cookies, y así funcionan igual en
@@ -14,11 +17,8 @@ import time
 
 from django.conf import settings
 from django.core.cache import cache
-from django.http import Http404, HttpResponseNotModified, JsonResponse
-from django.shortcuts import redirect, render
-from django.templatetags.static import static
-from django.urls import reverse
-from django.views.decorators.clickjacking import xframe_options_sameorigin
+from django.http import HttpResponseNotModified, JsonResponse
+from django.shortcuts import redirect
 from django.views.decorators.http import require_GET
 
 from apps.api.limites import permitido
@@ -26,7 +26,6 @@ from apps.tenants.context import tenant_context
 from apps.tenants.models import Tenant
 
 from . import selectors, serializers
-from .horario import horario_de_hoy
 
 TOPE_POR_IP = 600          # peticiones…
 VENTANA_TOPE = 10 * 60     # …cada 10 minutos (un restaurante lleno comparte la IP del wifi)
@@ -106,75 +105,11 @@ def menu_api(request, slug=None):
     return _cors(respuesta)
 
 
-def _para_plantilla(datos: dict) -> dict:
-    """Agrega a una copia de los datos lo que la plantilla necesita ya formateado."""
-    from apps.common.money import formato_cop
-
-    nombres = {t["key"]: t["name"] for t in datos["tags"]}
-    menus = []
-    for m in datos["menus"]:
-        categorias = []
-        for c in m["categories"]:
-            productos = []
-            for p in c["products"]:
-                precios = [x for x in (p["price"], *(v["price"] for v in p["variants"])) if x is not None]
-                texto = formato_cop(min(precios)) if p["variants"] and precios else formato_cop(p["price"])
-                productos.append({
-                    **p,
-                    "price_text": f"Desde {texto}" if p["variants"] else texto,
-                    "variants": [{**v, "price_text": formato_cop(v["price"])} for v in p["variants"]],
-                    "tag_items": [{"key": k, "name": nombres.get(k, k.replace("-", " ").capitalize())}
-                                  for k in p["tags"]],
-                })
-            categorias.append({**c, "products": productos})
-        menus.append({**m, "categories": categorias})
-    return {**datos, "menus": menus}
-
-
-@require_GET
-@xframe_options_sameorigin
-def menu_page(request, slug=None):
-    tenant = _restaurante(request, slug)
-    if tenant is None:
-        raise Http404("Ese restaurante no existe o no está activo.")
-    with tenant_context(tenant):
-        crudos = datos_del_menu(tenant, request)
-        datos = _para_plantilla(crudos)
-        mesa = selectors.mesa_por_token_o_numero(request.GET.get("mesa", ""))
-    negocio = datos["business"]
-    menu = datos["menus"][0] if datos["menus"] else None
-    # Dentro del panel (iframe de la vista previa) el menú se vuelve a pintar con lo
-    # que el dueño está editando, sin guardar (ver la plantilla).
-    vista_panel = request.GET.get("vista") == "panel"
-    # Esta página la sirve el mismo Cloudin: rutas relativas (así la CSP connect-src 'self'
-    # funciona en cualquier dominio, con o sin subdominio).
-    api = reverse("public_menu:api", args=[tenant.slug]) + ("?vista=panel" if vista_panel else "")
-    contexto = {
-        "negocio": negocio,
-        "menu": menu,
-        "mesa": mesa,
-        "hoy": horario_de_hoy(negocio["hours"]),
-        "whatsapp_link": _whatsapp_link(negocio["contact"]["whatsapp"]),
-        "api": api,
-        "runtime": static("cloudin-menu.v1.js"),
-        "slug": tenant.slug,
-        "sitio": tenant.site_url,
-        "vista_panel": vista_panel,
-        "datos_vista": crudos if vista_panel else None,
-    }
-    return render(request, "public_menu/menu.html", contexto)
-
-
-def _whatsapp_link(numero) -> str:
-    digitos = "".join(ch for ch in str(numero or "") if ch.isdigit())
-    return f"https://wa.me/{digitos}" if digitos else ""
-
-
 def raiz(request):
-    """`<slug>.<dominio>/` muestra el menú; la raíz sin restaurante lleva al panel."""
+    """`<slug>.<dominio>/` lleva al menú del restaurante (su página); sin restaurante, al panel."""
     from apps.tenants.middleware import _tenant_from_host
 
     tenant = _tenant_from_host(request)
-    if tenant is not None:
-        return menu_page(request)
+    if tenant is not None and tenant.menu_page:
+        return redirect(tenant.menu_page)
     return redirect("panel:inicio")

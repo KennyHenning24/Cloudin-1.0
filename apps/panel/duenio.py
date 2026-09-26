@@ -122,6 +122,30 @@ def _pendientes(ajustes, resumen) -> list[dict]:
     ]
 
 
+def vista_previa(tenant) -> dict:
+    """Lo que necesita la vista previa: la página del menú del restaurante (su diseño,
+    con ?cloudin-preview=1) y la API de donde el panel toma los datos guardados.
+    Sin página publicada no hay vista previa (Cloudin no tiene un menú propio)."""
+    pagina = qr.enlace_del_menu(tenant)
+    return {
+        "vista_previa": qr.con_parametro(pagina, "cloudin-preview", "1") if pagina else "",
+        "api_menu": reverse("public_menu:api", args=[tenant.slug]) + "?vista=panel",
+    }
+
+
+def con_vista_previa(respuesta, tenant):
+    """El panel solo deja meter en un iframe su propio origen: se suma el del menú."""
+    from urllib.parse import urlsplit
+
+    from config.seguridad import CSP
+
+    partes = urlsplit(tenant.menu_page or "")
+    if partes.scheme in ("http", "https") and partes.netloc:
+        respuesta["Content-Security-Policy"] = CSP.replace(
+            "frame-src 'self'", f"frame-src 'self' {partes.scheme}://{partes.netloc}")
+    return respuesta
+
+
 def _ultimo_cambio():
     fechas = [Product.history.aggregate(u=Max("history_date"))["u"],
               Category.history.aggregate(u=Max("history_date"))["u"]]
@@ -152,7 +176,9 @@ def inicio_menu(request):
         "hoy": timezone.localdate(),
         "es_admin": admin,
         "resumen": resumen,
-        "en_linea": resumen["activos"] > 0,
+        # En línea = tiene su página publicada y algo que mostrar.
+        "publicado": bool(tenant.menu_page),
+        "en_linea": bool(tenant.menu_page) and resumen["activos"] > 0,
         "visto": datetime.fromtimestamp(visto, tz=timezone.get_current_timezone()) if visto else None,
         "pendientes": pendientes,
         "hechos": hechos,
@@ -263,12 +289,11 @@ def producto(request, producto=None):
         "marcadas": {t.key for t in actual.tags.all()} if actual else set(),
         "impuestos": TAX_CHOICES,
         "config": config,
-        "vista_previa": reverse("public_menu:pagina", args=[request.tenant.slug]) + "?vista=panel",
+        **vista_previa(request.tenant),
         "fragmento": request.GET.get("fragmento") == "1",
     }
-    if contexto["fragmento"]:
-        return render(request, "panel/duenio/_producto_form.html", contexto)
-    return render(request, "panel/duenio/producto.html", contexto)
+    plantilla = "panel/duenio/_producto_form.html" if contexto["fragmento"] else "panel/duenio/producto.html"
+    return con_vista_previa(render(request, plantilla, contexto), request.tenant)
 
 
 # ------------------------------------------------------------ Personalizar
@@ -287,7 +312,7 @@ def personalizar(request):
     """Marca del menú, datos del negocio, contacto, horario, redes y pagos."""
     _solo_admin(request)
     ajustes = RestaurantSettings.load()
-    return render(request, "panel/duenio/personalizar.html", {
+    return con_vista_previa(render(request, "panel/duenio/personalizar.html", {
         "seccion": "personalizar",
         "ajustes": ajustes,
         "logo_url": ajustes.logo.url if ajustes.logo else "",
@@ -295,9 +320,9 @@ def personalizar(request):
         "dias": _horario_por_dia(),
         "servicios": [(k, v, bool((ajustes.services or {}).get(k))) for k, v in SERVICIOS.items()],
         "medios": [(k, v, k in (ajustes.payment_methods or [])) for k, v in MEDIOS_DE_PAGO.items()],
-        "vista_previa": reverse("public_menu:pagina", args=[request.tenant.slug]) + "?vista=panel",
+        **vista_previa(request.tenant),
         "enlace": qr.enlace_del_menu(request.tenant),
-    })
+    }), request.tenant)
 
 
 # ------------------------------------------------------------- Mesas y QR
@@ -312,6 +337,7 @@ def mesas_y_qr(request):
         "seccion": "qr",
         "es_admin": es_admin(request),
         "mesas": mesas,
+        "con_qr": any(m["enlace"] for m in mesas),
         "enlace": qr.enlace_del_menu(tenant),
     })
 
@@ -487,7 +513,7 @@ def bienvenida(request):
     elegida = request.session.get("bienvenida_categoria", "")
     dias = _horario_por_dia()
     primero = next((d["tramos"][0] for d in dias if d["tramos"]), {"open": "12:00", "close": "21:00"})
-    return render(request, "panel/duenio/bienvenida.html", {
+    return con_vista_previa(render(request, "panel/duenio/bienvenida.html", {
         "paso": paso,
         "final": final,
         "pasos": PASOS,
@@ -504,8 +530,8 @@ def bienvenida(request):
         "categoria_elegida": elegida or (str(categorias[-1].uuid) if categorias else ""),
         "creada_en_paso_3": bool(elegida),
         "enlace": qr.enlace_del_menu(request.tenant),
-        "vista_previa": reverse("public_menu:pagina", args=[request.tenant.slug]) + "?vista=panel",
-    })
+        **vista_previa(request.tenant),
+    }), request.tenant)
 
 
 def _paso_marca(request, ajustes) -> int:

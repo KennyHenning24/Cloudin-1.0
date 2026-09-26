@@ -1,0 +1,10 @@
+{% load cloudin %}{% comment %}
+Vista previa en vivo: el menú REAL del restaurante (su página, con ?cloudin-preview=1) en un
+teléfono. Cloudin no tiene un menú propio: sin página publicada, se explica y no se inventa uno.
+{% include "components/vista_previa.html" %}   (usa vista_previa y api_menu del contexto)
+{% endcomment %}{% if vista_previa %}<div class="telefono"><iframe title="Vista previa de tu menú" src="{{ vista_previa }}" data-api="{{ api_menu }}" data-vista-previa loading="lazy"></iframe></div>{% else %}<div class="telefono sin-pagina">
+  <div class="vacio-amable">
+    <span class="circulo">{% icono "celular" %}</span>
+    <div><strong>Tu menú todavía no está publicado</strong><p class="dim small" style="margin-top:4px">Cuando tenga su página, aquí lo verás con tus cambios en vivo, antes de guardarlos.</p></div>
+  </div>
+</div>{% endif %}

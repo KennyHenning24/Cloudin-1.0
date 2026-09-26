@@ -60,10 +60,12 @@
     const quitar = $("[data-quitar-foto]", raiz);
     raiz.addEventListener("foto-lista", (ev) => {
       fotoNueva = ev.detail.foto;
-      if (urlFotoNueva) URL.revokeObjectURL(urlFotoNueva);
-      urlFotoNueva = URL.createObjectURL(fotoNueva);
       quitarFoto = false;
       if (quitar) quitar.hidden = false;
+      // La vista previa es el sitio del restaurante (otro dominio): la foto viaja como data: URL.
+      const lector = new FileReader();
+      lector.onload = () => { urlFotoNueva = lector.result; programarVista(); };
+      lector.readAsDataURL(fotoNueva);
       marcar();
     });
     quitar && quitar.addEventListener("click", () => {

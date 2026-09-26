@@ -314,8 +314,15 @@ class MesasView(APIView):
         return Response({"created": creadas}, status=201 if creadas else 200)
 
 
+SIN_PAGINA = ("Tu menú todavía no está publicado: el QR sale cuando tenga su página "
+              "(la dirección llega al importar el menú).")
+
+
 class QrView(APIView):
-    """GET staff/qr/menu.(png|svg) · staff/qr/mesa/<id>.(png|svg) · staff/qr/mesas.pdf"""
+    """GET staff/qr/menu.(png|svg) · staff/qr/mesa/<id>.(png|svg) · staff/qr/mesas.pdf
+
+    El QR lleva a la página del menú del restaurante (Tenant.menu_page): Cloudin no
+    tiene un menú propio. Sin página publicada, responde 404 con la explicación."""
 
     permission_classes = [LeeLaCarta]
 
@@ -324,9 +331,10 @@ class QrView(APIView):
 
         tenant = request.tenant
         if todas:
-            mesas = list(Table.objects.filter(is_active=True).order_by("number"))
+            mesas = [m for m in Table.objects.filter(is_active=True).order_by("number") if qr.enlace_de_mesa(tenant, m)]
             if not mesas:
-                return Response({"detail": "Todavía no hay mesas."}, status=404)
+                detalle = SIN_PAGINA if Table.objects.filter(is_active=True).exists() else "Todavía no hay mesas."
+                return Response({"detail": detalle}, status=404)
             contenido = qr.pdf_de_mesas(tenant, mesas)
             return _archivo(contenido, "application/pdf", f"qr-mesas-{tenant.slug}.pdf")
         if mesa_id is not None:
@@ -336,6 +344,8 @@ class QrView(APIView):
             enlace, nombre = qr.enlace_de_mesa(tenant, mesa), f"qr-mesa-{mesa.number}-{tenant.slug}"
         else:
             enlace, nombre = qr.enlace_del_menu(tenant), f"qr-menu-{tenant.slug}"
+        if not enlace:
+            return Response({"detail": SIN_PAGINA}, status=404)
         if formato == "svg":
             return _archivo(qr.svg(enlace), "image/svg+xml", f"{nombre}.svg")
         return _archivo(qr.png(enlace), "image/png", f"{nombre}.png")

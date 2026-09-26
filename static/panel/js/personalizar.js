@@ -109,8 +109,19 @@
 
   // --------------------------------------------------- logo y portada
   const mostrarQuitar = (campo, si) => { const b = $(`[data-quitar-imagen="${campo}"]`, forma); if (b) b.hidden = !si; };
-  $("#subir-logo").addEventListener("foto-subida", () => { mostrarQuitar("logo", true); enviarVista(); });
-  $("#subir-portada").addEventListener("foto-subida", () => mostrarQuitar("cover", true));
+  // Direcciones completas: la vista previa es el sitio del restaurante (otro dominio).
+  const actual = (sel) => { const i = $(sel); return i && !i.hidden && i.getAttribute("src") ? i.src : null; };
+  const imagenes = { logo: actual("#subir-logo img.vista"), cover: actual("#subir-portada img.vista") };
+  $("#subir-logo").addEventListener("foto-subida", (ev) => {
+    imagenes.logo = (ev.detail && ev.detail.logo) || imagenes.logo;
+    mostrarQuitar("logo", true);
+    enviarVista();
+  });
+  $("#subir-portada").addEventListener("foto-subida", (ev) => {
+    imagenes.cover = (ev.detail && ev.detail.cover) || imagenes.cover;
+    mostrarQuitar("cover", true);
+    enviarVista();
+  });
   $$("[data-quitar-imagen]", forma).forEach((b) => b.addEventListener("click", async () => {
     const campo = b.dataset.quitarImagen;
     try {
@@ -120,6 +131,7 @@
       img.hidden = true;
       img.removeAttribute("src");
       caja.classList.remove("con-foto");
+      imagenes[campo] = null;
       mostrarQuitar(campo, false);
       C.aviso(campo === "logo" ? "Logo quitado" : "Portada quitada");
       enviarVista();
@@ -208,15 +220,17 @@
   const vista = C.vistaPrevia($("iframe[data-vista-previa]"));
   let temporizador;
   function programarVista() { clearTimeout(temporizador); temporizador = setTimeout(enviarVista, 200); }
+  // «300 123 4567» -> «+573001234567», como lo guarda el servidor (así sirve el enlace de WhatsApp).
+  const internacional = (n) => { const x = String(n || "").replace(/\D/g, ""); return x.length === 10 ? "+57" + x : n || null; };
   function enviarVista() {
     const d = datos();
-    const logo = $("#subir-logo img.vista");
     vista.enviar({
       colores: { primario: d.color_primary, secundario: d.color_secondary, fondo: d.color_background, texto: d.color_text },
       negocio: {
-        tagline: d.tagline || null, description: d.description || null,
-        logo: logo && !logo.hidden && logo.src ? logo.src : null,
-        contact: { whatsapp: d.whatsapp || null, phone: d.phone || null, address: d.address || null, city: d.city || null },
+        tagline: d.tagline || null, description: d.description || null, logo: imagenes.logo, cover: imagenes.cover,
+        contact: { whatsapp: internacional(d.whatsapp), phone: internacional(d.phone), email: d.email || null,
+                   address: d.address || null, city: d.city || null, maps_url: d.maps_url || null },
+        social: { instagram: d.instagram || null, facebook: d.facebook || null, tiktok: d.tiktok || null },
         hours: d.hours,
       },
     });

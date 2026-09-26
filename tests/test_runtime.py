@@ -289,6 +289,67 @@ def test_nombres_largos_y_ocho_variantes(entorno):
     assert page.text_content("#menu [data-cloudin-key=hamburguesa-clasica] h4").startswith("Hamburguesa triple")
 
 
+def test_los_colores_del_panel_quedan_como_variables_css(entorno):
+    abrir, api, page, errores = entorno
+    page = abrir()
+    colores = page.evaluate("""() => ['primary', 'secondary', 'background', 'text'].map(k =>
+        getComputedStyle(document.documentElement).getPropertyValue('--cloudin-' + k).trim())""")
+    assert colores == ["#B3261E", "#F2C14E", "#1A1110", "#FFF6EC"]
+    # El dueño cambia el color principal en Personalizar y borra el secundario.
+    api.etag = 'W/"ejemplo-2"'
+    api.datos["business"]["brand"].update(primary="#0B6E4F", secondary=None)
+    page.evaluate("Cloudin.refresh()")
+    page.wait_for_function("() => document.documentElement.style.getPropertyValue('--cloudin-primary') === '#0B6E4F'")
+    assert page.evaluate("document.documentElement.style.getPropertyValue('--cloudin-secondary')") == ""
+    assert errores == []
+
+
+def _panel_con_vista_previa(navegador, origen_panel):
+    """Un «panel» en `origen_panel` con el sitio en un iframe (?cloudin-preview=1)."""
+    contexto = navegador.new_context()
+    contexto.route("https://sitio.test/**", lambda r: r.fulfill(status=200, body=pagina(), content_type="text/html"))
+    contexto.route("https://cloudin.test/static/cloudin-menu.v1.js",
+                   lambda r: r.fulfill(status=200, body=RUNTIME, content_type="application/javascript"))
+    api = ApiFalsa()
+    contexto.route(API + "**", api)
+    panel = """<!doctype html><html><body><iframe id="vista" src="https://sitio.test/menu.html?cloudin-preview=1"
+      style="width:400px;height:700px"></iframe><script>
+      window.listo = false;
+      addEventListener("message", (e) => { if (e.data && e.data.tipo === "cloudin:vista-lista") window.listo = true; });
+      window.mandar = (data, foco) => document.getElementById("vista").contentWindow.postMessage(
+        {tipo: "cloudin:vista", data, foco}, "https://sitio.test");
+    </script></body></html>"""
+    contexto.route(origen_panel + "/panel/**", lambda r: r.fulfill(status=200, body=panel, content_type="text/html"))
+    page = contexto.new_page()
+    page.goto(origen_panel + "/panel/")
+    return contexto, page, api
+
+
+def test_vista_previa_del_panel_pinta_lo_que_se_edita(navegador):
+    contexto, page, api = _panel_con_vista_previa(navegador, "https://cloudin.test")
+    page.wait_for_function("() => window.listo")  # el sitio avisó que está listo
+    assert "vista=panel" in api.urls[-1]  # la vista previa no cuenta como visita
+    borrador = copy.deepcopy(DATOS)
+    borrador["menus"][0]["categories"][1]["products"][0].update(name="Limonada de coco helada", price=9500)
+    page.evaluate("([d, foco]) => mandar(d, foco)", [borrador, "limonada-de-coco"])
+    sitio = page.frame_locator("#vista")
+    sitio.locator("[data-cloudin-key=limonada-de-coco] h4").filter(has_text="Limonada de coco helada").wait_for()
+    assert sitio.locator("[data-cloudin-key=limonada-de-coco] .dish__price").inner_text() == "$ 9.500"
+    contexto.close()
+
+
+def test_la_vista_previa_no_acepta_mensajes_de_otro_sitio(navegador):
+    contexto, page, api = _panel_con_vista_previa(navegador, "https://intruso.test")
+    borrador = copy.deepcopy(DATOS)
+    borrador["menus"][0]["categories"][1]["products"][0]["name"] = "Hackeado"
+    page.wait_for_timeout(800)
+    assert page.evaluate("window.listo") is False  # el aviso solo va al origen de la API
+    page.evaluate("([d]) => mandar(d)", [borrador])
+    page.wait_for_timeout(300)
+    assert page.frame_locator("#vista").locator("text=Hackeado").count() == 0
+    contexto.close()
+
+
 @pytest.mark.parametrize("cuando", ["2026-09-26T13:00:00-05:00", "2026-09-27T12:00:00-05:00"])
 def test_horario_igual_que_en_python(entorno, cuando):
     abrir, api, page, errores = entorno

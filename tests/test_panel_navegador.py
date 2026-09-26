@@ -131,6 +131,78 @@ def test_el_editor_crea_el_producto_y_la_vista_previa_lo_muestra(navegador, pane
 
 
 @pytest.mark.django_db(transaction=True)
+def test_en_la_tablet_el_editor_se_abre_en_el_cajon(navegador, panel):
+    contexto, page, errores = _abrir(navegador, panel, "/panel/mi-menu/", ancho=768, alto=1024)
+    page.locator(f'li.producto[data-id="{panel.taco.uuid}"] a.nombre').click()
+    cajon = page.locator("#cajon-editor")
+    cajon.locator("#e-nombre").wait_for()
+    assert page.url.endswith("/panel/mi-menu/")  # no salió de la lista
+    cajon.locator("#e-nombre").fill("Taco de birria especial")
+    with page.expect_navigation():
+        cajon.locator("[data-guardar]").click()
+    page.get_by_text("Cambios guardados").wait_for()
+    assert _producto(panel, pk=panel.taco.pk).name == "Taco de birria especial"
+    contexto.close()
+    assert errores == []
+
+
+@pytest.mark.django_db(transaction=True)
+def test_subir_precios_en_porcentaje_y_deshacer(navegador, panel):
+    contexto, page, errores = _abrir(navegador, panel, "/panel/mi-menu/", ancho=1440, alto=900)
+    page.locator("#seleccionar").click()
+    filas = page.locator(f'.categoria[data-id="{panel.cat.uuid}"] li.producto')
+    for i in range(2):
+        filas.nth(i).locator(".seleccion").check()
+    page.get_by_text("2 seleccionados").wait_for()
+    page.locator('[data-masivo="price_percent"]').click()
+    page.locator("#c-porcentaje").fill("10")
+    page.locator('#dialogo-porcentaje button[type="submit"]').click()
+    page.get_by_text("Precios actualizados en 2 productos").wait_for()
+    assert _esperar(lambda: _producto(panel, pk=panel.taco.pk).price == Decimal("9900"))
+    assert _producto(panel, name__startswith="Quesabirria").price == Decimal("15400")
+    assert "$ 9.900" in page.locator(f'li.producto[data-id="{panel.taco.uuid}"]').inner_text()
+    page.get_by_role("button", name="Deshacer").click()
+    assert _esperar(lambda: _producto(panel, pk=panel.taco.pk).price == Decimal("9000"))
+    assert _producto(panel, name__startswith="Quesabirria").price == Decimal("14000")
+    contexto.close()
+    assert errores == []
+
+
+@pytest.mark.django_db(transaction=True)
+def test_ordenar_con_flechas_en_el_celular(navegador, panel):
+    contexto, page, errores = _abrir(navegador, panel, "/panel/mi-menu/")
+    page.locator("#ordenar").click()
+    fila = page.locator(f'li.producto[data-id="{panel.taco.uuid}"]')
+    # Sin orden guardado van por nombre: Quesabirria y luego el taco. Se sube el taco.
+    fila.locator('[data-mover="arriba"]').click()
+    assert _esperar(lambda: _producto(panel, name__startswith="Quesabirria").position == 1)
+    assert _producto(panel, pk=panel.taco.pk).position == 0
+    assert page.locator(f'.categoria[data-id="{panel.cat.uuid}"] li.producto').first.get_attribute("data-id") == str(panel.taco.uuid)
+    contexto.close()
+    assert errores == []
+
+
+@pytest.mark.django_db(transaction=True)
+def test_personalizar_guarda_datos_y_horario(navegador, panel):
+    contexto, page, errores = _abrir(navegador, panel, "/panel/personalizar/", ancho=1440, alto=900)
+    page.locator("#c-tagline").fill("La birria más jugosa de Cali")
+    page.locator("#c-whatsapp").fill("310 555 1234")
+    page.locator('.dia[data-dia="mon"] .switch').click()  # abre el lunes con un horario
+    page.locator('[data-copiar-horario]').click()          # y lo copia a toda la semana
+    page.locator("[data-guardar]").click()
+    page.get_by_text("Cambios guardados: ya se ven en tu menú.").wait_for()
+    assert page.locator("#c-whatsapp").input_value() == "310 555 1234"
+    with panel.en():
+        from apps.business.models import OpeningHours
+
+        ajustes = RestaurantSettings.load()
+        assert ajustes.tagline == "La birria más jugosa de Cali" and ajustes.whatsapp == "+573105551234"
+        assert sorted(OpeningHours.objects.values_list("day", flat=True)) == list(range(7))
+    contexto.close()
+    assert errores == []
+
+
+@pytest.mark.django_db(transaction=True)
 @pytest.mark.parametrize("ancho", [375, 768])
 def test_ninguna_pantalla_se_sale_de_lo_ancho(navegador, panel, ancho):
     for ruta in PANTALLAS:

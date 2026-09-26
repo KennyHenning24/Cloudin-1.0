@@ -118,8 +118,8 @@
         <strong>Así se ve en tu menú</strong>
         <button type="button" class="btn fantasma icono sm cerrar-vista" data-cerrar-vista aria-label="Cerrar la vista previa">{% icono "x" %}</button>
       </div>
-      <div class="telefono"><iframe title="Vista previa de tu menú" src="{{ vista_previa }}" data-vista-previa loading="lazy"></iframe></div>
-      <label class="switch"><input type="checkbox" role="switch" data-ver-agotado><span>Ver como agotado</span></label>
+      {% include "components/vista_previa.html" %}
+      {% if vista_previa %}<label class="switch"><input type="checkbox" role="switch" data-ver-agotado><span>Ver como agotado</span></label>{% endif %}
     </aside>
   </div>
 

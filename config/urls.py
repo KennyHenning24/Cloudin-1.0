@@ -37,7 +37,7 @@ admin.site.index_title = "Administración de restaurantes"
 urlpatterns = [
     # En <slug>.<dominio>/ se ve el menú; sin restaurante, lleva al panel.
     path("", raiz, name="raiz"),
-    # Menú público: API cloudin.menu/v1 y menú de respaldo (/m/<slug>/).
+    # API pública del menú (cloudin.menu/v1). El menú lo pone cada restaurante en su sitio.
     path("", include("apps.public_menu.urls")),
     # El login del panel maestro, con límite de intentos (va antes que el del admin).
     path("admin/login/", LoginAdminSeguro.as_view(), name="admin-login-seguro"),

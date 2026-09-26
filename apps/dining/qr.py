@@ -1,10 +1,11 @@
 """Códigos QR del menú y de cada mesa (PNG, SVG y un PDF con todas las mesas).
 
-A dónde lleva el QR de una mesa, en este orden:
-1. La página del menú del sitio (`Tenant.menu_page`) + `?mesa=<token>`.
+Cloudin no tiene un menú propio: el QR lleva a la página del menú del restaurante
+(`Tenant.menu_page`, la que llega con la importación). Para una mesa:
+1. `menu_page` + `?mesa=<token>` (el runtime lo lee y muestra «Mesa 5»).
 2. Si el restaurante pide por QR desde su sitio (plan completo, `site_url`), el
    enlace de siempre (`mesa.html?m=<token>`): así no hay que reimprimir.
-3. Si no tiene sitio, el menú de respaldo de Cloudin: `/m/<slug>/?mesa=<token>`.
+3. Si todavía no hay página publicada, no hay QR (enlace vacío).
 
 El token (no el número) va en el QR: cuando lleguen los pedidos, nadie podrá
 pedir para otra mesa cambiando un número en la dirección.
@@ -15,34 +16,28 @@ from urllib.parse import urlsplit, urlunsplit
 
 import qrcode
 import qrcode.image.svg
-from django.conf import settings
 from PIL import Image, ImageDraw, ImageFont
 
 from .models import Table
 
 
-def _base_publica() -> str:
-    return (settings.CLOUDIN_PUBLIC_URL or "http://localhost:8000").rstrip("/")
-
-
-def _con_parametro(url: str, clave: str, valor: str) -> str:
+def con_parametro(url: str, clave: str, valor: str) -> str:
     partes = urlsplit(url)
     consulta = f"{partes.query}&" if partes.query else ""
     return urlunsplit(partes._replace(query=f"{consulta}{clave}={valor}"))
 
 
 def enlace_del_menu(tenant) -> str:
-    if tenant.menu_page:
-        return tenant.menu_page
-    return f"{_base_publica()}/m/{tenant.slug}/"
+    """La página del menú del restaurante, o "" si todavía no está publicada."""
+    return tenant.menu_page or ""
 
 
 def enlace_de_mesa(tenant, mesa) -> str:
     if tenant.menu_page:
-        return _con_parametro(tenant.menu_page, "mesa", mesa.token)
+        return con_parametro(tenant.menu_page, "mesa", mesa.token)
     if tenant.site_url and not tenant.es_plan_menu:
         return tenant.qr_link(mesa.token)
-    return _con_parametro(enlace_del_menu(tenant), "mesa", mesa.token)
+    return ""
 
 
 def asegurar_mesas(cantidad: int) -> int:

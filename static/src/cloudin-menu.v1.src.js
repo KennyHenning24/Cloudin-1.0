@@ -12,6 +12,11 @@
  *  4. Lee ?mesa= y lo expone en window.Cloudin.table.
  *  5. Pone data-cloudin-state = static | cached | live | error.
  *  6. Dispara cloudin:ready, cloudin:rendered (detail.root) y cloudin:error.
+ *  7. Pone los colores del restaurante (business.brand) como variables CSS en <html>:
+ *     --cloudin-primary, --cloudin-secondary, --cloudin-background, --cloudin-text.
+ *     El sitio los usa así: color: var(--cloudin-primary, #B3261E).
+ *  8. Vista previa del panel: con ?cloudin-preview=1 y dentro de un iframe, acepta
+ *     (solo del origen de la API) los datos que el dueño está editando y los pinta.
  */
 ((w, d) => {
   "use strict";
@@ -20,7 +25,10 @@
 
   const LLAVE = "cloudin:" + (C.restaurant || ""),
     TTL = (C.cacheTtl ?? 60) * 1e3,
-    MESA = new URLSearchParams(location.search).get("mesa"),
+    Q = new URLSearchParams(location.search),
+    MESA = Q.get("mesa"),
+    PREVIA = Q.has("cloudin-preview") && w.parent != w,
+    ORIGEN = new URL(C.api, location.href).origin,
     DIAS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"],
     zona = (n) => '[data-cloudin="' + n + '"]',
     todos = (s, r = d) => [...r.querySelectorAll(s)],
@@ -33,6 +41,7 @@
     table: MESA ? { token: MESA, number: /^\d+$/.test(MESA) ? +MESA : null } : null,
     data: null,
     state: "static",
+    preview: PREVIA,
     render: (x) => pintar(x, "live"),
     refresh: () => cargar(1),
   });
@@ -201,6 +210,10 @@
       evento("rendered", { root: cont });
     }
     llenar(d.body, base); // datos del negocio en todo el sitio: header, footer, WhatsApp…
+    // Colores del panel (Personalizar) como variables CSS: el sitio decide dónde usarlos.
+    const marca = x.business?.brand || {}, raiz = d.documentElement.style;
+    for (const k of ["primary", "secondary", "background", "text"])
+      /^#[\da-f]{6}$/i.test(marca[k]) ? raiz.setProperty("--cloudin-" + k, marca[k]) : raiz.removeProperty("--cloudin-" + k);
     pintado = 1;
     estado(origen);
   }
@@ -227,7 +240,9 @@
         pintar(c.d, "cached");
       } catch (e) {}
     if (c && !forzar && !MESA && Date.now() - c.t < TTL) return Promise.resolve(listo());
-    return fetch(C.api + (MESA ? (C.api.includes("?") ? "&" : "?") + "table=" + encodeURIComponent(MESA) : ""),
+    // La vista previa del panel no cuenta como una visita al menú.
+    const extra = [MESA && "table=" + encodeURIComponent(MESA), PREVIA && "vista=panel"].filter(Boolean).join("&");
+    return fetch(C.api + (extra ? (C.api.includes("?") ? "&" : "?") + extra : ""),
       { cache: "no-cache", credentials: "omit" })
       .then((r) => {
         if (!r.ok) throw Error("HTTP " + r.status);
@@ -240,6 +255,21 @@
         evento("error", { error });
       })
       .then(listo);
+  }
+
+  // --------------------------------------------------- vista previa del panel
+  // El panel de Cloudin carga este sitio en un iframe (?cloudin-preview=1) y le manda
+  // lo que el dueño está editando. Solo se acepta lo que llega del origen de la API.
+  if (PREVIA) {
+    w.addEventListener("message", (e) => {
+      const m = e.data;
+      if (e.origin != ORIGEN || m?.tipo != "cloudin:vista") return;
+      try {
+        pintar(m.data, "live");
+      } catch (er) {}
+      m.foco && d.querySelector('[data-cloudin="products"] [data-cloudin-key="' + CSS.escape(m.foco) + '"]')?.scrollIntoView({ block: "center" });
+    });
+    d.addEventListener("cloudin:ready", () => w.parent.postMessage({ tipo: "cloudin:vista-lista" }, ORIGEN));
   }
 
   estado("static");
