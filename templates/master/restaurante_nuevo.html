@@ -1,0 +1,105 @@
+{% extends "master/_base.html" %}
+{% block title %}Nuevo restaurante — Cloudin{% endblock %}
+{% block titulo %}Nuevo restaurante{% endblock %}
+{% block subtitulo %}<p class="sub">Queda listo para operar en un solo paso</p>{% endblock %}
+
+{% block content %}
+<form method="post" class="cols cols-2">
+  {% csrf_token %}
+
+  <div class="stack">
+    <div class="card">
+      <div class="card-head"><div><h2>Datos del restaurante</h2></div></div>
+      {% include "master/_campo.html" with campo=form.name %}
+      {% include "master/_campo.html" with campo=form.slug %}
+      <div class="form-row">
+        {% include "master/_campo.html" with campo=form.city %}
+        {% include "master/_campo.html" with campo=form.phone %}
+      </div>
+      {% include "master/_campo.html" with campo=form.address %}
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <div>
+          <h2>Sitio web</h2>
+          <p>La página desde la que llegarán los pedidos. Solo esa dirección queda autorizada.</p>
+        </div>
+      </div>
+      {% include "master/_campo.html" with campo=form.site_url %}
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <div>
+          <h2>Datos fiscales</h2>
+          <p>Opcional por ahora; se usan al activar la facturación electrónica.</p>
+        </div>
+      </div>
+      <div class="form-row">
+        {% include "master/_campo.html" with campo=form.legal_name %}
+        {% include "master/_campo.html" with campo=form.nit %}
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <div>
+          <h2>Administrador del restaurante</h2>
+          <p>Quien entra al panel y opera las mesas. Después puede agregar meseros y cajeros.</p>
+        </div>
+      </div>
+      {% include "master/_campo.html" with campo=form.admin_usuario %}
+      <div class="campo" style="margin-top:calc(var(--sp-3) * -1 + 2px)">
+        <div class="ayuda">Entrará como <code id="previo">restaurante.admin</code></div>
+      </div>
+      {% include "master/_campo.html" with campo=form.admin_nombre %}
+      {% include "master/_campo.html" with campo=form.admin_correo %}
+    </div>
+  </div>
+
+  <div class="card" style="position:sticky;top:78px">
+    <div class="card-head"><div><h2>Qué va a pasar</h2></div></div>
+    <ol class="muted small" style="padding-left:18px;margin:0 0 var(--sp-4);line-height:2">
+      <li>Se registra el restaurante</li>
+      <li>Se crea su base de datos propia</li>
+      <li>Se le aplican las migraciones</li>
+      <li>Se genera su API key</li>
+      <li>Se crea el usuario administrador con su contraseña</li>
+      <li>Se autoriza su sitio web, si ya lo tiene</li>
+    </ol>
+    <button class="btn block" type="submit">Crear restaurante</button>
+    <p class="dim small" style="margin-top:var(--sp-2);text-align:center">
+      Tarda unos segundos: se migra la base nueva.
+    </p>
+  </div>
+</form>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const nombre = document.getElementById("id_name");
+const slug = document.getElementById("id_slug");
+const usuario = document.getElementById("id_admin_usuario");
+const previo = document.getElementById("previo");
+
+const limpiar = s => s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "")
+                      .replace(/[^a-z0-9]+/g, "").slice(0, 40);
+
+// Mientras no se toque el identificador a mano, se deriva del nombre.
+let slugManual = false;
+slug.addEventListener("input", () => { slugManual = true; pintar(); });
+nombre.addEventListener("input", () => {
+  if (!slugManual) slug.value = limpiar(nombre.value);
+  pintar();
+});
+usuario.addEventListener("input", pintar);
+
+function pintar() {
+  const s = limpiar(slug.value) || "restaurante";
+  const u = (usuario.value || "admin").trim().toLowerCase();
+  previo.textContent = `${s}.${u}`;
+}
+pintar();
+</script>
+{% endblock %}

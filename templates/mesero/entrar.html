@@ -1,0 +1,86 @@
+{% extends "mesero/base.html" %}
+{% load static %}
+{% block title %}Entrar · Meseros · {{ t.name }}{% endblock %}
+
+{% block head %}
+<style>
+  .pantalla{min-height:100dvh;display:grid;place-items:center;position:relative;overflow:hidden;
+    padding:calc(24px + var(--arriba)) 20px calc(24px + var(--abajo))}
+  .aura{position:absolute;border-radius:50%;filter:blur(80px);pointer-events:none}
+  .aura.a{top:-28vh;left:50%;transform:translateX(-50%);width:110vmax;height:60vh;
+    background:radial-gradient(closest-side,rgba(247,122,39,.24),transparent)}
+  .aura.b{bottom:-36vh;left:50%;transform:translateX(-50%);width:90vmax;height:60vh;
+    background:radial-gradient(closest-side,rgba(227,98,37,.16),transparent)}
+  .tarjeta{position:relative;z-index:1;width:100%;max-width:420px;border-radius:var(--r-xl);
+    padding:32px 24px 26px;background:rgba(19,21,28,.8);backdrop-filter:blur(20px);
+    border:1px solid rgba(255,255,255,.06);box-shadow:0 30px 80px rgba(0,0,0,.5);
+    animation:subir .55s var(--ease) both}
+  @keyframes subir{from{opacity:0;transform:translateY(16px)}}
+  .marca{text-align:center;margin-bottom:26px}
+  .marca .simbolo{height:56px;filter:drop-shadow(0 10px 26px rgba(239,112,38,.35))}
+  .marca .palabra{height:24px;display:block;margin:12px auto 0}
+  .chip-app{display:inline-block;margin-top:14px;padding:5px 12px;border-radius:99px;
+    background:var(--brand-soft);color:var(--brand);font-size:13px;font-weight:650;
+    letter-spacing:.04em}
+  .marca h1{font-size:21px;font-weight:720;margin-top:12px;letter-spacing:-.01em}
+  .formulario{display:grid;gap:16px}
+  .ojo{position:relative}
+  .ojo .entrada{padding-right:60px}
+  .ojo button{position:absolute;right:4px;top:50%;transform:translateY(-50%);
+    width:48px;height:48px;border-radius:12px;color:var(--text-3);display:grid;place-items:center}
+  .error{background:var(--danger-soft);border:1px solid rgba(242,85,90,.3);color:#f7b0b2;
+    border-radius:var(--r);padding:12px 14px;font-size:15px}
+  .pie{text-align:center;color:var(--text-3);font-size:13px;margin-top:20px;line-height:1.55}
+</style>
+{% endblock %}
+
+{% block body %}
+<main class="pantalla">
+  <div class="aura a"></div><div class="aura b"></div>
+  <section class="tarjeta">
+    <div class="marca">
+      <img class="simbolo" src="{% static 'img/cloudin-marca.png' %}" alt="">
+      <img class="palabra wm-oscuro" src="{% static 'img/cloudin-texto.png' %}" alt="Cloudin"><img class="palabra wm-claro" src="{% static 'img/cloudin-texto-claro.png' %}" alt="" aria-hidden="true">
+      <span class="chip-app">MESEROS</span>
+      <h1>{{ t.name }}</h1>
+    </div>
+
+    <form class="formulario" method="post" autocomplete="off">
+      {% csrf_token %}
+      {% if error %}<div class="error" role="alert">{{ error }}</div>{% endif %}
+      <div class="campo">
+        <label for="usuario">Usuario</label>
+        <input class="entrada" id="usuario" name="usuario" value="{{ usuario }}"
+               autocapitalize="none" autocorrect="off" spellcheck="false"
+               autocomplete="username" required {% if not usuario %}autofocus{% endif %}>
+      </div>
+      <div class="campo">
+        <label for="clave">Contraseña</label>
+        <div class="ojo">
+          <input class="entrada" id="clave" name="clave" type="password"
+                 autocomplete="current-password" required {% if usuario %}autofocus{% endif %}>
+          <button type="button" aria-label="Mostrar contraseña" id="ver">
+            <svg class="ico" viewBox="0 0 24 24"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>
+          </button>
+        </div>
+      </div>
+      <button class="boton bloque" type="submit" style="margin-top:6px">Entrar</button>
+    </form>
+
+    <p class="pie">
+      Tu usuario te lo da el administrador del restaurante.<br>
+      Esta entrada es solo para tomar pedidos.
+    </p>
+  </section>
+</main>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  const clave = document.getElementById("clave");
+  document.getElementById("ver").addEventListener("click", () => {
+    clave.type = clave.type === "password" ? "text" : "password";
+    clave.focus();
+  });
+</script>
+{% endblock %}

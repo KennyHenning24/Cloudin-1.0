@@ -1,0 +1,1150 @@
+{% extends "mesero/base.html" %}
+{% load static %}
+{% block title %}Meseros · {{ t.name }}{% endblock %}
+
+{% block head %}
+<style>
+/* ---------------------------------------------------------- estructura */
+.barra{position:sticky;top:0;z-index:30;display:flex;align-items:center;gap:12px;
+  padding:calc(10px + var(--arriba)) 16px 10px;background:var(--topbar);
+  backdrop-filter:blur(16px);border-bottom:1px solid var(--line-soft)}
+.barra .logo{height:30px;flex:none}
+.barra .quien{min-width:0}
+.barra .quien b{display:block;font-size:15px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.barra .quien small{display:block;font-size:12px;color:var(--text-3)}
+.barra .fin{margin-left:auto;display:flex;align-items:center;gap:8px}
+.avatar{width:44px;height:44px;border-radius:14px;display:grid;place-items:center;
+  background:var(--brand-grad);color:#fff;font-weight:760;font-size:15px}
+.avatar.tema-b{background:var(--surface-3);color:var(--text-2)}
+.pildora{display:inline-flex;align-items:center;gap:6px;padding:5px 11px;border-radius:99px;
+  font-size:13px;font-weight:620;background:var(--surface-3);color:var(--text-2);white-space:nowrap}
+.pildora .punto{width:7px;height:7px;border-radius:50%;background:currentColor}
+.pildora.ok{background:var(--ok-soft);color:var(--ok)}
+.pildora.aviso{background:var(--warn-soft);color:var(--warn)}
+.pildora.marca{background:var(--brand-soft);color:var(--brand)}
+.pildora.info{background:var(--info-soft);color:var(--info)}
+
+.sinred{position:sticky;top:calc(64px + var(--arriba));z-index:29;margin:0;padding:10px 16px;
+  background:var(--danger-soft);color:var(--danger-text);font-size:14px;text-align:center;
+  border-bottom:1px solid rgba(242,85,90,.25)}
+
+main{padding:16px 16px calc(120px + var(--abajo));max-width:1280px;margin:0 auto}
+
+/* ---------------------------------------------------------- mesas */
+.chips{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;margin:0 -16px 16px;padding-left:16px;
+  padding-right:16px;scrollbar-width:none}
+.chips::-webkit-scrollbar{display:none}
+.chip{flex:none;min-height:44px;padding:0 16px;border-radius:99px;background:var(--surface-2);
+  border:1px solid var(--line);color:var(--text-2);font-weight:600;font-size:15px;
+  display:inline-flex;align-items:center;gap:8px;transition:background .15s,border-color .15s}
+.chip b{font-weight:760;color:var(--text)}
+.chip.on{background:var(--brand-soft);border-color:var(--brand-line);color:var(--text)}
+
+/* bienvenida: saludo + lo que lleva el mesero en el turno */
+.bienvenida{position:relative;overflow:hidden;display:grid;gap:18px;margin:6px 0 26px;
+  padding:22px 20px;border-radius:var(--r-xl);border:1px solid var(--line);
+  background:radial-gradient(120% 140% at 0% 0%,rgba(247,122,39,.20),transparent 55%),
+             linear-gradient(180deg,var(--surface-2),var(--surface))}
+.bienvenida::after{content:"";position:absolute;right:-60px;top:-60px;width:220px;height:220px;border-radius:50%;
+  background:radial-gradient(circle,rgba(247,122,39,.16),transparent 70%);pointer-events:none}
+.saludo{position:relative;z-index:1;min-width:0}
+.saludo .fecha{display:inline-flex;align-items:center;gap:8px;font-size:13px;font-weight:620;letter-spacing:.02em;
+  color:var(--text-2)}
+.saludo .fecha .punto{width:7px;height:7px;border-radius:50%;background:var(--ok);box-shadow:0 0 0 4px var(--ok-soft)}
+.saludo .fecha .punto.apagado{background:var(--warn);box-shadow:0 0 0 4px var(--warn-soft)}
+.saludo h1{font-size:clamp(26px,5.4vw,38px);font-weight:790;letter-spacing:-.03em;line-height:1.08;margin-top:8px}
+.saludo h1 .nombre{background:var(--brand-grad);-webkit-background-clip:text;background-clip:text;color:transparent}
+.saludo p{color:var(--text-2);font-size:15.5px;margin-top:6px;max-width:44ch}
+.cifras{position:relative;z-index:1;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+/* En el teléfono lo vendido ocupa su propia fila: es la cifra que más crece. */
+.cifras .cifra.destacada{grid-column:1/-1;display:grid;grid-template-columns:auto 1fr;column-gap:12px;align-items:center}
+.cifras .cifra.destacada .ico-c{grid-row:span 2;margin:0}
+@media (min-width:760px){
+  .cifras{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .cifras .cifra.destacada{grid-column:auto;display:block}
+  .cifras .cifra.destacada .ico-c{margin-bottom:10px}
+}
+.cifra{padding:14px 14px 13px;border-radius:var(--r-lg);background:color-mix(in srgb,var(--bg) 60%,transparent);border:1px solid var(--line);
+  backdrop-filter:blur(6px);min-width:0}
+.cifra .ico-c{width:34px;height:34px;border-radius:11px;display:grid;place-items:center;background:var(--surface-3);
+  color:var(--text-2);margin-bottom:10px}
+.cifra .ico-c svg{width:18px;height:18px}
+.cifra small{display:block;font-size:12.5px;color:var(--text-3);font-weight:600;line-height:1.25}
+.cifra b{display:block;font-size:clamp(19px,3.6vw,26px);font-weight:790;letter-spacing:-.02em;margin-top:3px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cifra.destacada{background:linear-gradient(150deg,rgba(247,122,39,.22),color-mix(in srgb,var(--bg) 60%,transparent) 70%);border-color:var(--brand-line)}
+.cifra.destacada .ico-c{background:var(--brand-grad);color:#fff}
+
+.cabeza-lista{display:flex;align-items:center;gap:12px;margin:0 0 12px}
+.cabeza-lista h2{font-size:22px;font-weight:760;letter-spacing:-.02em}
+.cabeza-lista .fin{margin-left:auto;color:var(--text-3);font-size:13.5px;display:inline-flex;align-items:center;gap:6px}
+
+.rejilla{display:grid;gap:14px;grid-template-columns:repeat(auto-fill,minmax(150px,1fr))}
+.mesa{position:relative;text-align:left;min-height:178px;padding:14px 14px 13px;border-radius:var(--r-lg);
+  background:linear-gradient(180deg,var(--surface-2),var(--surface));border:1.5px solid var(--line);
+  display:flex;flex-direction:column;overflow:hidden;
+  transition:transform .14s var(--ease),border-color .15s,box-shadow .2s}
+.mesa:active{transform:scale(.97)}
+@media (hover:hover){.mesa:hover{border-color:var(--brand-line);box-shadow:0 14px 34px rgba(0,0,0,.35);transform:translateY(-2px)}}
+.mesa .cab{display:flex;align-items:flex-start;gap:8px}
+.mesa .num{font-size:38px;font-weight:820;letter-spacing:-.045em;line-height:.95}
+.mesa .num small{display:block;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--text-3);
+  font-weight:700;margin-bottom:4px}
+.mesa .tags{margin-left:auto;display:flex;flex-direction:column;gap:5px;align-items:flex-end}
+.mesa .tags .pildora{font-size:12px;padding:4px 9px}
+.mesa .plano{display:grid;place-items:center;flex:1;padding:6px 0 4px;min-height:70px}
+.mesa .plano svg{width:min(100%,108px);height:auto;overflow:visible}
+.plano .tablero{fill:var(--menta-bg);stroke:var(--menta);stroke-width:1.6}
+.plano .silla{fill:var(--menta-bg);stroke:var(--menta);stroke-width:1.4}
+.mesa .estado{font-size:13.5px;color:var(--text-3);display:flex;align-items:baseline;gap:6px;flex-wrap:wrap}
+.mesa .monto{font-size:19px;font-weight:760;color:var(--text);margin-left:auto}
+.mesa.ocupada{background:radial-gradient(130% 90% at 50% 0%,rgba(247,122,39,.14),transparent 62%),
+  linear-gradient(180deg,var(--surface-2),var(--surface));border-color:rgba(247,122,39,.30)}
+.mesa.ocupada .tablero{fill:rgba(247,122,39,.16);stroke:var(--brand)}
+.mesa.ocupada .silla{fill:rgba(247,122,39,.30);stroke:rgba(247,122,39,.8)}
+.mesa.mia{border-color:var(--brand);box-shadow:0 0 0 1px rgba(247,122,39,.25) inset}
+.mesa.mia::before{content:"";position:absolute;left:0;top:18px;bottom:18px;width:4px;
+  border-radius:0 4px 4px 0;background:var(--brand-grad)}
+.mesa.libre .estado .libre-punto{width:7px;height:7px;border-radius:50%;background:var(--ok);align-self:center}
+.vacio{padding:40px 20px;text-align:center;color:var(--text-3);border:1.5px dashed var(--line);
+  border-radius:var(--r-lg)}
+
+/* tablet y PC: saludo al lado de las cifras, mesas más grandes y con más aire */
+@media (min-width:760px){
+  main{padding-left:28px;padding-right:28px}
+  .chips{margin-left:-28px;margin-right:-28px;padding-left:28px;padding-right:28px}
+  .bienvenida{padding:30px 30px;gap:24px;margin-bottom:32px}
+  .cifra{padding:16px 16px 15px}
+  .cifra b{font-size:28px}
+  .rejilla{gap:20px;grid-template-columns:repeat(auto-fill,minmax(196px,1fr))}
+  .mesa{min-height:214px;padding:18px 18px 16px}
+  .mesa .num{font-size:46px}
+  .mesa .plano svg{width:min(100%,132px)}
+  .cabeza-lista{margin-bottom:16px}
+  .fija{margin:0 -28px;padding:8px 28px 4px}
+}
+@media (min-width:1024px){
+  .bienvenida{grid-template-columns:minmax(0,1fr) minmax(0,1.3fr);align-items:center;gap:32px}
+  .cifra b{font-size:clamp(22px,2.2vw,30px)}
+}
+@media (min-width:1200px){
+  .rejilla{gap:24px;grid-template-columns:repeat(auto-fill,minmax(220px,1fr))}
+  .mesa{min-height:232px}
+}
+
+/* ---------------------------------------------------------- mesa */
+.cabeza-mesa{display:flex;align-items:center;gap:12px;margin:2px 0 14px}
+.atras{width:var(--toque);height:var(--toque);border-radius:var(--r);background:var(--surface-2);
+  border:1px solid var(--line);display:grid;place-items:center;flex:none}
+.cabeza-mesa h1{font-size:26px;font-weight:780;letter-spacing:-.02em;line-height:1.1}
+.cabeza-mesa p{font-size:14px;color:var(--text-3);margin-top:2px}
+
+.segmento{display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:4px;border-radius:var(--r);
+  background:var(--surface-2);border:1px solid var(--line);margin-bottom:14px}
+.segmento button{min-height:46px;border-radius:11px;font-weight:660;color:var(--text-2);font-size:16px}
+.segmento button.on{background:var(--surface-3);color:var(--text);box-shadow:0 2px 10px rgba(0,0,0,.3)}
+.segmento .cuenta{margin-left:6px;padding:1px 8px;border-radius:99px;background:var(--brand);color:#fff;font-size:13px}
+
+.fija{position:sticky;top:calc(64px + var(--arriba));z-index:20;background:var(--bg);
+  margin:0 -16px;padding:8px 16px 4px}
+.buscar{position:relative;margin-bottom:10px}
+.buscar .ico{position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--text-3)}
+.buscar .entrada{padding-left:46px;background:var(--surface)}
+.fija .chips{margin-bottom:6px}
+
+.seccion{font-size:13px;letter-spacing:.09em;text-transform:uppercase;color:var(--text-3);
+  font-weight:680;margin:18px 2px 8px}
+.productos{display:grid;gap:8px}
+.producto{display:flex;align-items:center;gap:12px;min-height:74px;padding:12px 12px 12px 16px;
+  border-radius:var(--r-lg);background:var(--surface);border:1.5px solid var(--line-soft);
+  transition:border-color .15s,background .15s}
+.producto.con{border-color:var(--brand-line);background:linear-gradient(90deg,rgba(247,122,39,.08),transparent 60%),var(--surface)}
+.producto .info{flex:1;min-width:0}
+.producto .foto{width:64px;height:64px;border-radius:16px;flex:none;background:var(--surface-3) center/cover no-repeat;
+  display:grid;place-items:center;color:var(--text-3);overflow:hidden}
+.producto .foto svg{width:28px;height:28px;stroke:currentColor;fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.producto .etiquetas{display:flex;gap:6px;margin-top:5px;flex-wrap:wrap}
+.producto .etiquetas span{font-size:11.5px;font-weight:650;padding:2px 8px;border-radius:99px;background:var(--info-soft);color:var(--info)}
+@media (min-width:760px){.producto .foto{width:72px;height:72px}}
+
+/* hoja de toppings: abajo en el teléfono, centrada en tablet y PC */
+.opciones-foto{height:150px;margin:-2px -20px 0;background:var(--surface-3) center/cover no-repeat;border-bottom:1px solid var(--line-soft)}
+.grupo-op{margin:16px 0 4px}
+.grupo-op h3{font-size:15.5px;font-weight:720;display:flex;align-items:center;gap:8px}
+.grupo-op h3 small{font-size:12px;font-weight:650;color:var(--text-3)}
+.grupo-op h3 .req{color:var(--warn);background:var(--warn-soft);padding:2px 8px;border-radius:99px;font-size:11.5px}
+.op{display:flex;width:100%;text-align:left;align-items:center;gap:12px;min-height:56px;padding:10px 14px;margin-top:8px;border-radius:14px;
+  background:var(--surface-2);border:1.5px solid var(--line);cursor:pointer;font-size:16px}
+.op input{position:absolute;opacity:0;pointer-events:none}
+.op .marca{width:24px;height:24px;border-radius:50%;border:2px solid var(--line);flex:none;display:grid;place-items:center}
+.op.varios .marca{border-radius:7px}
+.op .precio-op{margin-left:auto;color:var(--text-2);font-weight:650;font-size:14.5px}
+.op.on{border-color:var(--brand);background:var(--brand-soft)}
+.op.on .marca{border-color:var(--brand);background:var(--brand)}
+.op.on .marca::after{content:"";width:9px;height:9px;border-radius:50%;background:#fff}
+.op.varios.on .marca::after{width:11px;height:6px;border-radius:0;background:none;border-left:2.5px solid #fff;
+  border-bottom:2.5px solid #fff;transform:rotate(-45deg) translate(1px,-1px)}
+.pie-op{display:flex;gap:12px;align-items:center}
+.pie-op .paso{flex:none}
+@media (min-width:760px){
+  .hoja.modal{left:50%;right:auto;bottom:auto;top:50%;width:min(560px,calc(100% - 48px));max-height:88dvh;
+    border-radius:var(--r-xl);border:1px solid var(--line);transform:translate(-50%,-46%) scale(.98);opacity:0;
+    transition:transform .22s var(--ease),opacity .18s}
+  .hoja.modal.on{transform:translate(-50%,-50%);opacity:1}
+  .hoja.modal .asa{display:none}
+  .opciones-foto{border-radius:var(--r-xl) var(--r-xl) 0 0;margin-top:0}
+}
+.producto .nombre{font-weight:650;font-size:16.5px;line-height:1.25}
+.producto .desc{font-size:13.5px;color:var(--text-3);margin-top:2px;display:-webkit-box;
+  -webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden}
+.producto .precio{font-size:15px;color:var(--text-2);margin-top:3px;font-weight:600}
+.mas{width:var(--toque);height:var(--toque);border-radius:16px;background:var(--brand-grad);color:#fff;
+  display:grid;place-items:center;flex:none;box-shadow:0 6px 18px rgba(239,112,38,.3)}
+.paso{display:flex;align-items:center;gap:4px;background:var(--surface-3);border-radius:16px;padding:4px;flex:none}
+.paso button{width:46px;height:46px;border-radius:12px;display:grid;place-items:center;background:var(--surface-2)}
+.paso button.suma{background:var(--brand-grad);color:#fff}
+.paso b{min-width:30px;text-align:center;font-size:19px;font-weight:780}
+
+/* ---------------------------------------------------------- cuenta */
+.pedido{border-radius:var(--r-lg);background:var(--surface);border:1.5px solid var(--line-soft);
+  padding:14px 16px;margin-bottom:10px}
+.pedido .cab{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.pedido .cab .fin{margin-left:auto;color:var(--text-3);font-size:14px}
+.pedido .linea{display:flex;gap:10px;padding:5px 0;font-size:15.5px}
+.pedido .linea .cant{font-weight:760;color:var(--brand);min-width:28px}
+.pedido .linea small{display:block;color:var(--text-3);font-size:13px}
+.pedido .linea .val{margin-left:auto;color:var(--text-2)}
+.pedido .acciones{margin-top:10px;display:flex;gap:8px}
+.pedido.servido{opacity:.62}
+.total-cuenta{display:flex;align-items:center;padding:16px;border-radius:var(--r-lg);
+  background:var(--surface-2);border:1px solid var(--line);font-size:17px;margin-top:6px}
+.total-cuenta b{margin-left:auto;font-size:24px;font-weight:780}
+
+/* ---------------------------------------------------------- carrito */
+.dock{position:fixed;left:0;right:0;bottom:0;z-index:40;padding:10px 16px calc(12px + var(--abajo));
+  background:linear-gradient(180deg,transparent,color-mix(in srgb,var(--bg) 95%,transparent) 30%);pointer-events:none}
+.dock .boton{pointer-events:auto;width:100%;max-width:720px;margin:0 auto;display:flex;
+  min-height:64px;justify-content:space-between;padding:0 20px;font-size:17px;border-radius:18px}
+.dock .contador{background:rgba(255,255,255,.22);border-radius:10px;padding:3px 10px;font-weight:800}
+
+.velo{position:fixed;inset:0;z-index:50;background:var(--velo);backdrop-filter:blur(3px);
+  opacity:0;pointer-events:none;transition:opacity .2s}
+.velo.on{opacity:1;pointer-events:auto}
+.hoja{position:fixed;left:0;right:0;bottom:0;z-index:60;max-height:92dvh;display:flex;flex-direction:column;
+  background:var(--surface);border-radius:var(--r-xl) var(--r-xl) 0 0;border-top:1px solid var(--line);
+  box-shadow:0 -20px 60px rgba(0,0,0,.5);transform:translateY(105%);transition:transform .28s var(--ease)}
+.hoja.on{transform:none}
+.hoja .asa{width:44px;height:5px;border-radius:99px;background:var(--surface-3);margin:10px auto 2px}
+.carrito-cab{display:flex;align-items:center;gap:10px;padding:10px 20px 12px;border-bottom:1px solid var(--line-soft)}
+.carrito-cab h2{font-size:20px;font-weight:760}
+.carrito-cab .fin{margin-left:auto}
+.carrito-cuerpo{overflow-y:auto;padding:8px 20px 12px;-webkit-overflow-scrolling:touch}
+.carrito-pie{padding:12px 20px calc(14px + var(--abajo));border-top:1px solid var(--line-soft);background:var(--surface)}
+.item{padding:12px 0;border-bottom:1px solid var(--line-soft)}
+.item:last-child{border:0}
+.item .fila{display:flex;align-items:center;gap:12px}
+.item .n{flex:1;min-width:0;font-weight:640;font-size:16px}
+.item .n small{display:block;color:var(--text-3);font-weight:500;font-size:14px;margin-top:2px}
+.item .nota-boton{margin-top:8px;min-height:40px;padding:0 12px;border-radius:10px;font-size:14px;
+  color:var(--text-2);background:var(--surface-2);display:inline-flex;align-items:center;gap:6px}
+.item .nota-boton.con{color:var(--brand);background:var(--brand-soft)}
+.item .entrada{margin-top:8px;min-height:46px;font-size:16px}
+.extras{display:grid;gap:12px;margin:14px 0 4px}
+.extras .dos{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:end}
+.personas{display:flex;align-items:center;gap:4px;background:var(--surface-3);border-radius:var(--r);padding:4px}
+.personas button{width:44px;height:44px;border-radius:11px;background:var(--surface-2);display:grid;place-items:center}
+.personas b{min-width:34px;text-align:center;font-size:18px}
+.resumen{display:flex;align-items:center;margin-bottom:12px;font-size:16px;color:var(--text-2)}
+.resumen b{margin-left:auto;color:var(--text);font-size:24px;font-weight:780}
+.enviar{min-height:64px;font-size:18px;border-radius:18px}
+
+/* Tablet apaisada: el pedido va al lado del menú, siempre visible. */
+.distribucion{display:block}
+@media (min-width:1024px){
+  main{padding-bottom:24px}
+  .distribucion.con-lado{display:grid;grid-template-columns:minmax(0,1fr) 400px;gap:20px;align-items:start}
+  .distribucion.con-lado .lateral{position:sticky;top:calc(80px + var(--arriba));
+    max-height:calc(100dvh - 100px - var(--arriba));display:flex;flex-direction:column;
+    background:var(--surface);border:1px solid var(--line);border-radius:var(--r-xl);overflow:hidden}
+  .productos{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media (min-width:1024px){ .dock.en-lateral{display:none} }
+/* Con el pedido al lado, una sola columna de platos hasta que haya espacio para dos. */
+@media (min-width:1024px) and (max-width:1279px){ .distribucion.con-lado .productos{grid-template-columns:1fr} }
+
+/* ---------------------------------------------------------- avisos */
+.aviso-flotante{position:fixed;left:50%;bottom:calc(96px + var(--abajo));z-index:80;
+  transform:translate(-50%,20px);opacity:0;pointer-events:none;max-width:calc(100% - 32px);
+  padding:14px 18px;border-radius:var(--r);background:var(--text);color:var(--bg);font-size:15.5px;
+  box-shadow:0 12px 40px rgba(0,0,0,.45);transition:all .25s var(--ease)}
+.aviso-flotante.on{opacity:1;transform:translate(-50%,0)}
+.aviso-flotante.malo{background:var(--danger);color:#fff}
+.exito{position:fixed;inset:0;z-index:90;display:grid;place-items:center;background:rgba(10,12,16,.9);
+  backdrop-filter:blur(6px);opacity:0;pointer-events:none;transition:opacity .2s}
+.exito.on{opacity:1;pointer-events:auto}
+.exito .circulo{width:112px;height:112px;border-radius:50%;background:var(--ok-soft);display:grid;place-items:center;
+  margin:0 auto 18px;animation:latir .5s var(--ease)}
+.exito .circulo svg{width:56px;height:56px;stroke:var(--ok);stroke-width:2.6;fill:none;stroke-linecap:round;
+  stroke-linejoin:round;stroke-dasharray:40;stroke-dashoffset:40;animation:trazo .45s .12s var(--ease) forwards}
+@keyframes latir{from{transform:scale(.6);opacity:0}}
+@keyframes trazo{to{stroke-dashoffset:0}}
+.exito h2{font-size:26px;font-weight:780;text-align:center}
+.exito p{color:var(--text-2);text-align:center;margin-top:6px}
+.menu-usuario .opcion{display:flex;align-items:center;gap:14px;width:100%;min-height:60px;padding:0 20px;font-size:17px}
+.esqueleto{height:74px;border-radius:var(--r-lg);background:linear-gradient(90deg,var(--surface),var(--surface-2),var(--surface));
+  background-size:200% 100%;animation:brillo 1.2s infinite}
+@keyframes brillo{to{background-position:-200% 0}}
+</style>
+{% endblock %}
+
+{% block body %}
+<header class="barra">
+  <img class="logo" src="{% static 'img/cloudin-marca.png' %}" alt="Cloudin">
+  <div class="quien">
+    <b>{{ t.name }}</b>
+    <small>Meseros</small>
+  </div>
+  <div class="fin">
+    <span class="pildora" id="turno" hidden></span>
+    <button class="avatar tema-b" data-accion="tema" aria-label="Cambiar entre tema claro y oscuro">
+      <svg class="ico" viewBox="0 0 24 24"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg></button>
+    <button class="avatar" id="btn-usuario" aria-label="Mi sesión">{{ m.iniciales }}</button>
+  </div>
+</header>
+<p class="sinred" id="sinred" hidden>Sin conexión. Lo que agregues se guarda en esta tablet.</p>
+
+<main id="vista" aria-live="polite"></main>
+
+<div class="dock" id="dock" hidden>
+  <button class="boton" data-accion="abrir-carrito">
+    <span><span class="contador" id="dock-n">0</span>&nbsp; Revisar pedido</span>
+    <span id="dock-total">$0</span>
+  </button>
+</div>
+
+<div class="velo" id="velo" data-accion="cerrar-hoja"></div>
+<section class="hoja" id="hoja" role="dialog" aria-modal="true" aria-label="Pedido">
+  <div class="asa"></div>
+  <div id="hoja-contenido" style="display:flex;flex-direction:column;min-height:0"></div>
+</section>
+
+<div class="aviso-flotante" id="aviso" role="status"></div>
+<div class="exito" id="exito">
+  <div>
+    <div class="circulo"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div>
+    <h2>¡Enviado a cocina!</h2>
+    <p id="exito-detalle"></p>
+  </div>
+</div>
+
+<form id="form-salir" method="post" action="{% url 'mesero:salir' t.slug %}" hidden>{% csrf_token %}</form>
+{% endblock %}
+
+{% block scripts %}
+<script>
+"use strict";
+/* ============================================================
+   Cloudin Meseros · la app
+   Tres pantallas: mesas → mesa (pedir / cuenta) → carrito.
+   El carrito de cada mesa se guarda en la tablet, así cambiar
+   de mesa o perder la señal no borra lo que ya se anotó.
+   ============================================================ */
+const SLUG = "{{ t.slug|escapejs }}";
+const MESERO = {id: {{ m.id }}, nombre: "{{ m.nombre|escapejs }}"};
+const CSRF = "{{ csrf_token }}";
+const BASE = `/mesero/${SLUG}`;
+const ANCHO = window.matchMedia("(min-width:1024px)");
+
+const $ = (id) => document.getElementById(id);
+const vista = $("vista");
+const pesos = (n) => "$" + Math.round(Number(n) || 0).toLocaleString("es-CO");
+const esc = (t) => String(t ?? "").replace(/[&<>"']/g,
+  (c) => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"}[c]));
+const vibrar = (ms = 8) => { try { navigator.vibrate && navigator.vibrate(ms); } catch (e) {} };
+const ICO = {
+  atras: '<svg class="ico" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg>',
+  mas: '<svg class="ico" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>',
+  menos: '<svg class="ico" viewBox="0 0 24 24"><path d="M5 12h14"/></svg>',
+  buscar: '<svg class="ico" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>',
+  nota: '<svg class="ico" viewBox="0 0 24 24" style="width:17px;height:17px"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg>',
+  salir: '<svg class="ico" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>',
+  cerrar: '<svg class="ico" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg>',
+};
+
+const estado = {
+  mesas: [], filtro: "todas", menu: null,
+  mesa: null, datosMesa: null, pestana: "pedir", busqueda: "", categoria: null,
+  enviando: false, temporizador: null,
+};
+
+/* ------------------------------------------------------------ red */
+async function pedir(ruta, opciones = {}) {
+  let respuesta;
+  try {
+    respuesta = await fetch(BASE + ruta, {
+      credentials: "same-origin",
+      headers: {"Content-Type": "application/json", "X-CSRFToken": CSRF},
+      ...opciones,
+    });
+  } catch (e) {
+    marcarRed(false);
+    throw {sinRed: true, detail: "Sin conexión con Cloudin."};
+  }
+  marcarRed(true);
+  const datos = await respuesta.json().catch(() => ({}));
+  if (respuesta.status === 401) { location.href = `${BASE}/entrar/`; throw datos; }
+  if (!respuesta.ok) throw {estado: respuesta.status, ...datos};
+  return datos;
+}
+function marcarRed(hay) { $("sinred").hidden = hay; }
+window.addEventListener("online", () => marcarRed(true));
+window.addEventListener("offline", () => marcarRed(false));
+
+/* ------------------------------------------------------------ carrito */
+const llaveCarrito = (n) => `cloudin:${SLUG}:m${MESERO.id}:mesa${n}`;
+function carrito(n = estado.mesa) {
+  try {
+    const c = JSON.parse(localStorage.getItem(llaveCarrito(n)) || "null");
+    if (c && Array.isArray(c.lineas)) return c;
+  } catch (e) {}
+  return {lineas: [], cliente: "", personas: 2, nota: ""};
+}
+function guardarCarrito(c, n = estado.mesa) {
+  try { localStorage.setItem(llaveCarrito(n), JSON.stringify(c)); } catch (e) {}
+}
+function cantidadEn(c, id) {
+  return c.lineas.filter((l) => l.id === id).reduce((s, l) => s + l.cantidad, 0);
+}
+function totales(c) {
+  return c.lineas.reduce((a, l) => ({n: a.n + l.cantidad, total: a.total + l.cantidad * l.precio}),
+                         {n: 0, total: 0});
+}
+function sumar(producto, delta) {
+  const c = carrito();
+  // Con toppings, cada combinación es su propia línea y se elige en la hoja.
+  if (delta > 0 && (producto.opciones || []).length) { abrirOpciones(producto); return; }
+  // Una línea por producto; la nota se agrega luego en el carrito.
+  let linea = c.lineas.find((l) => l.id === producto.id && !l.nota && !(l.opciones || []).length);
+  if (!linea && delta > 0) {
+    linea = {id: producto.id, nombre: producto.nombre, precio: producto.precio, cantidad: 0, nota: "",
+             obs: producto.observacion !== false, opciones: [], resumen: ""};
+    c.lineas.push(linea);
+  }
+  if (!linea) {
+    linea = [...c.lineas].reverse().find((l) => l.id === producto.id);
+    if (!linea) return;
+  }
+  linea.cantidad = Math.max(0, Math.min(99, linea.cantidad + delta));
+  c.lineas = c.lineas.filter((l) => l.cantidad > 0);
+  guardarCarrito(c);
+  vibrar(delta > 0 ? 8 : 5);
+  actualizarProducto(producto.id);
+  pintarDock();
+  if (ANCHO.matches) pintarLateral();
+}
+
+/* ------------------------------------------------------------ rutas */
+function ir(ruta) { if (location.hash !== ruta) location.hash = ruta; else rutear(); }
+window.addEventListener("hashchange", rutear);
+function rutear() {
+  const m = location.hash.match(/^#\/mesa\/(\d+)/);
+  cerrarHoja();
+  clearInterval(estado.temporizador);
+  if (m) abrirMesa(Number(m[1]));
+  else verMesas();
+}
+
+/* ============================================================ MESAS */
+async function verMesas() {
+  estado.mesa = null;
+  $("dock").hidden = true;
+  if (!estado.mesas.length) {
+    vista.innerHTML = `<div class="esqueleto" style="height:190px;border-radius:var(--r-xl);margin:6px 0 26px"></div>
+      <div class="rejilla">${'<div class="esqueleto" style="height:190px"></div>'.repeat(8)}</div>`;
+  }
+  await cargarMesas();
+  estado.temporizador = setInterval(cargarMesas, 10000);
+}
+async function cargarMesas() {
+  try {
+    const datos = await pedir("/api/mesas/");
+    estado.mesas = datos.mesas;
+    estado.yo = datos.yo;
+    estado.numeroTurno = datos.turno;
+    pintarTurno(datos.turno);
+    if (estado.mesa === null) pintarMesas(datos.hora);
+  } catch (e) {
+    if (estado.mesa === null && !estado.mesas.length) {
+      vista.innerHTML = `<div class="vacio">${esc(e.detail || "No se pudieron cargar las mesas.")}</div>`;
+    }
+  }
+}
+
+const ICO_CIFRA = {
+  plata: '<svg class="ico" viewBox="0 0 24 24"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>',
+  mesa: '<svg class="ico" viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="6" rx="1.5"/><path d="M6 13v7M18 13v7M8 4h8"/></svg>',
+  comanda: '<svg class="ico" viewBox="0 0 24 24"><path d="M6 2h9l5 5v13a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z"/><path d="M14 2v6h6M9 13h6M9 17h4"/></svg>',
+  reloj: '<svg class="ico" viewBox="0 0 24 24" style="width:15px;height:15px"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>',
+};
+
+function saludo() {
+  const h = new Date().getHours();
+  return h < 12 ? "Buenos días" : h < 19 ? "Buenas tardes" : "Buenas noches";
+}
+function bienvenida() {
+  const yo = estado.yo || {vendido: 0, mesas_atendidas: 0, pedidos: 0, mesas_activas: 0};
+  const nombre = MESERO.nombre.split(" ")[0];
+  const fecha = new Date().toLocaleDateString("es-CO", {weekday: "long", day: "numeric", month: "long"});
+  const hoy = fecha.charAt(0).toUpperCase() + fecha.slice(1);
+  const turno = estado.numeroTurno;
+  const frase = !turno
+    ? "La caja está cerrada. Cuando el administrador abra el turno ya puedes enviar pedidos."
+    : yo.mesas_activas
+      ? `Tienes ${yo.mesas_activas} ${yo.mesas_activas === 1 ? "mesa activa" : "mesas activas"}. ¡A darle con todo!`
+      : "Toca una mesa libre para empezar a tomar el pedido.";
+  return `<section class="bienvenida">
+    <div class="saludo">
+      <span class="fecha"><span class="punto ${turno ? "" : "apagado"}"></span>${esc(hoy)}${turno ? ` · Turno ${turno}` : ""}</span>
+      <h1>${saludo()},<br><span class="nombre">${esc(nombre)}</span></h1>
+      <p>${frase}</p>
+    </div>
+    <div class="cifras">
+      <div class="cifra destacada"><span class="ico-c">${ICO_CIFRA.plata}</span>
+        <small>Llevas vendido</small><b>${pesos(yo.vendido)}</b></div>
+      <div class="cifra"><span class="ico-c">${ICO_CIFRA.mesa}</span>
+        <small>Mesas atendidas</small><b>${yo.mesas_atendidas}</b></div>
+      <div class="cifra"><span class="ico-c">${ICO_CIFRA.comanda}</span>
+        <small>Comandas enviadas</small><b>${yo.pedidos}</b></div>
+    </div>
+  </section>`;
+}
+
+function pintarMesas(hora) {
+  const todas = estado.mesas;
+  const mias = todas.filter((m) => m.mia);
+  const libres = todas.filter((m) => !m.ocupada);
+  const lista = {todas, mias, libres}[estado.filtro] || todas;
+  const chip = (clave, texto, n) =>
+    `<button class="chip ${estado.filtro === clave ? "on" : ""}" data-accion="filtro" data-filtro="${clave}">
+       ${texto} <b>${n}</b></button>`;
+
+  vista.innerHTML = `
+    ${bienvenida()}
+    <div class="cabeza-lista"><h2>Mesas</h2>
+      <span class="fin">${hora ? ICO_CIFRA.reloj + " Actualizado " + esc(hora) : ""}</span></div>
+    <div class="chips">
+      ${chip("todas", "Todas", todas.length)}
+      ${chip("mias", "Mías", mias.length)}
+      ${chip("libres", "Libres", libres.length)}
+    </div>
+    ${lista.length ? `<div class="rejilla">${lista.map(tarjetaMesa).join("")}</div>`
+      : `<div class="vacio">${estado.filtro === "mias" ? "Todavía no atiendes ninguna mesa." :
+         estado.filtro === "libres" ? "No hay mesas libres ahora." : "El restaurante aún no tiene mesas."}</div>`}`;
+}
+
+/* La mesa vista desde arriba: el tablero y una silla por puesto. */
+function planoMesa(puestos) {
+  const n = Math.max(2, Math.min(Number(puestos) || 4, 12));
+  // Desde 4 puestos va una silla en cada cabecera; el resto se reparte arriba y abajo.
+  const lados = n >= 4 ? 1 : 0;
+  const arriba = Math.ceil((n - 2 * lados) / 2);
+  const abajo = n - 2 * lados - arriba;
+  const ancho = Math.max(56, arriba * 30 + 14);
+  const W = ancho + 44, H = 96;
+  const x0 = (W - ancho) / 2, y0 = 26, alto = 44;
+  const sillas = [];
+  const fila = (cuantas, y) => {
+    for (let i = 0; i < cuantas; i++) {
+      const cx = x0 + (ancho / (cuantas + 1)) * (i + 1);
+      sillas.push(`<rect class="silla" x="${cx - 11}" y="${y}" width="22" height="13" rx="5"/>`);
+    }
+  };
+  fila(arriba, y0 - 18);
+  fila(abajo, y0 + alto + 5);
+  if (lados) {
+    sillas.push(`<rect class="silla" x="${x0 - 18}" y="${y0 + alto / 2 - 11}" width="13" height="22" rx="5"/>`);
+    sillas.push(`<rect class="silla" x="${x0 + ancho + 5}" y="${y0 + alto / 2 - 11}" width="13" height="22" rx="5"/>`);
+  }
+  return `<svg viewBox="0 0 ${W} ${H}" aria-hidden="true">${sillas.join("")}
+    <rect class="tablero" x="${x0}" y="${y0}" width="${ancho}" height="${alto}" rx="10"/></svg>`;
+}
+
+function tarjetaMesa(m) {
+  const clases = ["mesa", m.ocupada ? "ocupada" : "libre", m.mia ? "mia" : ""].join(" ");
+  const tags = [];
+  if (m.mia) tags.push('<span class="pildora marca">Tuya</span>');
+  if (m.en_cocina) tags.push(`<span class="pildora aviso">${m.en_cocina} en cocina</span>`);
+  return `<button class="${clases}" data-accion="mesa" data-numero="${m.numero}"
+             aria-label="Mesa ${m.numero}, ${m.ocupada ? "ocupada" : "libre"}">
+      <span class="cab">
+        <span class="num"><small>Mesa</small>${m.numero}</span>
+        <span class="tags">${tags.join("")}</span>
+      </span>
+      <span class="plano">${planoMesa(m.puestos)}</span>
+      <span class="estado">
+        ${m.ocupada
+          ? `<span>${m.mesero && !m.mia ? esc(m.mesero) + " · " : ""}${m.minutos} min</span>
+             <span class="monto">${pesos(m.total)}</span>`
+          : `<span class="libre-punto"></span><span>Libre · ${m.puestos} puestos</span>`}
+      </span>
+    </button>`;
+}
+
+/* ============================================================ MESA */
+async function abrirMesa(numero) {
+  estado.mesa = numero;
+  estado.pestana = "pedir";
+  estado.busqueda = "";
+  estado.categoria = null;
+  vista.innerHTML = `<div class="cabeza-mesa"><button class="atras" data-accion="volver" aria-label="Volver a las mesas">${ICO.atras}</button>
+    <div><h1>Mesa ${numero}</h1><p>Cargando…</p></div></div>
+    <div class="productos">${'<div class="esqueleto"></div>'.repeat(6)}</div>`;
+  try {
+    const [menu] = await Promise.all([
+      estado.menu ? Promise.resolve(estado.menu) : pedir("/api/menu/"),
+      cargarMesa(),
+    ]);
+    estado.menu = menu;
+    pintarMesa();
+    estado.temporizador = setInterval(async () => {
+      await cargarMesa();
+      if (estado.pestana === "cuenta") pintarCuenta(); else pintarCabezaMesa();
+    }, 8000);
+  } catch (e) {
+    vista.innerHTML = `<div class="cabeza-mesa"><button class="atras" data-accion="volver">${ICO.atras}</button>
+      <div><h1>Mesa ${numero}</h1></div></div><div class="vacio">${esc(e.detail || "No se pudo abrir la mesa.")}</div>`;
+  }
+}
+async function cargarMesa() {
+  estado.datosMesa = await pedir(`/api/mesa/${estado.mesa}/`);
+  // El turno pudo abrirse o cerrarse en el panel: la píldora se entera aquí también.
+  pintarTurno(estado.datosMesa.turno);
+}
+function pintarTurno(numero) {
+  const turno = $("turno");
+  turno.hidden = false;
+  turno.className = "pildora " + (numero ? "ok" : "aviso");
+  turno.innerHTML = numero
+    ? `<span class="punto"></span>Turno ${numero}`
+    : `<span class="punto"></span>Sin turno · no se pueden enviar pedidos`;
+}
+function subtituloMesa() {
+  // Texto plano: quien lo pinte decide si escapar (innerHTML) o no (textContent).
+  const d = estado.datosMesa;
+  if (!d) return "";
+  if (!d.ocupada) return `Libre · ${d.puestos} puestos`;
+  const partes = [];
+  if (d.cliente) partes.push(d.cliente);
+  partes.push(`${d.personas} ${d.personas === 1 ? "persona" : "personas"}`);
+  if (d.mesero) partes.push(d.mia ? "tu mesa" : d.mesero);
+  partes.push(pesos(d.total));
+  return partes.join(" · ");
+}
+function pintarCabezaMesa() {
+  const sub = document.querySelector("[data-sub-mesa]");
+  if (sub) sub.textContent = subtituloMesa();
+  const n = document.querySelector("[data-n-pedidos]");
+  const d = estado.datosMesa;
+  if (n) { n.textContent = d && d.pedidos ? d.pedidos : ""; n.hidden = !(d && d.pedidos); }
+}
+function pintarMesa() {
+  const d = estado.datosMesa;
+  vista.innerHTML = `
+    <div class="cabeza-mesa">
+      <button class="atras" data-accion="volver" aria-label="Volver a las mesas">${ICO.atras}</button>
+      <div><h1>Mesa ${estado.mesa}</h1><p data-sub-mesa>${esc(subtituloMesa())}</p></div>
+    </div>
+    <div class="segmento" role="tablist">
+      <button class="${estado.pestana === "pedir" ? "on" : ""}" data-accion="pestana" data-pestana="pedir" role="tab">Tomar pedido</button>
+      <button class="${estado.pestana === "cuenta" ? "on" : ""}" data-accion="pestana" data-pestana="cuenta" role="tab">
+        Cuenta<span class="cuenta" data-n-pedidos ${d && d.pedidos ? "" : "hidden"}>${d ? d.pedidos : ""}</span></button>
+    </div>
+    <div class="distribucion" id="distribucion"><div id="panel-principal"></div><aside class="lateral" id="lateral" hidden></aside></div>`;
+  if (estado.pestana === "pedir") pintarPedir(); else pintarCuenta();
+}
+
+/* ---------------------------------------------------- tomar pedido */
+function pintarPedir() {
+  const menu = estado.menu || {categorias: []};
+  const cont = $("panel-principal");
+  if (!menu.categorias.length) {
+    cont.innerHTML = `<div class="vacio">El menú está vacío. El administrador lo carga en el panel,
+      en <b>Configuración → Menú</b>.</div>`;
+    pintarDock();
+    return;
+  }
+  cont.innerHTML = `
+    <div class="fija">
+      <div class="buscar">${ICO.buscar}
+        <input class="entrada" id="buscar" type="search" placeholder="Buscar en el menú" value="${esc(estado.busqueda)}"
+               autocomplete="off" enterkeyhint="search"></div>
+      <div class="chips">
+        <button class="chip ${estado.categoria === null ? "on" : ""}" data-accion="categoria" data-categoria="">Todo</button>
+        ${menu.categorias.map((c) => `<button class="chip ${estado.categoria === c.id ? "on" : ""}"
+            data-accion="categoria" data-categoria="${c.id}">${esc(c.nombre)}</button>`).join("")}
+      </div>
+    </div>
+    <div id="lista-productos"></div>`;
+  $("buscar").addEventListener("input", (e) => { estado.busqueda = e.target.value; pintarProductos(); });
+  pintarProductos();
+  pintarDock();
+  if (ANCHO.matches) pintarLateral();
+}
+function pintarProductos() {
+  const c = carrito();
+  const texto = estado.busqueda.trim().toLowerCase();
+  const secciones = estado.menu.categorias
+    .filter((cat) => estado.categoria === null || cat.id === estado.categoria)
+    .map((cat) => ({...cat, productos: cat.productos.filter((p) => !texto || p.nombre.toLowerCase().includes(texto))}))
+    .filter((cat) => cat.productos.length);
+  $("lista-productos").innerHTML = secciones.length
+    ? secciones.map((cat) => `
+        <h2 class="seccion">${esc(cat.nombre)}</h2>
+        <div class="productos">${cat.productos.map((p) => filaProducto(p, cantidadEn(c, p.id))).join("")}</div>`).join("")
+    : `<div class="vacio" style="margin-top:14px">Nada coincide con «${esc(estado.busqueda)}».</div>`;
+}
+const ICO_PLATO = '<svg viewBox="0 0 24 24"><path d="M3 13h18M5 13a7 7 0 0 1 14 0M12 5V4M4 17h16l-1.5 3h-13z"/></svg>';
+function fotoProducto(p) {
+  const url = p.imagen ? String(p.imagen).replace(/'/g, "%27") : "";
+  return `<span class="foto" ${url ? `style="background-image:url('${url}')"` : ""}>${url ? "" : ICO_PLATO}</span>`;
+}
+function filaProducto(p, n) {
+  const grupos = (p.opciones || []).length;
+  return `<div class="producto ${n ? "con" : ""}" data-producto="${p.id}" data-accion="sumar" data-id="${p.id}">
+    ${fotoProducto(p)}
+    <div class="info">
+      <div class="nombre">${esc(p.nombre)}</div>
+      ${p.descripcion ? `<div class="desc">${esc(p.descripcion)}</div>` : ""}
+      <div class="precio">${pesos(p.precio)}</div>
+      ${grupos ? `<div class="etiquetas"><span>Con opciones</span></div>` : ""}
+    </div>
+    ${controlCantidad(p.id, n)}
+  </div>`;
+}
+
+/* ---------------------------------------------------- toppings */
+const elegido = {producto: null, marcas: {}, cantidad: 1, nota: ""};
+function precioElegido() {
+  const p = elegido.producto;
+  let total = p.precio;
+  p.opciones.forEach((g, gi) => (elegido.marcas[gi] || []).forEach((vi) => { total += Number(g.valores[vi].precio) || 0; }));
+  return total;
+}
+function faltaObligatorio() {
+  const p = elegido.producto;
+  return p.opciones.findIndex((g, gi) => g.tipo === "uno" && g.obligatorio && !(elegido.marcas[gi] || []).length);
+}
+function abrirOpciones(p) {
+  elegido.producto = p; elegido.marcas = {}; elegido.cantidad = 1; elegido.nota = "";
+  $("hoja").classList.add("modal");
+  pintarOpciones();
+  $("velo").classList.add("on");
+  $("hoja").classList.add("on");
+}
+function pintarOpciones() {
+  const p = elegido.producto;
+  const falta = faltaObligatorio();
+  $("hoja-contenido").innerHTML = `
+    <div class="carrito-cuerpo" style="padding-top:0">
+      ${p.imagen ? `<div class="opciones-foto" style="background-image:url('${String(p.imagen).replace(/'/g, "%27")}')"></div>` : ""}
+      <div class="carrito-cab" style="padding:14px 0 6px;border:0">
+        <div><h2>${esc(p.nombre)}</h2>${p.descripcion ? `<p style="color:var(--text-3);font-size:14px;margin-top:3px">${esc(p.descripcion)}</p>` : ""}</div>
+        <button class="atras fin" data-accion="cerrar-hoja" aria-label="Cerrar">${ICO.cerrar}</button>
+      </div>
+      ${p.opciones.map((g, gi) => `
+        <div class="grupo-op">
+          <h3>${esc(g.nombre)} <small>${g.tipo === "uno" ? "elige una" : (g.maximo ? `hasta ${g.maximo}` : "puedes elegir varias")}</small>
+            ${g.obligatorio ? '<span class="req">Obligatorio</span>' : ""}</h3>
+          ${g.valores.map((v, vi) => {
+            const on = (elegido.marcas[gi] || []).includes(vi);
+            return `<button type="button" class="op ${g.tipo === "uno" ? "" : "varios"} ${on ? "on" : ""}"
+                data-accion="opcion" data-g="${gi}" data-v="${vi}">
+              <span class="marca"></span><span>${esc(v.nombre)}</span>
+              <span class="precio-op">${Number(v.precio) ? "+" + pesos(v.precio) : ""}</span></button>`;
+          }).join("")}
+        </div>`).join("")}
+      ${p.observacion !== false ? `<div class="campo" style="margin-top:16px"><label for="nota-op">Observación</label>
+        <input class="entrada" id="nota-op" data-extra-op="nota" maxlength="200" placeholder="Ej. sin cebolla, término medio"
+               value="${esc(elegido.nota)}" autocomplete="off"></div>` : ""}
+    </div>
+    <div class="carrito-pie">
+      <div class="pie-op">
+        <div class="paso">
+          <button data-accion="op-cantidad" data-delta="-1" aria-label="Menos">${ICO.menos}</button>
+          <b>${elegido.cantidad}</b>
+          <button class="suma" data-accion="op-cantidad" data-delta="1" aria-label="Más">${ICO.mas}</button>
+        </div>
+        <button class="boton bloque enviar" data-accion="op-agregar" ${falta >= 0 ? "disabled" : ""} style="flex:1">
+          ${falta >= 0 ? "Elige " + esc(p.opciones[falta].nombre.toLowerCase()) : `Agregar · ${pesos(precioElegido() * elegido.cantidad)}`}
+        </button>
+      </div>
+    </div>`;
+}
+function marcarOpcion(gi, vi) {
+  const g = elegido.producto.opciones[gi];
+  const actuales = elegido.marcas[gi] || [];
+  if (g.tipo === "uno") {
+    elegido.marcas[gi] = actuales.includes(vi) && !g.obligatorio ? [] : [vi];
+  } else if (actuales.includes(vi)) {
+    elegido.marcas[gi] = actuales.filter((x) => x !== vi);
+  } else {
+    if (g.maximo && actuales.length >= g.maximo) { avisar(`En «${g.nombre}» se eligen máximo ${g.maximo}.`, true); return; }
+    elegido.marcas[gi] = [...actuales, vi];
+  }
+  vibrar(6);
+  const nota = document.getElementById("nota-op");
+  if (nota) elegido.nota = nota.value;
+  const scroll = $("hoja-contenido").querySelector(".carrito-cuerpo")?.scrollTop || 0;
+  pintarOpciones();
+  const cuerpo = $("hoja-contenido").querySelector(".carrito-cuerpo");
+  if (cuerpo) cuerpo.scrollTop = scroll;
+}
+function agregarElegido() {
+  const p = elegido.producto;
+  if (faltaObligatorio() >= 0) return;
+  const nota = document.getElementById("nota-op");
+  if (nota) elegido.nota = nota.value.trim();
+  const opciones = [];
+  const nombres = [];
+  p.opciones.forEach((g, gi) => (elegido.marcas[gi] || []).sort((a, b) => a - b).forEach((vi) => {
+    opciones.push({grupo: gi, valor: vi});
+    nombres.push(g.valores[vi].nombre);
+  }));
+  const firma = JSON.stringify(opciones) + "|" + elegido.nota;
+  const c = carrito();
+  let linea = c.lineas.find((l) => l.id === p.id && l.firma === firma);
+  if (!linea) {
+    linea = {id: p.id, nombre: p.nombre, precio: precioElegido(), cantidad: 0, nota: elegido.nota,
+             obs: p.observacion !== false, opciones, resumen: nombres.join(", "), firma};
+    c.lineas.push(linea);
+  }
+  linea.cantidad = Math.min(99, linea.cantidad + elegido.cantidad);
+  guardarCarrito(c);
+  vibrar(10);
+  cerrarHoja();
+  actualizarProducto(p.id);
+  pintarDock();
+  if (ANCHO.matches) pintarLateral();
+  avisar(`${elegido.cantidad} × ${p.nombre} agregado.`);
+}
+function controlCantidad(id, n) {
+  if (!n) return `<button class="mas" data-accion="sumar" data-id="${id}" aria-label="Agregar">${ICO.mas}</button>`;
+  return `<div class="paso">
+    <button data-accion="restar" data-id="${id}" aria-label="Quitar uno">${ICO.menos}</button>
+    <b>${n}</b>
+    <button class="suma" data-accion="sumar" data-id="${id}" aria-label="Agregar otro">${ICO.mas}</button>
+  </div>`;
+}
+function actualizarProducto(id) {
+  const fila = document.querySelector(`[data-producto="${id}"]`);
+  if (!fila) return;
+  const n = cantidadEn(carrito(), id);
+  fila.classList.toggle("con", n > 0);
+  fila.lastElementChild.outerHTML = controlCantidad(id, n);
+}
+function productoPorId(id) {
+  for (const cat of (estado.menu?.categorias || [])) {
+    const p = cat.productos.find((x) => x.id === id);
+    if (p) return p;
+  }
+  const linea = carrito().lineas.find((l) => l.id === id);
+  return linea ? {id, nombre: linea.nombre, precio: linea.precio} : null;
+}
+
+function pintarDock() {
+  const {n, total} = totales(carrito());
+  const dock = $("dock");
+  const enPedir = estado.mesa !== null && estado.pestana === "pedir";
+  dock.hidden = !(enPedir && n > 0);
+  dock.classList.toggle("en-lateral", true);
+  $("dock-n").textContent = n;
+  $("dock-total").textContent = pesos(total);
+}
+
+/* ---------------------------------------------------- el carrito */
+function contenidoCarrito(enHoja) {
+  const c = carrito();
+  const {n, total} = totales(c);
+  const libre = !(estado.datosMesa && estado.datosMesa.ocupada);
+  if (!n) {
+    return `<div class="carrito-cab"><h2>Pedido</h2>
+      ${enHoja ? `<button class="atras fin" data-accion="cerrar-hoja" aria-label="Cerrar">${ICO.cerrar}</button>` : ""}</div>
+      <div class="carrito-cuerpo"><div class="vacio" style="margin:12px 0">Toca un plato para agregarlo.</div></div>`;
+  }
+  return `
+    <div class="carrito-cab">
+      <h2>Mesa ${estado.mesa}</h2><span class="pildora">${n} ${n === 1 ? "producto" : "productos"}</span>
+      ${enHoja ? `<button class="atras fin" data-accion="cerrar-hoja" aria-label="Cerrar">${ICO.cerrar}</button>` : ""}
+    </div>
+    <div class="carrito-cuerpo">
+      ${c.lineas.map((l, i) => `
+        <div class="item">
+          <div class="fila">
+            <div class="n">${esc(l.nombre)}${l.resumen ? `<small style="color:var(--brand)">${esc(l.resumen)}</small>` : ""}<small>${pesos(l.precio)} c/u · ${pesos(l.precio * l.cantidad)}</small></div>
+            <div class="paso">
+              <button data-accion="linea-menos" data-i="${i}" aria-label="Quitar uno">${ICO.menos}</button>
+              <b>${l.cantidad}</b>
+              <button class="suma" data-accion="linea-mas" data-i="${i}" aria-label="Agregar otro">${ICO.mas}</button>
+            </div>
+          </div>
+          ${l.obs === false ? "" : l.editando
+            ? `<input class="entrada" data-nota="${i}" maxlength="200" placeholder="Ej. sin cebolla, término medio"
+                      value="${esc(l.nota)}" enterkeyhint="done">`
+            : `<button class="nota-boton ${l.nota ? "con" : ""}" data-accion="nota" data-i="${i}">
+                 ${ICO.nota} ${l.nota ? esc(l.nota) : "Agregar observación"}</button>`}
+        </div>`).join("")}
+      <div class="extras">
+        ${libre ? `
+          <div class="dos">
+            <div class="campo"><label for="cliente">Cliente (opcional)</label>
+              <input class="entrada" id="cliente" data-extra="cliente" value="${esc(c.cliente)}" maxlength="80" autocomplete="off"></div>
+            <div class="campo"><label>Personas</label>
+              <div class="personas">
+                <button data-accion="personas" data-delta="-1" aria-label="Menos personas">${ICO.menos}</button>
+                <b>${c.personas}</b>
+                <button data-accion="personas" data-delta="1" aria-label="Más personas">${ICO.mas}</button>
+              </div></div>
+          </div>` : ""}
+        <div class="campo"><label for="nota-cocina">Nota para cocina</label>
+          <input class="entrada" id="nota-cocina" data-extra="nota" value="${esc(c.nota)}" maxlength="500"
+                 placeholder="Ej. traer las entradas primero" autocomplete="off"></div>
+      </div>
+    </div>
+    <div class="carrito-pie">
+      <div class="resumen">Total del pedido <b>${pesos(total)}</b></div>
+      <button class="boton bloque enviar" data-accion="enviar" ${estado.enviando ? "disabled" : ""}>
+        ${estado.enviando ? "Enviando…" : "Enviar a cocina"}</button>
+    </div>`;
+}
+function abrirHoja() {
+  if (ANCHO.matches) return;
+  $("hoja").classList.remove("modal");
+  $("hoja-contenido").innerHTML = contenidoCarrito(true);
+  $("velo").classList.add("on");
+  $("hoja").classList.add("on");
+}
+function cerrarHoja() {
+  $("velo").classList.remove("on");
+  $("hoja").classList.remove("on");
+  setTimeout(() => { if (!$("hoja").classList.contains("on")) $("hoja").classList.remove("modal"); }, 260);
+}
+function pintarLateral() {
+  const lateral = $("lateral");
+  const dist = $("distribucion");
+  if (!lateral || !dist) return;
+  const mostrar = ANCHO.matches && estado.pestana === "pedir";
+  lateral.hidden = !mostrar;
+  dist.classList.toggle("con-lado", mostrar);
+  if (mostrar) lateral.innerHTML = contenidoCarrito(false);
+}
+function repintarCarrito() {
+  if ($("hoja").classList.contains("on") && !$("hoja").classList.contains("modal")) $("hoja-contenido").innerHTML = contenidoCarrito(true);
+  if (ANCHO.matches) pintarLateral();
+  pintarDock();
+}
+ANCHO.addEventListener("change", () => { cerrarHoja(); if (estado.mesa !== null && estado.pestana === "pedir") pintarLateral(); pintarDock(); });
+
+async function enviar() {
+  const c = carrito();
+  if (!c.lineas.length || estado.enviando) return;
+  estado.enviando = true;
+  repintarCarrito();
+  // La llave hace que un reintento (red caída justo al enviar) no duplique la comanda.
+  c.llave = c.llave || `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+  guardarCarrito(c);
+  try {
+    const r = await pedir(`/api/mesa/${estado.mesa}/pedido/`, {
+      method: "POST",
+      body: JSON.stringify({
+        llave: c.llave,
+        items: c.lineas.map((l) => ({product_id: l.id, quantity: l.cantidad, note: l.nota, opciones: l.opciones || []})),
+        note: c.nota, customer_name: c.cliente, guests: c.personas,
+      }),
+    });
+    const {n} = totales(c);
+    localStorage.removeItem(llaveCarrito(estado.mesa));
+    estado.enviando = false;
+    cerrarHoja();
+    vibrar([12, 40, 12]);
+    $("exito-detalle").textContent = `Mesa ${estado.mesa} · ${n} ${n === 1 ? "producto" : "productos"} · ${pesos(r.pedido.total)}`;
+    $("exito").classList.add("on");
+    setTimeout(() => $("exito").classList.remove("on"), 1500);
+    await cargarMesa();
+    estado.pestana = "cuenta";
+    pintarMesa();
+    pintarDock();
+  } catch (e) {
+    estado.enviando = false;
+    repintarCarrito();
+    avisar(e.sinRed ? "Sin conexión. El pedido sigue aquí; vuelve a enviarlo cuando haya señal."
+                    : (e.detail || "No se pudo enviar el pedido."), true);
+    if (e.codigo === "agotado") { estado.menu = null; estado.menu = await pedir("/api/menu/").catch(() => estado.menu); }
+  }
+}
+
+/* ---------------------------------------------------- cuenta */
+function pintarCuenta() {
+  const cont = $("panel-principal");
+  if (!cont) return;
+  pintarLateral();
+  pintarCabezaMesa();
+  const d = estado.datosMesa;
+  if (!d || !d.ocupada || !d.lista_pedidos.length) {
+    cont.innerHTML = `<div class="vacio">La mesa todavía no tiene pedidos.</div>`;
+    return;
+  }
+  const clase = {pending: "aviso", preparing: "info", served: "ok"};
+  cont.innerHTML = d.lista_pedidos.map((p) => `
+    <article class="pedido ${p.estado === "served" ? "servido" : ""}">
+      <div class="cab">
+        <span class="pildora ${clase[p.estado] || ""}"><span class="punto"></span>${esc(p.estado_texto)}</span>
+        <span class="fin">${esc(p.creado)}${p.mesero ? " · " + esc(p.mesero) : ""}</span>
+      </div>
+      ${p.items.map((i) => `<div class="linea"><span class="cant">${i.cantidad}×</span>
+        <span>${esc(i.nombre)}${i.nota ? `<small>${esc(i.nota)}</small>` : ""}</span>
+        <span class="val">${pesos(i.total)}</span></div>`).join("")}
+      ${p.nota ? `<div class="linea"><small>Nota: ${esc(p.nota)}</small></div>` : ""}
+      ${p.estado !== "served" ? `<div class="acciones">
+        <button class="boton suave" data-accion="servido" data-pedido="${p.id}">Ya lo llevé a la mesa</button></div>` : ""}
+    </article>`).join("") +
+    `<div class="total-cuenta">Total de la mesa <b>${pesos(d.total)}</b></div>`;
+}
+
+/* ---------------------------------------------------- avisos */
+let temporizadorAviso;
+function avisar(texto, malo = false) {
+  const a = $("aviso");
+  a.textContent = texto;
+  a.classList.toggle("malo", malo);
+  a.classList.add("on");
+  clearTimeout(temporizadorAviso);
+  temporizadorAviso = setTimeout(() => a.classList.remove("on"), malo ? 4200 : 2400);
+}
+function menuUsuario() {
+  $("hoja").classList.remove("modal");
+  $("hoja-contenido").innerHTML = `
+    <div class="carrito-cab"><h2>${esc(MESERO.nombre)}</h2>
+      <button class="atras fin" data-accion="cerrar-hoja" aria-label="Cerrar">${ICO.cerrar}</button></div>
+    <div class="menu-usuario" style="padding:6px 0 calc(12px + var(--abajo))">
+      <button class="opcion" data-accion="salir">${ICO.salir} Salir de la tablet</button>
+    </div>`;
+  $("velo").classList.add("on");
+  $("hoja").classList.add("on");
+}
+
+/* ------------------------------------------------------------ eventos
+   Un solo escuchador para toda la app: los botones dicen qué hacer con
+   data-accion. Así lo que se repinta por sondeo no pierde sus eventos. */
+document.addEventListener("click", async (e) => {
+  const el = e.target.closest("[data-accion]");
+  if (!el) return;
+  const accion = el.dataset.accion;
+  const c = estado.mesa !== null ? carrito() : null;
+
+  switch (accion) {
+    case "filtro": estado.filtro = el.dataset.filtro; pintarMesas(); break;
+    case "mesa": vibrar(); ir(`#/mesa/${el.dataset.numero}`); break;
+    case "volver": ir("#/"); break;
+    case "pestana":
+      estado.pestana = el.dataset.pestana;
+      pintarMesa();
+      pintarDock();
+      break;
+    case "categoria":
+      estado.categoria = el.dataset.categoria ? Number(el.dataset.categoria) : null;
+      document.querySelectorAll('[data-accion="categoria"]').forEach((b) =>
+        b.classList.toggle("on", b === el));
+      pintarProductos();
+      break;
+    case "sumar": case "restar": {
+      e.stopPropagation();
+      const p = productoPorId(Number(el.dataset.id));
+      if (p) sumar(p, accion === "sumar" ? 1 : -1);
+      break;
+    }
+    case "abrir-carrito": abrirHoja(); break;
+    case "opcion": marcarOpcion(Number(el.dataset.g), Number(el.dataset.v)); break;
+    case "op-cantidad": {
+      const nota = document.getElementById("nota-op");
+      if (nota) elegido.nota = nota.value;
+      elegido.cantidad = Math.max(1, Math.min(99, elegido.cantidad + Number(el.dataset.delta)));
+      pintarOpciones();
+      break;
+    }
+    case "op-agregar": agregarElegido(); break;
+    case "cerrar-hoja": cerrarHoja(); break;
+    case "linea-mas": case "linea-menos": {
+      const linea = c.lineas[Number(el.dataset.i)];
+      if (!linea) break;
+      linea.cantidad += accion === "linea-mas" ? 1 : -1;
+      c.lineas = c.lineas.filter((l) => l.cantidad > 0);
+      guardarCarrito(c);
+      vibrar(6);
+      actualizarProducto(linea.id);
+      if (!c.lineas.length) cerrarHoja();
+      repintarCarrito();
+      break;
+    }
+    case "nota": {
+      c.lineas.forEach((l, i) => { l.editando = i === Number(el.dataset.i); });
+      guardarCarrito(c);
+      repintarCarrito();
+      const campo = document.querySelector(`[data-nota="${el.dataset.i}"]`);
+      if (campo) campo.focus();
+      break;
+    }
+    case "personas":
+      c.personas = Math.max(1, Math.min(50, c.personas + Number(el.dataset.delta)));
+      guardarCarrito(c);
+      repintarCarrito();
+      break;
+    case "enviar": enviar(); break;
+    case "servido":
+      el.disabled = true;
+      try {
+        await pedir(`/api/pedido/${el.dataset.pedido}/servido/`, {method: "POST"});
+        await cargarMesa();
+        pintarCuenta();
+        avisar("Marcado como servido.");
+      } catch (err) { el.disabled = false; avisar(err.detail || "No se pudo marcar.", true); }
+      break;
+    case "salir": $("form-salir").submit(); break;
+    case "tema": {
+      const t = document.documentElement.dataset.theme === "claro" ? "oscuro" : "claro";
+      const aplicar = () => { document.documentElement.dataset.theme = t; try { localStorage.setItem("cloudin-tema", t); } catch (x) {} };
+      if (document.startViewTransition) document.startViewTransition(aplicar); else aplicar();
+      break;
+    }
+  }
+});
+$("btn-usuario").addEventListener("click", menuUsuario);
+
+// Notas y datos del pedido: se guardan mientras se escribe.
+document.addEventListener("input", (e) => {
+  if (estado.mesa === null) return;
+  const c = carrito();
+  if (e.target.dataset.nota !== undefined) {
+    const linea = c.lineas[Number(e.target.dataset.nota)];
+    if (linea) linea.nota = e.target.value;
+  } else if (e.target.dataset.extra) {
+    c[e.target.dataset.extra] = e.target.value;
+  } else return;
+  guardarCarrito(c);
+});
+document.addEventListener("focusout", (e) => {
+  // Sin repintar a propósito: si el mesero toca «Enviar» con el teclado
+  // abierto, repintar cambiaría el botón bajo su dedo y el toque se perdería.
+  if (e.target.dataset && e.target.dataset.nota !== undefined && estado.mesa !== null) {
+    const c = carrito();
+    c.lineas.forEach((l) => { delete l.editando; });
+    guardarCarrito(c);
+  }
+});
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape") cerrarHoja();
+  if (e.key === "Enter" && e.target.dataset && e.target.dataset.nota !== undefined) e.target.blur();
+});
+
+rutear();
+</script>
+{% endblock %}

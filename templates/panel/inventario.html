@@ -1,0 +1,208 @@
+{% extends "panel/_base.html" %}
+{% load static cloudin %}
+{% block title %}Inventario — Cloudin{% endblock %}
+{% block titulo %}Inventario{% endblock %}
+{% block subtitulo %}<p class="sub dim small">Insumos, costos reales y qué hay que reponer</p>{% endblock %}
+{% block acciones %}
+  <a class="btn ghost" href="{% url 'panel:insumo-nuevo' %}">Nuevo insumo</a>
+  <a class="btn" href="{% url 'panel:compra-nueva' %}">
+    <svg class="ico" viewBox="0 0 24 24"><path d="M6 2l1.5 4h13L19 15H8L6 2z"/><circle cx="9" cy="20" r="1.6"/><circle cx="18" cy="20" r="1.6"/></svg>
+    Registrar compra
+  </a>
+{% endblock %}
+
+{% block head %}
+{{ block.super }}
+<style>
+  .alerta-lista{display:grid;gap:var(--sp-2)}
+  .alerta-fila{display:flex;gap:10px;align-items:flex-start;font-size:13.5px;
+    border-radius:var(--r);padding:10px 13px;border:1px solid}
+  .alerta-fila.alerta{background:var(--warn-soft);border-color:rgba(240,180,41,.28);color:var(--warn-text)}
+  .alerta-fila.malo{background:var(--danger-soft);border-color:rgba(242,85,90,.28);color:var(--danger-text)}
+  .paso{display:flex;gap:12px;align-items:flex-start;padding:12px 0;
+    border-bottom:1px solid var(--line-soft)}
+  .paso:last-child{border:0}
+  .paso .num{width:26px;height:26px;border-radius:9px;flex:none;display:grid;place-items:center;
+    background:var(--surface-3);color:var(--text-2);font-weight:700;font-size:12.5px}
+  .paso.listo .num{background:var(--ok-soft);color:var(--ok)}
+  .paso h3{font-size:13.5px;font-weight:640}
+  .paso p{font-size:12.5px;color:var(--text-3);margin-top:3px;line-height:1.55}
+</style>
+{% endblock %}
+
+{% block content %}
+{% include "panel/_inv_nav.html" %}
+
+<div class="kpis">
+  <div class="kpi destacado">
+    <div class="cab">
+      <svg class="ico" viewBox="0 0 24 24"><path d="M20 7L12 3 4 7v10l8 4 8-4z"/><path d="M4 7l8 4 8-4M12 11v10"/></svg>
+      Plata parada en insumos
+    </div>
+    <div class="valor">${{ resumen.valorizacion|pesos }}</div>
+    <div class="pie">{{ resumen.insumos }} insumo(s) activos</div>
+  </div>
+  <div class="kpi">
+    <div class="cab">
+      <svg class="ico" viewBox="0 0 24 24"><path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9L1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>
+      Hay que reponer
+    </div>
+    <div class="valor">{{ resumen.bajo_minimo }}</div>
+    <div class="pie">por debajo del mínimo</div>
+  </div>
+  <div class="kpi">
+    <div class="cab">
+      <svg class="ico" viewBox="0 0 24 24"><path d="M6 2l1.5 4h13L19 15H8L6 2z"/><circle cx="9" cy="20" r="1.6"/><circle cx="18" cy="20" r="1.6"/></svg>
+      Comprado este mes
+    </div>
+    <div class="valor">${{ resumen.gasto_mes|pesos }}</div>
+    <div class="pie">
+      {% if resumen.por_pagar_n %}<b>${{ resumen.por_pagar|pesos }}</b> por pagar{% else %}todo pagado{% endif %}
+    </div>
+  </div>
+  <div class="kpi">
+    <div class="cab">
+      <svg class="ico" viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="M7 14l4-4 3 3 5-6"/></svg>
+      Food cost (30 días)
+    </div>
+    <div class="valor">
+      {% if food.real_pct %}{{ food.real_pct|floatformat:1 }}%{% else %}—{% endif %}
+    </div>
+    <div class="pie">
+      {% if food.teorico_pct %}teórico {{ food.teorico_pct|floatformat:1 }}%{% else %}faltan recetas{% endif %}
+    </div>
+  </div>
+</div>
+
+{% if alertas %}
+<div class="bloque">
+  <div class="bloque-cab">
+    <svg class="ico" viewBox="0 0 24 24"><path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9L1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>
+    <h2>Lo que pide atención</h2>
+    <span class="dim small fin">{{ alertas|length }}</span>
+  </div>
+  <div class="card">
+    <div class="alerta-lista">
+      {% for a in alertas|slice:":12" %}
+        <div class="alerta-fila {{ a.nivel }}">
+          <span>{{ a.texto }}</span>
+          {% if a.insumo %}
+            <a class="fin" style="margin-left:auto;white-space:nowrap"
+               href="{% url 'panel:insumo-detalle' a.insumo %}">Ver →</a>
+          {% endif %}
+        </div>
+      {% endfor %}
+    </div>
+    {% if alertas|length > 12 %}
+      <div class="sep"></div>
+      <a class="dim small" href="{% url 'panel:insumos' %}?ver=bajos">Ver todos los insumos en alerta →</a>
+    {% endif %}
+  </div>
+</div>
+{% endif %}
+
+<div class="bloque cols cols-2">
+  <div>
+    <div class="bloque-cab">
+      <svg class="ico" viewBox="0 0 24 24"><path d="M3 6h18v13a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M3 10h18M7 15h4"/></svg>
+      <h2>Últimos movimientos</h2>
+      <a class="dim small fin" href="{% url 'panel:insumos' %}">Ver insumos →</a>
+    </div>
+    <div class="card">
+      <div class="tabla-wrap">
+        <table>
+          <thead><tr><th>Cuándo</th><th>Insumo</th><th>Qué pasó</th><th class="fin">Cantidad</th>
+                     <th class="fin">Valor</th></tr></thead>
+          <tbody>
+            {% for m in movimientos %}
+            <tr>
+              <td class="dim small">{{ m.momento|date:"d/m H:i" }}</td>
+              <td><a href="{% url 'panel:insumo-detalle' m.insumo_id %}">{{ m.insumo.nombre }}</a></td>
+              <td>
+                {% if m.es_entrada %}
+                  <span class="pill ok"><i class="dot"></i>{{ m.get_tipo_display }}</span>
+                {% else %}
+                  <span class="pill {% if m.tipo == 'venta' %}info{% else %}warn{% endif %}">
+                    <i class="dot"></i>{{ m.get_tipo_display }}</span>
+                {% endif %}
+              </td>
+              <td class="fin">{% if m.es_entrada %}+{% else %}−{% endif %}{{ m.cantidad|cantidad }} {{ m.insumo.unidad_consumo }}</td>
+              <td class="fin">${{ m.valor_total|pesos }}</td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="5" class="vacio">
+              El inventario todavía no tiene movimientos. Empieza registrando una compra.
+            </td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div>
+    <div class="bloque-cab">
+      <svg class="ico" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg>
+      <h2>Cómo se pone a andar</h2>
+    </div>
+    <div class="card">
+      <div class="paso {% if resumen.insumos %}listo{% endif %}">
+        <span class="num">{% if resumen.insumos %}✓{% else %}1{% endif %}</span>
+        <div>
+          <h3>Crea los insumos</h3>
+          <p>Lo que le compras al proveedor: carne, arroz, aceite, empaques.
+             <a href="{% url 'panel:insumo-nuevo' %}" style="color:var(--brand)">Nuevo insumo →</a></p>
+        </div>
+      </div>
+      <div class="paso {% if resumen.gasto_mes %}listo{% endif %}">
+        <span class="num">{% if resumen.gasto_mes %}✓{% else %}2{% endif %}</span>
+        <div>
+          <h3>Registra una compra</h3>
+          <p>La compra es la que carga el stock y fija el costo promedio. También queda
+             anotado de dónde salió la plata.
+             <a href="{% url 'panel:compra-nueva' %}" style="color:var(--brand)">Registrar compra →</a></p>
+        </div>
+      </div>
+      <div class="paso {% if resumen.recetas %}listo{% endif %}">
+        <span class="num">{% if resumen.recetas %}✓{% else %}3{% endif %}</span>
+        <div>
+          <h3>Arma las recetas</h3>
+          <p>Cuánto consume cada plato. Desde ahí el sistema sabe qué cuesta y cuánto deja.
+             <a href="{% url 'panel:recetas' %}" style="color:var(--brand)">Ver recetas →</a></p>
+        </div>
+      </div>
+      <div class="paso">
+        <span class="num">4</span>
+        <div>
+          <h3>Vende</h3>
+          <p>Al facturar la mesa, el stock baja solo según la receta. Nadie descuenta a mano.</p>
+        </div>
+      </div>
+    </div>
+
+    {% if vencimientos %}
+    <div class="bloque-cab" style="margin-top:var(--sp-5)">
+      <svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+      <h2>Próximos a vencer</h2>
+    </div>
+    <div class="card">
+      <div class="tabla-wrap">
+        <table>
+          <thead><tr><th>Insumo</th><th>Lote</th><th>Vence</th><th class="fin">Queda</th></tr></thead>
+          <tbody>
+            {% for l in vencimientos %}
+            <tr>
+              <td>{{ l.insumo.nombre }}</td>
+              <td><code>{{ l.codigo|default:l.id }}</code></td>
+              <td class="{% if l.vencido %}pill bad{% endif %}">{{ l.vence|date:"d/m/Y" }}</td>
+              <td class="fin">{{ l.cantidad|cantidad }} {{ l.insumo.unidad_consumo }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

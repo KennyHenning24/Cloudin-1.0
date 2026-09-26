@@ -1,0 +1,61 @@
+{% extends "panel/_form_page.html" %}
+{% load cloudin %}
+{% block title %}{% if es_nuevo %}Nuevo insumo{% else %}{{ insumo.nombre }}{% endif %} — Cloudin{% endblock %}
+{% block titulo %}{% if es_nuevo %}Nuevo insumo{% else %}Editar {{ insumo.nombre }}{% endif %}{% endblock %}
+{% block subtitulo %}<p class="sub dim small">Inventario</p>{% endblock %}
+
+{% block seccion_nombre %}Inventario{% endblock %}
+{% block encabezado %}
+  {% if es_nuevo %}¿Qué insumo vas a cargar?{% else %}{{ insumo.nombre }}{% endif %}
+{% endblock %}
+{% block bajada %}
+  Un insumo es materia prima: se le compra al proveedor y tiene stock de verdad. Los platos
+  del menú no llevan stock propio — su disponibilidad y su costo salen de la receta.
+  El stock no se escribe aquí: entra con una compra o un ajuste, para que quede en el kardex.
+{% endblock %}
+{% block volver %}{% url 'panel:insumos' %}{% endblock %}
+{% block boton %}{% if es_nuevo %}Crear insumo{% else %}Guardar cambios{% endif %}{% endblock %}
+
+{% block campos %}
+  <div class="eyebrow" style="margin-bottom:var(--sp-3)">Qué es</div>
+  <div class="form-row">
+    {% include "master/_campo.html" with campo=form.nombre %}
+    {% include "master/_campo.html" with campo=form.codigo %}
+    {% include "master/_campo.html" with campo=form.categoria %}
+  </div>
+
+  <div class="sep"></div>
+  <div class="eyebrow" style="margin-bottom:var(--sp-3)">Cómo se compra y cómo se usa</div>
+  <div class="form-row">
+    {% include "master/_campo.html" with campo=form.unidad_compra %}
+    {% include "master/_campo.html" with campo=form.unidad_consumo %}
+    {% include "master/_campo.html" with campo=form.factor_conversion %}
+  </div>
+  <p class="nota-pie" style="margin-top:0">
+    Ejemplo: compras <strong>bultos de 50 kg</strong> de arroz pero la receta lo mide en
+    <strong>gramos</strong> → unidad de compra «bulto de 50 kg», unidad de consumo «gramos»,
+    factor <strong>50000</strong>. El sistema convierte solo.
+  </p>
+
+  <div class="sep"></div>
+  <div class="eyebrow" style="margin-bottom:var(--sp-3)">Control</div>
+  <div class="form-row">
+    {% include "master/_campo.html" with campo=form.stock_minimo %}
+    {% include "master/_campo.html" with campo=form.proveedor %}
+    <div class="campo">
+      <label class="switch">{{ form.perecedero }} Es perecedero</label>
+      <div class="ayuda">Si lo es, se le controla el lote y la fecha de vencimiento, y sale
+        primero el lote más próximo a vencer.</div>
+    </div>
+  </div>
+{% endblock %}
+
+{% block despues %}
+{% if insumo %}
+<p class="nota-pie">
+  Stock actual: <strong>{{ insumo.stock|cantidad }} {{ insumo.unidad_consumo }}</strong>
+  a un costo promedio de <strong>${{ insumo.costo_promedio|pesos:2 }}</strong>.
+  <a href="{% url 'panel:insumo-detalle' insumo.id %}" style="color:var(--brand)">Ver el kardex →</a>
+</p>
+{% endif %}
+{% endblock %}

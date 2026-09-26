@@ -1,0 +1,57 @@
+{% extends "panel/_form_page.html" %}
+{% block title %}{% if es_nuevo %}Nuevo empleado{% else %}{{ empleado.nombre }}{% endif %} — Cloudin{% endblock %}
+{% block titulo %}{% if es_nuevo %}Agregar empleado{% else %}Editar a {{ empleado.nombre }}{% endif %}{% endblock %}
+{% block subtitulo %}<p class="sub dim small">Cloudin Employees</p>{% endblock %}
+
+{% block seccion_nombre %}Cloudin Employees{% endblock %}
+{% block encabezado %}
+  {% if es_nuevo %}¿A quién vamos a registrar?{% else %}{{ empleado.nombre }}{% endif %}
+{% endblock %}
+{% block bajada %}
+  Con estos datos la persona puede marcar entrada y salida, y el sistema le cuenta las horas
+  y lo que cuestan. Registrarla aquí <strong>no le da acceso al panel</strong>: eso es otro
+  trámite y lo hace quien administra Cloudin.
+{% endblock %}
+{% block volver %}{% url 'panel:empleados' %}{% endblock %}
+{% block boton %}{% if es_nuevo %}Registrar empleado{% else %}Guardar cambios{% endif %}{% endblock %}
+
+{% block campos %}
+  <div class="eyebrow" style="margin-bottom:var(--sp-3)">Quién es</div>
+  <div class="form-row">
+    {% include "master/_campo.html" with campo=form.nombre %}
+    {% include "master/_campo.html" with campo=form.cargo %}
+  </div>
+  <div class="form-row">
+    {% include "master/_campo.html" with campo=form.tipo_documento %}
+    {% include "master/_campo.html" with campo=form.documento %}
+    {% include "master/_campo.html" with campo=form.ingreso %}
+  </div>
+
+  <div class="sep"></div>
+  <div class="eyebrow" style="margin-bottom:var(--sp-3)">Cómo lo contactamos</div>
+  <div class="form-row">
+    {% include "master/_campo.html" with campo=form.telefono %}
+    {% include "master/_campo.html" with campo=form.correo %}
+  </div>
+
+  <div class="sep"></div>
+  <div class="eyebrow" style="margin-bottom:var(--sp-3)">Código para marcar</div>
+  <div class="form-row">
+    {% include "master/_campo.html" with campo=form.codigo %}
+  </div>
+
+  <div class="sep"></div>
+  <div class="eyebrow" style="margin-bottom:var(--sp-3)">Cómo se le paga</div>
+  <div class="form-row">
+    {% include "master/_campo.html" with campo=form.forma_pago %}
+    {% include "master/_campo.html" with campo=form.valor_hora %}
+    {% include "master/_campo.html" with campo=form.salario_mensual %}
+  </div>
+{% endblock %}
+
+{% block despues %}
+<p class="nota-pie">
+  Lo que se pague por hora es lo que usa el sistema para estimar el costo del turno, y es
+  también la base de la futura <strong>nómina electrónica</strong>.
+</p>
+{% endblock %}

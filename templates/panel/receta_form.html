@@ -1,0 +1,213 @@
+{% extends "panel/_base.html" %}
+{% load static cloudin %}
+{% block title %}Receta de {{ receta.titulo }} — Cloudin{% endblock %}
+{% block titulo %}Receta de {{ receta.titulo }}{% endblock %}
+{% block subtitulo %}
+<p class="sub dim small">
+  {% if receta.es_subreceta %}Subreceta · se usa dentro de otras recetas
+  {% else %}{{ producto.category.name }} · ${{ precio|pesos }} en la carta{% endif %}
+</p>
+{% endblock %}
+{% block acciones %}
+  {% if faltantes %}<span class="pill warn"><i class="dot"></i>{{ faltantes|length }} insumo(s) sin stock</span>{% endif %}
+  <a class="btn ghost" href="{% url 'panel:recetas' %}">Todas las recetas</a>
+{% endblock %}
+
+{% block head %}
+{{ block.super }}
+<style>
+  .costos{position:relative;overflow:hidden;border-radius:var(--r-xl);padding:var(--sp-5);
+    background:linear-gradient(125deg,rgba(239,112,38,.14),transparent 60%),var(--surface);
+    border:1px solid var(--line);margin-bottom:var(--sp-5)}
+  .costos .marca-agua{position:absolute;right:22px;bottom:-30px;height:158px;opacity:.055}
+  .costos .dentro{position:relative;z-index:1;display:grid;gap:var(--sp-5);
+    grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}
+  .costos .rot{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--text-3);
+    font-weight:600;margin-bottom:4px}
+  .costos .cifra{font-size:27px;font-weight:740;letter-spacing:-.025em;line-height:1.05}
+  .costos .cifra.marca{color:var(--brand)}
+  .ingrediente{display:flex;align-items:center;gap:10px}
+</style>
+{% endblock %}
+
+{% block content %}
+{% include "panel/_inv_nav.html" %}
+
+<div class="costos">
+  <img class="marca-agua" src="{% static 'img/cloudin-marca.png' %}" alt="">
+  <div class="dentro">
+    <div>
+      <div class="rot">Costo por porción</div>
+      <div class="cifra marca">${{ costo|pesos }}</div>
+      <div class="dim small">al costo promedio de hoy</div>
+    </div>
+    {% if not receta.es_subreceta %}
+    <div>
+      <div class="rot">Precio en la carta</div>
+      <div class="cifra">${{ precio|pesos }}</div>
+      <div class="dim small">impuesto incluido</div>
+    </div>
+    <div>
+      <div class="rot">Margen bruto</div>
+      <div class="cifra">${{ margen|pesos }}</div>
+      <div class="dim small">precio menos materia prima</div>
+    </div>
+    <div>
+      <div class="rot">Food cost</div>
+      <div class="cifra">{% if food_cost_pct %}{{ food_cost_pct|floatformat:1 }}%{% else %}—{% endif %}</div>
+      <div class="dim small">
+        {% if food_cost_pct and food_cost_pct <= 35 %}dentro de lo normal
+        {% elif food_cost_pct %}alto para un restaurante{% else %}falta precio{% endif %}
+      </div>
+    </div>
+    {% else %}
+    <div>
+      <div class="rot">Rendimiento</div>
+      <div class="cifra">{{ receta.rendimiento|cantidad }}</div>
+      <div class="dim small">{{ receta.unidad_rendimiento }} por preparación</div>
+    </div>
+    <div>
+      <div class="rot">Se usa en</div>
+      <div class="cifra">{{ receta.usada_en.count }}</div>
+      <div class="dim small">receta(s)</div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+{% if faltantes %}
+<div class="aviso alerta">
+  No alcanza el stock para una porción:
+  {% for f in faltantes %}
+    <strong>{{ f.insumo.nombre }}</strong> (necesita {{ f.necesita|cantidad }},
+    hay {{ f.hay|cantidad }}){% if not forloop.last %}; {% endif %}
+  {% endfor %}.
+</div>
+{% endif %}
+
+<div class="cols cols-2">
+  <div>
+    <div class="bloque-cab" style="margin-top:0">
+      <svg class="ico" viewBox="0 0 24 24"><path d="M20 7L12 3 4 7v10l8 4 8-4z"/><path d="M4 7l8 4 8-4M12 11v10"/></svg>
+      <h2>Qué lleva</h2>
+      <span class="dim small fin">por {{ receta.rendimiento|floatformat:0 }} {{ receta.unidad_rendimiento }}</span>
+    </div>
+    <div class="card">
+      <div class="tabla-wrap">
+        <table>
+          <thead><tr><th>Ingrediente</th><th class="fin">Cantidad</th><th class="fin">Costo unitario</th>
+                     <th class="fin">Costo</th><th class="fin">Stock</th><th class="fin"></th></tr></thead>
+          <tbody>
+            {% for it in items %}
+            <tr>
+              <td>
+                <div class="ingrediente">
+                  {% if it.subreceta_id %}
+                    <span class="pill info"><i class="dot"></i>subreceta</span>
+                    <a href="{% url 'panel:receta' it.subreceta_id %}">{{ it.que }}</a>
+                  {% else %}
+                    <a href="{% url 'panel:insumo-detalle' it.insumo_id %}">{{ it.que }}</a>
+                  {% endif %}
+                </div>
+                {% if it.nota %}<div class="dim small">{{ it.nota }}</div>{% endif %}
+              </td>
+              <td class="fin">{{ it.cantidad|cantidad }} {{ it.unidad }}</td>
+              <td class="fin">
+                {% if it.insumo_id %}${{ it.insumo.costo_promedio|pesos:2 }}
+                {% else %}${{ it.subreceta.costo|pesos:2 }}{% endif %}
+              </td>
+              <td class="fin"><strong>${{ it.costo|pesos }}</strong></td>
+              <td class="fin dim small">
+                {% if it.insumo_id %}{{ it.insumo.stock|cantidad }}{% else %}—{% endif %}
+              </td>
+              <td class="fin">
+                <form method="post">
+                  {% csrf_token %}
+                  <input type="hidden" name="accion" value="quitar">
+                  <input type="hidden" name="item_id" value="{{ it.id }}">
+                  <button class="btn quiet sm" type="submit">Quitar</button>
+                </form>
+              </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="6" class="vacio">
+              La receta está vacía. Agrega sus insumos con el formulario de la derecha.
+            </td></tr>
+            {% endfor %}
+          </tbody>
+          {% if items %}
+          <tfoot>
+            <tr>
+              <td colspan="3" class="fin"><strong>Costo de la preparación</strong></td>
+              <td class="fin"><strong>${{ costo|pesos }}</strong>
+                <div class="dim small">por porción</div></td>
+              <td colspan="2"></td>
+            </tr>
+          </tfoot>
+          {% endif %}
+        </table>
+      </div>
+    </div>
+
+    {% if receta.notas %}
+    <div class="bloque-cab">
+      <svg class="ico" viewBox="0 0 24 24"><path d="M4 4h16v16H4z"/><path d="M8 9h8M8 13h6"/></svg>
+      <h2>Preparación</h2>
+    </div>
+    <div class="card"><p class="muted small" style="white-space:pre-line">{{ receta.notas }}</p></div>
+    {% endif %}
+  </div>
+
+  <div>
+    <div class="bloque-cab" style="margin-top:0">
+      <svg class="ico" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+      <h2>Agregar ingrediente</h2>
+    </div>
+    <div class="card">
+      <form method="post">
+        {% csrf_token %}
+        <input type="hidden" name="accion" value="item">
+        {% if form_item.non_field_errors %}
+          {% for e in form_item.non_field_errors %}<div class="aviso malo">{{ e }}</div>{% endfor %}
+        {% endif %}
+        {% include "master/_campo.html" with campo=form_item.insumo %}
+        {% include "master/_campo.html" with campo=form_item.subreceta %}
+        <div class="form-row">
+          {% include "master/_campo.html" with campo=form_item.cantidad %}
+          {% include "master/_campo.html" with campo=form_item.nota %}
+        </div>
+        <button class="btn" type="submit">Agregar</button>
+      </form>
+      <div class="sep"></div>
+      <p class="dim small">
+        La cantidad va en la unidad de consumo del insumo (gramos, mililitros, unidades).
+        Si una salsa se usa en varios platos, créala como <strong>subreceta</strong> y úsala
+        aquí: se define una sola vez.
+      </p>
+    </div>
+
+    <div class="bloque-cab">
+      <svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.2"/><path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-2.7 1.1V21a2 2 0 1 1-4 0v-.1A1.6 1.6 0 0 0 7.5 19.4l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1A1.6 1.6 0 0 0 3 14.6a2 2 0 1 1 0-4h.1A1.6 1.6 0 0 0 4.6 7.5l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1A1.6 1.6 0 0 0 10 3.6V3a2 2 0 1 1 4 0v.1a1.6 1.6 0 0 0 2.7 1.1l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0 1.1 2.7H21a2 2 0 1 1 0 4h-.1a1.6 1.6 0 0 0-1.5 1z"/></svg>
+      <h2>Datos de la receta</h2>
+    </div>
+    <div class="card">
+      <form method="post">
+        {% csrf_token %}
+        <input type="hidden" name="accion" value="receta">
+        {% if receta.es_subreceta %}
+          {% include "master/_campo.html" with campo=form.nombre %}
+        {% endif %}
+        <div class="form-row">
+          {% include "master/_campo.html" with campo=form.rendimiento %}
+          {% include "master/_campo.html" with campo=form.unidad_rendimiento %}
+        </div>
+        {% include "master/_campo.html" with campo=form.notas %}
+        <label class="switch">{{ form.activa }} Activa (descuenta inventario al vender)</label>
+        <div style="margin-top:var(--sp-3)">
+          <button class="btn ghost" type="submit">Guardar receta</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

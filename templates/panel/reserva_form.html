@@ -1,0 +1,152 @@
+{% extends "panel/_base.html" %}
+{% block title %}Nueva reserva — Cloudin{% endblock %}
+{% block titulo %}Anotar una reserva{% endblock %}
+{% block subtitulo %}<p class="sub">Para quien llama, escribe por WhatsApp o reserva en persona</p>{% endblock %}
+{% block acciones %}<a class="btn ghost" href="{% url 'panel:reservas' %}">Volver a la agenda</a>{% endblock %}
+
+{% block head %}
+{{ block.super }}
+<style>
+  .pasos{max-width:820px;margin:0 auto;display:grid;gap:var(--sp-4)}
+  .paso{display:grid;grid-template-columns:44px 1fr;gap:var(--sp-3)}
+  .paso .n{width:44px;height:44px;border-radius:14px;display:grid;place-items:center;font-weight:800;font-size:17px;
+    background:var(--brand-soft);color:var(--brand)}
+  .paso h2{font-size:16.5px;font-weight:800;margin:8px 0 12px}
+  .opciones-s{display:grid;gap:10px;grid-template-columns:repeat(auto-fill,minmax(190px,1fr))}
+  .opcion-s{display:block;margin:0;padding:14px 16px;border-radius:16px;border:1.5px solid var(--line);background:var(--surface-2);
+    cursor:pointer;transition:border-color .2s,background .2s,transform .2s var(--ease)}
+  .opcion-s:hover{transform:translateY(-2px)}
+  .opcion-s:has(input:checked){border-color:var(--brand);background:var(--brand-soft)}
+  .opcion-s input{display:none}
+  .opcion-s strong{display:block;color:var(--text);font-size:15px}
+  .opcion-s small{color:var(--text-3);font-size:12.5px}
+  .horas{display:flex;flex-wrap:wrap;gap:8px;min-height:44px}
+  .hora-b{min-width:92px;padding:10px 12px;border-radius:12px;border:1.5px solid var(--line);background:var(--surface-2);
+    font:700 14px var(--fuente);color:var(--text);cursor:pointer;transition:all .2s var(--ease)}
+  .hora-b small{display:block;font-weight:600;font-size:11px;color:var(--text-3)}
+  .hora-b:hover{border-color:var(--brand-line)}
+  .hora-b.on{background:var(--brand-grad);color:#fff;border-color:transparent;transform:scale(1.04)}
+  .hora-b.on small{color:#fff}
+  .hora-b.llena{opacity:.55;text-decoration:line-through}
+  .stepper{display:inline-flex;align-items:center;gap:8px;background:var(--surface-2);border:1.5px solid var(--line);
+    border-radius:14px;padding:4px}
+  .stepper button{width:40px;height:40px;border-radius:10px;border:0;background:var(--surface);color:var(--text);
+    font-size:20px;font-weight:700;cursor:pointer;box-shadow:var(--shadow)}
+  .stepper input{width:64px;text-align:center;border:0;background:none;font-size:19px;font-weight:800;min-height:0;padding:4px}
+  .estado-dia{font-size:13.5px;margin-top:8px}
+</style>
+{% endblock %}
+
+{% block content %}
+<form method="post" class="pasos" id="formReserva" novalidate>
+  {% csrf_token %}
+  {% for e in form.non_field_errors %}<div class="aviso malo">{{ e }}</div>{% endfor %}
+
+  <div class="card paso">
+    <span class="n">1</span>
+    <div>
+      <h2>¿Para qué horario?</h2>
+      <div class="opciones-s">
+        {% for s in form.fields.servicio.queryset %}
+          <label class="opcion-s"><input type="radio" name="servicio" value="{{ s.id }}" data-por-dia="{{ s.por_dia|yesno:'1,0' }}"
+            {% if form.servicio.value|stringformat:'s' == s.id|stringformat:'s' or not form.servicio.value and forloop.first %}checked{% endif %}>
+            <strong>{{ s.nombre }}</strong><small>{{ s.dias_texto }} · {{ s.abre|time:"g:i a" }} a {{ s.cierra|time:"g:i a" }}</small></label>
+        {% empty %}
+          <p class="dim">Todavía no hay horarios. <a href="{% url 'panel:reservas-config' %}" style="color:var(--brand)">Créalos aquí</a>.</p>
+        {% endfor %}
+      </div>
+      {% for e in form.servicio.errors %}<div class="campo"><div class="error">{{ e }}</div></div>{% endfor %}
+    </div>
+  </div>
+
+  <div class="card paso">
+    <span class="n">2</span>
+    <div>
+      <h2>¿Qué día y cuántas personas?</h2>
+      <div class="form-row">
+        <div class="campo"><label for="id_fecha">Fecha</label>{{ form.fecha }}</div>
+        <div class="campo"><label>Personas</label>
+          <div class="stepper"><button type="button" data-paso="-1" aria-label="Una persona menos">−</button>
+            <input type="number" name="personas" id="id_personas" value="{{ form.personas.value|default:2 }}" min="1" max="200">
+            <button type="button" data-paso="1" aria-label="Una persona más">+</button></div>
+        </div>
+      </div>
+      <p class="estado-dia" id="estadoDia"></p>
+    </div>
+  </div>
+
+  <div class="card paso" id="pasoHora">
+    <span class="n">3</span>
+    <div>
+      <h2>¿A qué hora?</h2>
+      <div class="horas" id="horas"><span class="dim small">Elige el horario y la fecha…</span></div>
+      <input type="hidden" name="hora" id="id_hora" value="{{ form.hora.value|default_if_none:''|time:'H:i' }}">
+      <p class="dim small" style="margin-top:8px">Las horas tachadas no tienen mesa libre para ese grupo, pero desde el panel igual puedes anotarla.</p>
+    </div>
+  </div>
+
+  <div class="card paso">
+    <span class="n">4</span>
+    <div>
+      <h2>¿Quién viene?</h2>
+      <div class="form-row">
+        {% include "master/_campo.html" with campo=form.nombre %}
+        {% include "master/_campo.html" with campo=form.telefono %}
+      </div>
+      <div class="form-row">
+        {% include "master/_campo.html" with campo=form.origen %}
+        {% include "master/_campo.html" with campo=form.mesa %}
+        {% include "master/_campo.html" with campo=form.zona %}
+      </div>
+      {% include "master/_campo.html" with campo=form.observaciones %}
+      <div class="row" style="margin-top:6px">
+        <button class="btn lg" type="submit">
+          <svg class="ico" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>Guardar reserva</button>
+        <a class="btn quiet" href="{% url 'panel:reservas' %}">Cancelar</a>
+      </div>
+    </div>
+  </div>
+</form>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const form = document.getElementById("formReserva");
+const horasEl = document.getElementById("horas");
+const horaIn = document.getElementById("id_hora");
+const personas = document.getElementById("id_personas");
+const fecha = document.getElementById("id_fecha");
+const estadoDia = document.getElementById("estadoDia");
+
+form.querySelectorAll("[data-paso]").forEach((b) => b.addEventListener("click", () => {
+  personas.value = Math.max(1, (Number(personas.value) || 1) + Number(b.dataset.paso));
+  cargarHoras();
+}));
+
+async function cargarHoras() {
+  const servicio = form.querySelector("input[name=servicio]:checked");
+  if (!servicio || !fecha.value) return;
+  const porDia = servicio.dataset.porDia === "1";
+  document.getElementById("pasoHora").hidden = porDia;
+  const r = await fetch(`/panel/reservas/horas/?servicio=${servicio.value}&fecha=${fecha.value}&personas=${personas.value}`);
+  const d = await r.json();
+  const dia = d.dia || {};
+  estadoDia.innerHTML = dia.disponible
+    ? `<span class="pill ok">Hay cupo</span>${dia.cupo_restante != null ? ` · quedan ${dia.cupo_restante} cupos` : ""}`
+    : `<span class="pill warn">${dia.texto || "Sin cupo"}</span>`;
+  if (porDia) { horaIn.value = ""; return; }
+  horasEl.innerHTML = d.horas.length ? d.horas.map((h) => `
+    <button type="button" class="hora-b ${h.libre ? "" : "llena"} ${horaIn.value === h.hora ? "on" : ""}" data-h="${h.hora}">
+      ${h.texto}<small>${h.libre ? h.mesas + " mesa" + (h.mesas === 1 ? "" : "s") : "llena"}</small></button>`).join("")
+    : '<span class="dim small">Ese día no hay servicio en este horario.</span>';
+  horasEl.querySelectorAll("[data-h]").forEach((b) => b.addEventListener("click", () => {
+    horaIn.value = b.dataset.h;
+    horasEl.querySelectorAll(".hora-b").forEach((x) => x.classList.toggle("on", x === b));
+  }));
+}
+form.querySelectorAll("input[name=servicio]").forEach((i) => i.addEventListener("change", () => { horaIn.value = ""; cargarHoras(); }));
+fecha.addEventListener("change", cargarHoras);
+personas.addEventListener("change", cargarHoras);
+cargarHoras();
+</script>
+{% endblock %}

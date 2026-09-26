@@ -1,0 +1,212 @@
+{% extends "panel/_base.html" %}
+{% load static cloudin %}
+{% block title %}Propinas — Cloudin{% endblock %}
+{% block titulo %}Propinas{% endblock %}
+{% block subtitulo %}<p class="sub dim small">Lo que dejaron los clientes y cuánto le toca a cada persona del equipo</p>{% endblock %}
+{% block acciones %}
+  <span class="pill info"><i class="dot"></i>Bolsa común por horas</span>
+{% endblock %}
+
+{% block head %}
+{{ block.super }}
+<style>
+  .prop-hero{position:relative;overflow:hidden;border-radius:var(--r-xl);padding:var(--sp-5);
+    background:linear-gradient(130deg,rgba(62,207,142,.13),transparent 60%),var(--surface);border:1px solid var(--line)}
+  .prop-hero .marca-agua{position:absolute;right:24px;bottom:-34px;height:170px;opacity:.06;pointer-events:none}
+  .prop-hero .dentro{position:relative;z-index:1}
+  .prop-hero .gran{font-size:42px;font-weight:770;letter-spacing:-.035em;line-height:1.02}
+  .franja{display:grid;gap:var(--sp-4);grid-template-columns:repeat(auto-fit,minmax(140px,1fr));
+    margin-top:var(--sp-4);padding-top:var(--sp-4);border-top:1px solid var(--line)}
+  .franja .rot{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--text-3);font-weight:600;margin-bottom:3px}
+  .franja .dato{font-size:19px;font-weight:690}
+  .persona{display:flex;align-items:center;gap:10px}
+  .avatar{width:34px;height:34px;border-radius:11px;display:grid;place-items:center;flex:none;
+    background:var(--brand-grad);color:#fff;font-weight:700;font-size:13px}
+  .como{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}
+  .como .paso{display:flex;gap:10px;align-items:flex-start;font-size:13px;color:var(--text-2)}
+  .como .n{width:26px;height:26px;border-radius:9px;display:grid;place-items:center;flex:none;
+    background:var(--surface-3);color:var(--text);font-weight:700;font-size:12.5px}
+  .filtro{display:flex;gap:var(--sp-2);align-items:center;flex-wrap:wrap}
+  .filtro .campo{margin:0}
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div class="prop-hero">
+  <img class="marca-agua" src="{% static 'img/cloudin-marca.png' %}" alt="">
+  <div class="dentro">
+    <div class="eyebrow">{% if abierto %}Turno {{ abierto.numero }} · en curso{% else %}Sin turno abierto{% endif %}</div>
+    <div class="gran">${{ vivo.total|default:"0"|pesos }}</div>
+    <p class="dim small" style="margin-top:6px">
+      Propina recogida en este turno. Se reparte entre quienes marcaron en el reloj, según sus horas.
+    </p>
+    <div class="franja">
+      <div><div class="rot">Mesas con propina</div><div class="dato">{{ vivo.mesas_con_propina|default:"0" }}</div></div>
+      <div><div class="rot">Sobre las ventas</div><div class="dato">{{ vivo.porcentaje_ventas|default:"0" }} %</div></div>
+      <div><div class="rot">En efectivo (en la caja)</div><div class="dato">${{ vivo.efectivo|default:"0"|pesos }}</div></div>
+      <div><div class="rot">Horas del equipo</div><div class="dato">{{ vivo.horas_equipo|default:"0"|floatformat:1 }} h</div></div>
+      <div><div class="rot">Por entregar (período)</div><div class="dato">${{ pendiente|pesos }}</div></div>
+    </div>
+  </div>
+</div>
+
+<div class="cols cols-half" style="margin-top:var(--sp-5)">
+  <div>
+    <div class="bloque-cab">
+      <svg class="ico" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      <h2>Reparto de este turno</h2>
+      <span class="dim small fin">provisional hasta cerrar</span>
+    </div>
+    <div class="card">
+      <div class="tabla-wrap">
+        <table>
+          <thead><tr><th>Persona</th><th class="fin">Horas</th><th class="fin">Parte</th><th class="fin">Le toca</th></tr></thead>
+          <tbody>
+            {% for f in vivo.reparto %}
+            <tr>
+              <td><div class="persona"><span class="avatar">{{ f.nombre|slice:":1"|upper }}</span>
+                <span><strong>{{ f.nombre }}</strong>{% if f.cargo %}<div class="dim small">{{ f.cargo }}</div>{% endif %}</span></div></td>
+              <td class="fin">{{ f.horas|floatformat:1 }} h</td>
+              <td class="fin dim">{{ f.porcentaje }} %</td>
+              <td class="fin"><strong>${{ f.valor|pesos }}</strong></td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="4" class="vacio">
+              {% if vivo and vivo.total != "0" %}
+                Hay propina, pero nadie ha marcado entrada en el reloj durante este turno.
+                <a href="{% url 'panel:empleados' %}" style="color:var(--brand)">Ir a Empleados</a>.
+              {% else %}
+                Todavía no hay propina en este turno.
+              {% endif %}
+            </td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div>
+    <div class="bloque-cab">
+      <svg class="ico" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M7 20v-4M17 20v-4"/></svg>
+      <h2>Mesas que dejaron propina</h2>
+    </div>
+    <div class="card">
+      <div class="tabla-wrap">
+        <table>
+          <thead><tr><th>Mesa</th><th>Hora</th><th>Pagó con</th><th class="fin">Cuenta</th><th class="fin">Propina</th></tr></thead>
+          <tbody>
+            {% for m in vivo.mesas %}
+            <tr>
+              <td><strong>Mesa {{ m.mesa }}</strong>{% if m.mesero %}<div class="dim small">{{ m.mesero }}</div>{% endif %}</td>
+              <td class="dim small">{{ m.hora|default:"—" }}</td>
+              <td class="dim small">{{ m.medio }}</td>
+              <td class="fin dim">${{ m.cuenta|pesos }}</td>
+              <td class="fin"><strong>${{ m.propina|pesos }}</strong> <span class="dim small">{{ m.porcentaje }} %</span></td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="5" class="vacio">Ninguna mesa ha dejado propina en este turno.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="bloque">
+  <div class="bloque-cab">
+    <svg class="ico" viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="M7 14l4-4 3 3 5-6"/></svg>
+    <h2>Acumulado por persona</h2>
+    <span class="dim small fin">{{ desde|date:"d/m/Y" }} – {{ hasta|date:"d/m/Y" }}</span>
+  </div>
+  <div class="card">
+    <form class="filtro" method="get" style="margin-bottom:var(--sp-3)">
+      <label class="small dim" for="desde">Desde</label>
+      <input type="date" id="desde" name="desde" value="{{ desde|date:'Y-m-d' }}" style="max-width:170px">
+      <label class="small dim" for="hasta">hasta</label>
+      <input type="date" id="hasta" name="hasta" value="{{ hasta|date:'Y-m-d' }}" style="max-width:170px">
+      <button class="btn ghost sm" type="submit">Ver período</button>
+    </form>
+    <div class="tabla-wrap">
+      <table>
+        <thead><tr><th>Persona</th><th class="fin">Turnos</th><th class="fin">Horas</th>
+          <th class="fin">Propina ganada</th><th class="fin">Por entregar</th></tr></thead>
+        <tbody>
+          {% for a in acumulado %}
+          <tr>
+            <td><div class="persona"><span class="avatar">{{ a.nombre|slice:":1"|upper }}</span>
+              <span><strong>{{ a.nombre }}</strong>{% if a.cargo %}<div class="dim small">{{ a.cargo }}</div>{% endif %}</span></div></td>
+            <td class="fin">{{ a.turnos }}</td>
+            <td class="fin">{{ a.horas|floatformat:1 }} h</td>
+            <td class="fin"><strong>${{ a.valor|pesos }}</strong></td>
+            <td class="fin">{% if a.pendiente %}<span class="pill warn">${{ a.pendiente|pesos }}</span>{% else %}<span class="pill ok"><i class="dot"></i>al día</span>{% endif %}</td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="5" class="vacio">Sin propinas repartidas en turnos cerrados entre {{ desde|date:"d/m/Y" }} y {{ hasta|date:"d/m/Y" }}.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <div class="sep"></div>
+    <p class="dim small">Total del período: <strong>${{ total_periodo|pesos }}</strong>. Solo cuentan los turnos ya cerrados.</p>
+  </div>
+</div>
+
+<div class="bloque">
+  <div class="bloque-cab">
+    <svg class="ico" viewBox="0 0 24 24"><path d="M3 6h18v13a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M8 3v4M16 3v4M3 10h18"/></svg>
+    <h2>Por turno</h2>
+  </div>
+  <div class="card">
+    <div class="tabla-wrap">
+      <table>
+        <thead><tr><th>Turno</th><th>Fecha</th><th class="fin">Mesas</th><th class="fin">Propina</th>
+          <th class="fin">Efectivo</th><th>Entrega al equipo</th><th class="fin"></th></tr></thead>
+        <tbody>
+          {% for h in historial %}
+          <tr>
+            <td><strong>#{{ h.t.numero }}</strong></td>
+            <td class="dim small">{{ h.t.abierto_en|date:"d/m H:i" }} → {{ h.t.cerrado_en|date:"H:i" }}</td>
+            <td class="fin">{{ h.p.mesas_con_propina|default:"0" }}</td>
+            <td class="fin"><strong>${{ h.total|pesos }}</strong></td>
+            <td class="fin dim">${{ h.p.efectivo|default:"0"|pesos }}</td>
+            <td>
+              {% if not h.total %}<span class="dim small">—</span>
+              {% elif h.t.propinas_pagadas_en %}<span class="pill ok"><i class="dot"></i>Entregada {{ h.t.propinas_pagadas_en|date:"d/m H:i" }}</span>
+              {% else %}<span class="pill warn"><i class="dot"></i>Pendiente</span>{% endif %}
+            </td>
+            <td class="fin">
+              <div class="acciones">
+                <a class="btn quiet sm" href="{% url 'panel:turno-detalle' h.t.id %}">Informe</a>
+                {% if h.total %}
+                <form method="post" action="{% url 'panel:propinas-pagadas' h.t.id %}">
+                  {% csrf_token %}
+                  <button class="btn {% if h.t.propinas_pagadas_en %}quiet{% else %}ok{% endif %} sm" type="submit">
+                    {% if h.t.propinas_pagadas_en %}Deshacer{% else %}Marcar entregada{% endif %}
+                  </button>
+                </form>
+                {% endif %}
+              </div>
+            </td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="7" class="vacio">No hay turnos cerrados en este período.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div class="bloque card">
+  <div class="card-head"><div><h2>Cómo funciona</h2></div></div>
+  <div class="como">
+    <div class="paso"><span class="n">1</span><span>Al cobrar la mesa, pregúntale al cliente si desea dejar propina. La sugerida es el 10 %, pero es <strong>voluntaria</strong>.</span></div>
+    <div class="paso"><span class="n">2</span><span>La propina <strong>no va en la factura electrónica</strong>: sale aparte en el recibo, porque no es ingreso del restaurante.</span></div>
+    <div class="paso"><span class="n">3</span><span>Todo lo del turno va a una bolsa y se reparte según las <strong>horas marcadas</strong> en el reloj de Empleados.</span></div>
+    <div class="paso"><span class="n">4</span><span>La propina en efectivo queda en la caja: el cuadre la suma. Al entregarla, márcala como entregada.</span></div>
+  </div>
+</div>
+{% endblock %}

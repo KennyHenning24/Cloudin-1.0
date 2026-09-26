@@ -1,0 +1,357 @@
+{% extends "panel/_base.html" %}
+{% load cloudin %}
+{% block title %}Facturación — Cloudin{% endblock %}
+{% block titulo %}Facturación electrónica{% endblock %}
+{% block subtitulo %}<p class="sub dim small">Habilitación ante la DIAN y documentos emitidos</p>{% endblock %}
+{% block acciones %}
+  {% if empresa %}
+    <span class="pill {% if empresa.puede_facturar %}ok{% else %}warn{% endif %}">
+      <i class="dot"></i>{{ empresa.get_estado_habilitacion_display }}
+    </span>
+  {% else %}
+    <span class="pill neutro"><i class="dot"></i>Sin configurar</span>
+  {% endif %}
+{% endblock %}
+
+{% block head %}
+{{ block.super }}
+<style>
+  .req{display:grid;gap:var(--sp-2);grid-template-columns:repeat(auto-fit,minmax(215px,1fr))}
+  .req div{display:flex;align-items:center;gap:10px;background:var(--surface-2);
+           border:1px solid var(--line);border-radius:var(--r);padding:12px 14px;font-size:13.5px}
+  .req .marca{width:22px;height:22px;border-radius:50%;display:grid;place-items:center;
+              font-size:12px;font-weight:700;flex:none}
+  .req .si .marca,.req div.si .marca{background:var(--ok-soft);color:var(--ok)}
+  .req div.no .marca{background:var(--warn-soft);color:var(--warn)}
+</style>
+{% endblock %}
+
+{% block content %}
+
+{% for a in alertas %}
+  <div class="aviso {% if a.nivel == 'malo' %}malo{% else %}alerta{% endif %}">{{ a.texto }}</div>
+{% endfor %}
+
+<!-- ------------------------------------------------------- habilitación -->
+<div class="card" style="margin-bottom:var(--sp-4)">
+  <div class="card-head">
+    <div>
+      <h2>Para poder facturar</h2>
+      <p>La DIAN exige estas tres cosas. Hasta tenerlas, el sistema no emite documentos reales.</p>
+    </div>
+  </div>
+  <div class="req">
+    <div class="{% if requisitos.datos_empresa %}si{% else %}no{% endif %}">
+      <span class="marca">{% if requisitos.datos_empresa %}✓{% else %}!{% endif %}</span>
+      Datos de la empresa (RUT)
+    </div>
+    <div class="{% if requisitos.certificado %}si{% else %}no{% endif %}">
+      <span class="marca">{% if requisitos.certificado %}✓{% else %}!{% endif %}</span>
+      {% if empresa.firma_el_proveedor %}Firma digital (la pone {{ empresa.proveedor|capfirst }}){% else %}Certificado digital vigente{% endif %}
+    </div>
+    <div class="{% if requisitos.resolucion %}si{% else %}no{% endif %}">
+      <span class="marca">{% if requisitos.resolucion %}✓{% else %}!{% endif %}</span>
+      Resolución de numeración
+    </div>
+  </div>
+</div>
+
+<div class="cols cols-2">
+  <div class="stack">
+
+    <!-- datos de la empresa -->
+    <div class="card">
+      <div class="card-head">
+        <div>
+          <h2>Datos fiscales</h2>
+          <p>Como aparecen en el RUT. Van impresos en cada factura.</p>
+        </div>
+      </div>
+      <form method="post">
+        {% csrf_token %}
+        <input type="hidden" name="accion" value="empresa">
+        <div class="form-row">
+          {% include "master/_campo.html" with campo=form_empresa.razon_social %}
+          {% include "master/_campo.html" with campo=form_empresa.nombre_comercial %}
+        </div>
+        <div class="form-row">
+          {% include "master/_campo.html" with campo=form_empresa.nit %}
+          {% include "master/_campo.html" with campo=form_empresa.digito_verificacion %}
+          {% include "master/_campo.html" with campo=form_empresa.regimen %}
+        </div>
+        <div class="form-row">
+          {% include "master/_campo.html" with campo=form_empresa.direccion %}
+          {% include "master/_campo.html" with campo=form_empresa.ciudad %}
+          {% include "master/_campo.html" with campo=form_empresa.departamento %}
+        </div>
+        <div class="form-row">
+          {% include "master/_campo.html" with campo=form_empresa.correo_facturacion %}
+          {% include "master/_campo.html" with campo=form_empresa.telefono %}
+          {% include "master/_campo.html" with campo=form_empresa.certificado_vence %}
+        </div>
+        <label class="switch" style="margin:var(--sp-2) 0 var(--sp-3)">
+          {{ form_empresa.precios_incluyen_impuesto }}
+          Los precios del menú ya incluyen impuesto
+        </label>
+        <p class="dim small" style="margin-bottom:var(--sp-3)">
+          Es lo normal en restaurantes: si un plato vale $35.000 con INC del 8%, la base
+          es $32.407 y el impuesto $2.593. El cliente paga los $35.000 de la carta.
+        </p>
+        <button class="btn" type="submit">Guardar datos fiscales</button>
+      </form>
+    </div>
+
+    <!-- resoluciones -->
+    <div class="card">
+      <div class="card-head">
+        <div>
+          <h2>Resoluciones de numeración</h2>
+          <p>El rango de números que la DIAN autorizó, y por dónde va el consecutivo.</p>
+        </div>
+      </div>
+
+      {% if resoluciones %}
+      <div class="tabla-wrap" style="margin-bottom:var(--sp-3)">
+        <table>
+          <thead>
+            <tr><th>Resolución</th><th>Tipo</th><th>Rango</th><th>Van</th><th>Vence</th><th>Estado</th></tr>
+          </thead>
+          <tbody>
+            {% for r in resoluciones %}
+            <tr>
+              <td><code>{{ r.numero_resolucion }}</code></td>
+              <td class="muted small">{{ r.get_tipo_documento_display }}</td>
+              <td class="muted small">{{ r.prefijo }}{{ r.rango_desde }} – {{ r.prefijo }}{{ r.rango_hasta }}</td>
+              <td>
+                <strong>{{ r.consecutivo_actual }}</strong>
+                <div class="dim small">quedan {{ r.disponibles }}</div>
+              </td>
+              <td class="muted small">{{ r.fecha_vencimiento|date:"d/m/Y" }}</td>
+              <td>
+                <span class="pill {% if r.estado == 'activa' %}ok{% elif r.estado == 'inactiva' %}neutro{% else %}bad{% endif %}">
+                  <i class="dot"></i>{{ r.estado }}
+                </span>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% endif %}
+
+      {% if empresa %}
+      <details {% if not resoluciones %}open{% endif %}>
+        <summary class="btn ghost sm" style="display:inline-flex;list-style:none">
+          Registrar una resolución
+        </summary>
+        <form method="post" style="margin-top:var(--sp-3)">
+          {% csrf_token %}
+          <input type="hidden" name="accion" value="resolucion">
+          <div class="form-row">
+            {% include "master/_campo.html" with campo=form_resolucion.tipo_documento %}
+            {% include "master/_campo.html" with campo=form_resolucion.numero_resolucion %}
+            {% include "master/_campo.html" with campo=form_resolucion.prefijo %}
+          </div>
+          <div class="form-row">
+            {% include "master/_campo.html" with campo=form_resolucion.fecha_expedicion %}
+            {% include "master/_campo.html" with campo=form_resolucion.fecha_vencimiento %}
+          </div>
+          <div class="form-row">
+            {% include "master/_campo.html" with campo=form_resolucion.rango_desde %}
+            {% include "master/_campo.html" with campo=form_resolucion.rango_hasta %}
+            {% include "master/_campo.html" with campo=form_resolucion.consecutivo_actual %}
+          </div>
+          {% include "master/_campo.html" with campo=form_resolucion.clave_tecnica %}
+          <button class="btn" type="submit">Guardar resolución</button>
+        </form>
+      </details>
+      {% else %}
+        <p class="dim small">Primero guarda los datos fiscales.</p>
+      {% endif %}
+    </div>
+
+    <!-- documentos emitidos -->
+    <div class="card">
+      <div class="card-head">
+        <div>
+          <h2>Documentos emitidos</h2>
+          <p>Lo último que se envió al proveedor, con lo que respondió la DIAN.</p>
+        </div>
+      </div>
+      {% if documentos %}
+      <div class="tabla-wrap">
+        <table>
+          <thead>
+            <tr><th>Número</th><th>Mesa</th><th>Fecha</th><th class="fin">Total</th>
+                <th>Estado</th><th class="fin"></th></tr>
+          </thead>
+          <tbody>
+            {% for d in documentos %}
+            <tr>
+              <td><code>{{ d.numero_completo|default:"sin número aún" }}</code>
+                {% if d.cufe %}<div class="dim small">CUFE {{ d.cufe|slice:":16" }}…</div>{% endif %}</td>
+              <td class="muted">{% if d.sesion %}Mesa {{ d.sesion.table.number }}{% else %}—{% endif %}</td>
+              <td class="muted small">{{ d.fecha_generacion|date:"d/m/Y H:i" }}</td>
+              <td class="fin"><strong>${{ d.total_general|pesos }}</strong>
+                <div class="dim small">INC ${{ d.total_impuestos|pesos }}</div></td>
+              <td>
+                {% if d.es_simulado %}
+                <span class="pill neutro" title="Emitida por el proveedor simulado: no fue a la DIAN">
+                  <i class="dot"></i>Simulada · sin validez
+                {% else %}
+                <span class="pill {% if d.estado == 'aceptada_dian' %}ok{% elif d.estado == 'rechazada' %}bad{% elif d.estado == 'en_contingencia' %}warn{% else %}neutro{% endif %}">
+                  <i class="dot"></i>{{ d.get_estado_display }}
+                {% endif %}
+                </span>
+                {% if d.motivo_rechazo %}<div class="dim small">{{ d.motivo_rechazo|truncatechars:60 }}</div>{% endif %}
+              </td>
+              <td class="fin">
+                {% if d.pdf_url %}<a class="btn quiet sm" href="{{ d.pdf_url }}" target="_blank">PDF</a>{% endif %}
+                {% if d.xml_url %}<a class="btn quiet sm" href="{{ d.xml_url }}" target="_blank">XML</a>{% endif %}
+                {% if d.qr_url %}<a class="btn quiet sm" href="{{ d.qr_url }}" target="_blank" rel="noopener">DIAN</a>{% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+        <p class="vacio">Todavía no se ha emitido ningún documento.</p>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- ------------------------------------------------ columna derecha -->
+  <div class="stack">
+    <div class="card">
+      <div class="card-head"><div><h2>Certificado digital</h2></div></div>
+      {% if empresa and empresa.firma_el_proveedor %}
+        <p class="dim small">
+          Con <strong>{{ empresa.proveedor|capfirst }}</strong> el documento lo firma el proveedor con
+          su propio certificado. El restaurante no necesita cargar uno.
+        </p>
+      {% elif empresa %}
+        <p class="dim small" style="margin-bottom:var(--sp-3)">
+          El archivo lo guarda el proveedor tecnológico; aquí solo queda la constancia
+          de cuál es y cuándo vence.
+        </p>
+        <form method="post">
+          {% csrf_token %}
+          <input type="hidden" name="accion" value="certificado">
+          <div class="campo">
+            <label for="certificado_ref">Referencia del certificado</label>
+            <input type="text" id="certificado_ref" name="certificado_ref"
+                   value="{{ empresa.certificado_ref }}" placeholder="Ej. Andes SCD · serie 4F2A…">
+          </div>
+          <button class="btn ghost sm" type="submit">Guardar</button>
+        </form>
+        <div class="sep"></div>
+        <dl class="kv">
+          <dt>Vence</dt>
+          <dd>{{ empresa.certificado_vence|date:"d/m/Y"|default:"—" }}
+            {% if empresa.certificado_vence %}
+              <span class="pill {% if empresa.certificado_vigente %}ok{% else %}bad{% endif %}">
+                {% if empresa.certificado_vigente %}vigente{% else %}vencido{% endif %}</span>
+            {% endif %}
+          </dd>
+        </dl>
+      {% else %}
+        <p class="dim small">Primero guarda los datos fiscales.</p>
+      {% endif %}
+    </div>
+
+    <div class="card" id="proveedor">
+      <div class="card-head"><div><h2>Proveedor tecnológico</h2></div></div>
+      {% if empresa %}
+        <form method="post" class="stack-sm">
+          {% csrf_token %}
+          <input type="hidden" name="accion" value="proveedor">
+          <div class="campo" style="margin:0">
+            <label for="proveedor-sel">Quién valida ante la DIAN</label>
+            <select id="proveedor-sel" name="proveedor">
+              <option value="simulado" {% if empresa.proveedor == "simulado" %}selected{% endif %}>Simulado (pruebas internas)</option>
+              <option value="factus" {% if empresa.proveedor == "factus" %}selected{% endif %}>Factus</option>
+            </select>
+          </div>
+          <button class="btn ghost sm" type="submit">Guardar proveedor</button>
+        </form>
+        <div class="sep"></div>
+        <dl class="kv">
+          <dt>Estado</dt><dd>{{ empresa.get_estado_habilitacion_display }}</dd>
+          {% if empresa.proveedor == "factus" %}
+            <dt>Ambiente</dt>
+            <dd>{% if factus.sandbox %}<span class="pill warn">sandbox · pruebas</span>
+                {% else %}<span class="pill ok">producción</span>{% endif %}</dd>
+            <dt>Credenciales</dt>
+            <dd>{% if factus.propias %}propias del restaurante{% elif factus.configurado %}de Cloudin (.env){% else %}<span class="pill bad">faltan</span>{% endif %}</dd>
+          {% endif %}
+        </dl>
+
+        {% if empresa.proveedor == "factus" %}
+          <div class="sep"></div>
+          <div class="row">
+            <form method="post">{% csrf_token %}
+              <input type="hidden" name="accion" value="factus_probar">
+              <button class="btn sm" type="submit">Probar conexión</button>
+            </form>
+            <form method="post">{% csrf_token %}
+              <input type="hidden" name="accion" value="factus_rangos">
+              <button class="btn ghost sm" type="submit">Traer rangos de Factus</button>
+            </form>
+          </div>
+          <p class="dim small" style="margin-top:var(--sp-2)">
+            Los rangos de numeración viven en Factus: al traerlos quedan como resoluciones aquí,
+            con su id de rango, y el panel avisa antes de que se agoten.
+          </p>
+          <details style="margin-top:var(--sp-3)">
+            <summary class="small" style="cursor:pointer;color:var(--text-2)">Credenciales propias del restaurante</summary>
+            <form method="post" style="margin-top:var(--sp-3)">
+              {% csrf_token %}
+              <input type="hidden" name="accion" value="factus_credenciales">
+              <p class="dim small" style="margin-bottom:var(--sp-2)">
+                Solo si Factus le entregó credenciales a este restaurante. Si se dejan vacías
+                se usan las de Cloudin. Se guardan cifradas.
+              </p>
+              <div class="campo"><label>URL de la API</label>
+                <input type="url" name="url" placeholder="https://api.factus.com.co" autocomplete="off"></div>
+              <div class="campo"><label>Client ID</label>
+                <input type="text" name="client_id" autocomplete="off"></div>
+              <div class="campo"><label>Client secret</label>
+                <input type="password" name="client_secret" autocomplete="new-password"></div>
+              <div class="campo"><label>Usuario (correo)</label>
+                <input type="email" name="username" autocomplete="off"></div>
+              <div class="campo"><label>Contraseña</label>
+                <input type="password" name="password" autocomplete="new-password"></div>
+              <div class="row">
+                <button class="btn ghost sm" type="submit">Guardar credenciales</button>
+                {% if factus.propias %}
+                  <button class="btn quiet sm" type="submit" name="borrar" value="1">Usar las de Cloudin</button>
+                {% endif %}
+              </div>
+            </form>
+          </details>
+        {% else %}
+          <div class="sep"></div>
+          <p class="dim small">
+            El <strong>simulado</strong> emite CUFE, XML y PDF de prueba para usar todo el flujo
+            sin enviar nada a la DIAN. Cambia a <strong>Factus</strong> para validar de verdad.
+          </p>
+        {% endif %}
+      {% else %}
+        <p class="dim small">Primero guarda los datos fiscales.</p>
+      {% endif %}
+    </div>
+
+    <div class="card">
+      <div class="card-head"><div><h2>Cómo se factura</h2></div></div>
+      <ol class="muted small" style="padding-left:18px;margin:0;line-height:1.95">
+        <li>El mesero cierra la mesa desde <strong>Mesas</strong>.</li>
+        <li>El sistema calcula base e impuestos de cada línea.</li>
+        <li>Toma el siguiente número del rango (con Factus lo asigna Factus).</li>
+        <li>Lo envía al proveedor y guarda CUFE, PDF y enlace de la DIAN.</li>
+        <li>Si el proveedor no responde, queda en contingencia y se reintenta solo.</li>
+      </ol>
+    </div>
+  </div>
+</div>
+{% endblock %}

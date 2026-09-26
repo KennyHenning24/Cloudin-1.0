@@ -1,0 +1,311 @@
+{% extends "panel/_base.html" %}
+{% load static cloudin %}
+{% block title %}Turno {{ t.numero }} — Cloudin{% endblock %}
+{% block titulo %}Informe del turno {{ t.numero }}{% endblock %}
+{% block subtitulo %}
+<p class="sub dim small">
+  {{ t.abierto_en|date:"l j \d\e F, g:i a"|lower|capfirst }}
+  {% if t.cerrado_en %}→ {{ t.cerrado_en|date:"H:i" }}{% else %}· en curso{% endif %}
+  · {{ t.horas }} h
+</p>
+{% endblock %}
+{% block acciones %}
+  {% if t.abierto %}
+    <span class="pill warn"><i class="dot"></i>En curso</span>
+  {% else %}
+    <span class="pill ok"><i class="dot"></i>Cerrado</span>
+  {% endif %}
+  <button class="btn ghost" type="button" onclick="imprimirTurno({{ t.id }})">
+    <svg class="ico" viewBox="0 0 24 24"><path d="M6 9V2h12v7M6 18H4v-6h16v6h-2M8 14h8v8H8z"/></svg>
+    Imprimir cierre
+  </button>
+  <a class="btn quiet" href="{% url 'panel:turnos' %}">Todos los turnos</a>
+{% endblock %}
+
+{% block head %}
+{{ block.super }}
+<style>
+  .cierre{position:relative;overflow:hidden;border-radius:var(--r-xl);padding:var(--sp-5);
+    background:linear-gradient(130deg,rgba(62,207,142,.12),transparent 60%),var(--surface);
+    border:1px solid var(--line);margin-bottom:var(--sp-5)}
+  .cierre.vivo{background:linear-gradient(130deg,rgba(239,112,38,.15),transparent 60%),var(--surface)}
+  .cierre .marca-agua{position:absolute;right:22px;bottom:-32px;height:168px;opacity:.06}
+  .cierre .dentro{position:relative;z-index:1}
+  .cierre .gran{font-size:42px;font-weight:770;letter-spacing:-.035em;line-height:1.02}
+  .franja{display:grid;gap:var(--sp-4);grid-template-columns:repeat(auto-fit,minmax(148px,1fr));
+    margin-top:var(--sp-4);padding-top:var(--sp-4);border-top:1px solid var(--line)}
+  .franja .rot{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--text-3);
+    font-weight:600;margin-bottom:3px}
+  .franja .dato{font-size:19px;font-weight:690}
+  .caja{display:grid;gap:2px;font-size:13.5px}
+  .caja .fila{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--line-soft)}
+  .caja .fila:last-child{border:0}
+  .caja .fila.total{font-weight:700;font-size:15px;border-top:1px solid var(--line);margin-top:4px;padding-top:10px}
+  .cuadre{border-radius:var(--r);padding:12px 14px;font-size:13px;border:1px solid}
+  .cuadre.ok{background:var(--ok-soft);border-color:rgba(62,207,142,.3);color:var(--ok-text)}
+  .cuadre.mal{background:var(--danger-soft);border-color:rgba(242,85,90,.3);color:var(--danger-text)}
+  .cuadre.neutro{background:var(--surface-2);border-color:var(--line);color:var(--text-2)}
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div class="cierre {% if t.abierto %}vivo{% endif %}">
+  <img class="marca-agua" src="{% static 'img/cloudin-marca.png' %}" alt="">
+  <div class="dentro">
+    <div class="eyebrow">
+      {% if t.abierto %}Vendido hasta ahora{% else %}Total vendido en el turno{% endif %}
+    </div>
+    <div class="gran">${{ r.total_ventas|pesos }}</div>
+    <p class="dim small" style="margin-top:6px">
+      {% if t.abierto_por %}Abrió {{ t.abierto_por }}{% endif %}
+      {% if t.cerrado_por %} · cerró {{ t.cerrado_por }}{% endif %}
+      {% if empresa %} · {{ empresa.razon_social }}{% endif %}
+    </p>
+    <div class="franja">
+      <div><div class="rot">Pedidos</div><div class="dato">{{ r.total_pedidos }}</div></div>
+      <div><div class="rot">Mesas atendidas</div><div class="dato">{{ r.total_mesas }}</div></div>
+      <div><div class="rot">Comensales</div><div class="dato">{{ r.total_comensales }}</div></div>
+      <div><div class="rot">Facturado DIAN</div><div class="dato">${{ r.facturado.total|pesos }}</div></div>
+      <div><div class="rot">Impuestos</div><div class="dato">${{ r.facturado.impuestos|pesos }}</div></div>
+      <div><div class="rot">Costo de insumos</div><div class="dato">${{ r.inventario.valor|pesos }}</div></div>
+      <div><div class="rot">Propinas</div><div class="dato">${{ r.propinas.total|default:"0"|pesos }}</div></div>
+    </div>
+  </div>
+</div>
+
+<div class="cols cols-2">
+  <div>
+    <div class="bloque-cab">
+      <svg class="ico" viewBox="0 0 24 24"><path d="M6 2h9l5 5v13a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z"/><path d="M14 2v6h6M9 13h6M9 17h4"/></svg>
+      <h2>Facturas emitidas en el turno</h2>
+      <span class="dim small fin">{{ r.documentos|length }}</span>
+    </div>
+    <div class="card">
+      <div class="tabla-wrap">
+        <table>
+          <thead><tr><th>Número</th><th>Hora</th><th>Mesa</th><th>Estado</th>
+                     <th class="fin">Base</th><th class="fin">Impuesto</th><th class="fin">Total</th></tr></thead>
+          <tbody>
+            {% for d in r.documentos %}
+            <tr>
+              <td>
+                <a href="{% url 'panel:documento' d.id %}"><strong>{{ d.numero }}</strong></a>
+                {% if d.cufe %}<div class="dim small">CUFE {{ d.cufe|slice:":16" }}…</div>{% endif %}
+              </td>
+              <td class="dim small">{{ d.hora }}</td>
+              <td>{% if d.mesa %}Mesa {{ d.mesa }}{% else %}—{% endif %}</td>
+              <td>
+                {% if d.estado == "aceptada_dian" %}<span class="pill ok"><i class="dot"></i>Aceptada</span>
+                {% elif d.estado == "rechazada" %}<span class="pill bad"><i class="dot"></i>Rechazada</span>
+                {% elif d.estado == "en_contingencia" %}<span class="pill warn"><i class="dot"></i>Contingencia</span>
+                {% else %}<span class="pill neutro"><i class="dot"></i>{{ d.estado_texto }}</span>{% endif %}
+              </td>
+              <td class="fin">${{ d.base|pesos }}</td>
+              <td class="fin">${{ d.impuestos|pesos }}</td>
+              <td class="fin"><strong>${{ d.total|pesos }}</strong></td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="7" class="vacio">No se emitió ninguna factura en este turno.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div>
+    <div class="bloque-cab">
+      <svg class="ico" viewBox="0 0 24 24"><path d="M3 6h18v13a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M3 10h18M7 15h4"/></svg>
+      <h2>Cuadre de caja</h2>
+    </div>
+    <div class="card">
+      <div class="caja">
+        <div class="fila"><span class="dim">Base inicial</span><span>${{ t.base_inicial|pesos }}</span></div>
+        <div class="fila"><span class="dim">Ventas del turno</span><span>${{ r.total_ventas|pesos }}</span></div>
+        {% for m in r.ventas_otros_medios %}
+        <div class="fila"><span class="dim">− Pagado con {{ m.medio|lower }}</span><span>−${{ m.total|pesos }}</span></div>
+        {% endfor %}
+        {% if r.propinas and r.propinas.efectivo != "0" %}
+        <div class="fila"><span class="dim">+ Propinas en efectivo (del equipo)</span><span>+${{ r.propinas.efectivo|pesos }}</span></div>
+        {% endif %}
+        <div class="fila total"><span>Debería haber</span><span>${{ t.efectivo_esperado|pesos }}</span></div>
+        {% if t.efectivo_contado != None %}
+        <div class="fila"><span class="dim">Contado al cerrar</span><span>${{ t.efectivo_contado|pesos }}</span></div>
+        {% endif %}
+      </div>
+      <div class="sep"></div>
+      {% if t.efectivo_contado == None %}
+        <div class="cuadre neutro">No se contó el efectivo al cerrar, así que no hay cuadre.</div>
+      {% elif t.diferencia == 0 %}
+        <div class="cuadre ok">La caja cuadró exacto.</div>
+      {% elif t.diferencia > 0 %}
+        <div class="cuadre neutro">
+          Sobran <strong>${{ t.diferencia|pesos }}</strong> en la caja.
+        </div>
+      {% else %}
+        <div class="cuadre mal">
+          Faltan <strong>${{ t.diferencia|pesos }}</strong> en la caja.
+        </div>
+      {% endif %}
+
+      {% if r.sin_facturar != "0" and r.sin_facturar != "0.00" %}
+        <div class="sep"></div>
+        <p class="dim small">
+          Vendido sin documento fiscal: <strong>${{ r.sin_facturar|pesos }}</strong>.
+          Suele ser una mesa cerrada sin facturar o una factura rechazada.
+        </p>
+      {% endif %}
+      {% if t.docs_pendientes %}
+        <div class="sep"></div>
+        <p class="dim small">
+          {{ t.docs_pendientes }} documento(s) todavía esperando al proveedor. Se reintentan solos.
+        </p>
+      {% endif %}
+      {% if t.notas %}
+        <div class="sep"></div>
+        <div class="eyebrow">Notas del cierre</div>
+        <p class="small muted" style="margin-top:5px">{{ t.notas }}</p>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<div class="bloque cols cols-half" style="display:grid">
+  <div>
+    <div class="bloque-cab">
+      <svg class="ico" viewBox="0 0 24 24"><path d="M4 20h16M6 20V9a6 6 0 0 1 12 0v11"/></svg>
+      <h2>Lo que se vendió</h2>
+    </div>
+    <div class="card">
+      <div class="tabla-wrap">
+        <table>
+          <thead><tr><th>Producto</th><th class="fin">Cantidad</th><th class="fin">Total</th></tr></thead>
+          <tbody>
+            {% for p in r.productos %}
+            <tr>
+              <td>{{ p.nombre }}</td>
+              <td class="fin">{{ p.cantidad }}</td>
+              <td class="fin">${{ p.total|pesos }}</td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="3" class="vacio">No se vendió nada en este turno.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div>
+    <div class="bloque-cab">
+      <svg class="ico" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M7 20v-4M17 20v-4"/></svg>
+      <h2>Mesas del turno</h2>
+    </div>
+    <div class="card">
+      <div class="tabla-wrap">
+        <table>
+          <thead><tr><th>Mesa</th><th>Horario</th><th class="fin">Personas</th>
+                     <th class="fin">Total</th><th>Factura</th></tr></thead>
+          <tbody>
+            {% for m in r.mesas %}
+            <tr>
+              <td><strong>Mesa {{ m.mesa }}</strong>
+                  {% if m.cliente %}<div class="dim small">{{ m.cliente }}</div>{% endif %}</td>
+              <td class="dim small">{{ m.abierta }}{% if m.cerrada %} → {{ m.cerrada }}{% endif %}</td>
+              <td class="fin">{{ m.personas }}</td>
+              <td class="fin">${{ m.total|pesos }}</td>
+              <td>
+                {% if m.documento %}
+                  <a class="pill info" href="{% url 'panel:documento' m.documento_id %}">{{ m.documento }}</a>
+                {% else %}<span class="dim small">sin factura</span>{% endif %}
+              </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="5" class="vacio">Ninguna mesa en este turno.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="bloque cols cols-half" style="display:grid">
+  <div>
+    <div class="bloque-cab">
+      <svg class="ico" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      <h2>Quién trabajó</h2>
+    </div>
+    <div class="card">
+      <div class="tabla-wrap">
+        <table>
+          <thead><tr><th>Persona</th><th>Cargo</th><th class="fin">Horas</th><th class="fin">Costo</th></tr></thead>
+          <tbody>
+            {% for e in r.empleados %}
+            <tr>
+              <td>{{ e.nombre }}</td>
+              <td class="dim small">{{ e.cargo|default:"—" }}</td>
+              <td class="fin">{{ e.horas|floatformat:1 }} h</td>
+              <td class="fin">${{ e.costo|pesos }}</td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="4" class="vacio">Nadie marcó entrada durante el turno.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div>
+    <div class="bloque-cab">
+      <svg class="ico" viewBox="0 0 24 24"><path d="M20 7L12 3 4 7v10l8 4 8-4z"/><path d="M4 7l8 4 8-4M12 11v10"/></svg>
+      <h2>Insumos consumidos</h2>
+      <span class="dim small fin">${{ r.inventario.valor|pesos }}</span>
+    </div>
+    <div class="card">
+      <div class="tabla-wrap">
+        <table>
+          <thead><tr><th>Insumo</th><th class="fin">Cantidad</th><th class="fin">Costo</th></tr></thead>
+          <tbody>
+            {% for i in r.inventario.insumos %}
+            <tr>
+              <td>{{ i.nombre }}</td>
+              <td class="fin">{{ i.cantidad|cantidad }} {{ i.unidad }}</td>
+              <td class="fin">${{ i.valor|pesos }}</td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="3" class="vacio">
+              Sin consumo registrado. Se descuenta solo cuando los platos tienen receta.
+            </td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  function imprimirTurno(id) {
+    let marco = document.getElementById("impresora-cloudin");
+    if (!marco) {
+      marco = document.createElement("iframe");
+      marco.id = "impresora-cloudin";
+      marco.setAttribute("aria-hidden", "true");
+      marco.style.cssText =
+        "position:fixed;right:0;bottom:0;width:1px;height:1px;opacity:0;border:0;pointer-events:none";
+      document.body.appendChild(marco);
+    }
+    const url = `/panel/turnos/${id}/imprimir/?t=${Date.now()}`;
+    marco.onload = () => {
+      try { marco.contentWindow.focus(); marco.contentWindow.print(); }
+      catch (e) { window.open(url, "_blank", "width=420,height=700"); }
+    };
+    marco.src = url;
+  }
+</script>
+{% endblock %}

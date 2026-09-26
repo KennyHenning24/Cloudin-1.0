@@ -1,0 +1,165 @@
+{% extends "panel/_base.html" %}
+{% block title %}Horarios de reservas — Cloudin{% endblock %}
+{% block titulo %}Horarios y mesas{% endblock %}
+{% block subtitulo %}<p class="sub">Lo que tu página web ofrece para reservar sale de aquí</p>{% endblock %}
+
+{% block head %}
+{{ block.super }}
+<style>
+  .servicio-c{display:flex;gap:var(--sp-3);align-items:center;padding:14px 0;border-top:1px solid var(--line-soft)}
+  .servicio-c:first-of-type{border-top:0}
+  .servicio-c .fin{margin-left:auto;display:flex;gap:6px}
+  .dias-chips{display:flex;gap:6px;flex-wrap:wrap}
+  .dias-chips label{margin:0;cursor:pointer}
+  .dias-chips input{display:none}
+  .dias-chips span{display:inline-grid;place-items:center;min-width:52px;height:40px;padding:0 10px;border-radius:12px;
+    border:1.5px solid var(--line);background:var(--surface-2);font-weight:700;font-size:13.5px;color:var(--text-2);
+    transition:all .2s var(--ease)}
+  .dias-chips input:checked+span{background:var(--brand-grad);color:#fff;border-color:transparent}
+  .ul-limpia{list-style:none;padding:0;margin:0}
+  .mesas-t input{min-height:38px;padding:7px 10px}
+  .mesas-t td{padding:8px 10px}
+  .ancla{scroll-margin-top:90px}
+</style>
+{% endblock %}
+
+{% block content %}
+{% include "panel/_reservas_nav.html" %}
+
+<div class="cols cols-2">
+  <div class="stack">
+    <section class="card ancla" id="horarios">
+      <div class="card-head"><span class="chip-ico sm durazno"><svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span>
+        <div><h2>Horarios que se pueden reservar</h2><p>Por ejemplo Almuerzo, Noche o Pasadía. El cliente solo ve los días y horas que pongas aquí.</p></div></div>
+      {% for s in servicios %}
+        <div class="servicio-c">
+          <span class="chip-ico sm {% if s.por_dia %}menta{% else %}lavanda{% endif %}"><svg class="ico" viewBox="0 0 24 24">{% if s.por_dia %}<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2"/>{% else %}<rect x="3" y="4" width="18" height="12" rx="2"/><path d="M7 20v-4M17 20v-4"/>{% endif %}</svg></span>
+          <div>
+            <strong>{{ s.nombre }}</strong> {% if not s.activo %}<span class="pill neutro">Apagado</span>{% endif %}
+            <div class="dim small">{{ s.dias_texto }} · {{ s.abre|time:"g:i a" }} a {{ s.cierra|time:"g:i a" }}
+              {% if s.por_dia %}· cupo {{ s.cupo_personas }} personas{% else %}· cada {{ s.intervalo_minutos }} min · mesa por {{ s.duracion_minutos }} min{% endif %}</div>
+          </div>
+          <div class="fin">
+            <a class="btn sm ghost" href="?servicio={{ s.id }}#editar">Editar</a>
+            <form method="post" onsubmit="return confirm('¿Quitar el horario {{ s.nombre|escapejs }}?')">{% csrf_token %}
+              <input type="hidden" name="accion" value="borrar_servicio"><input type="hidden" name="id" value="{{ s.id }}">
+              <button class="btn sm quiet" aria-label="Quitar">✕</button></form>
+          </div>
+        </div>
+      {% empty %}
+        <p class="dim">Todavía no hay horarios. Crea el primero aquí abajo.</p>
+      {% endfor %}
+    </section>
+
+    <section class="card ancla" id="editar">
+      <div class="card-head"><div><h2>{% if servicio_editar %}Editar «{{ servicio_editar.nombre }}»{% else %}Agregar un horario{% endif %}</h2>
+        <p>Si cierra a medianoche o después (por ejemplo 12:00 a. m.), igual funciona.</p></div>
+        {% if servicio_editar %}<a class="btn sm quiet fin" href="{% url 'panel:reservas-config' %}#editar">Nuevo en vez</a>{% endif %}</div>
+      <form method="post">
+        {% csrf_token %}
+        <input type="hidden" name="accion" value="servicio">
+        {% if servicio_editar %}<input type="hidden" name="id" value="{{ servicio_editar.id }}">{% endif %}
+        <div class="form-row">
+          {% include "master/_campo.html" with campo=form_servicio.nombre %}
+          {% include "master/_campo.html" with campo=form_servicio.tipo %}
+        </div>
+        <div class="campo"><label>Días que abre</label>
+          <div class="dias-chips">{% for op in form_servicio.dias %}<label>{{ op.tag }}<span>{{ op.choice_label|slice:":3" }}</span></label>{% endfor %}</div>
+          {% for e in form_servicio.dias.errors %}<div class="error">{{ e }}</div>{% endfor %}
+        </div>
+        <div class="form-row">
+          {% include "master/_campo.html" with campo=form_servicio.abre %}
+          {% include "master/_campo.html" with campo=form_servicio.cierra %}
+          {% include "master/_campo.html" with campo=form_servicio.cupo_personas %}
+        </div>
+        <details style="margin-bottom:var(--sp-3)"><summary class="dim small" style="cursor:pointer">Opciones avanzadas</summary>
+          <div class="form-row" style="margin-top:12px">
+            {% include "master/_campo.html" with campo=form_servicio.intervalo_minutos %}
+            {% include "master/_campo.html" with campo=form_servicio.duracion_minutos %}
+            {% include "master/_campo.html" with campo=form_servicio.ultima_llegada_minutos %}
+          </div>
+          <div class="form-row">
+            {% include "master/_campo.html" with campo=form_servicio.descripcion %}
+            {% include "master/_campo.html" with campo=form_servicio.orden %}
+          </div>
+          <label class="switch">{{ form_servicio.activo }} Activo</label>
+        </details>
+        <button class="btn" type="submit">{% if servicio_editar %}Guardar cambios{% else %}Agregar horario{% endif %}</button>
+      </form>
+    </section>
+
+    <section class="card ancla" id="mesas">
+      <div class="card-head"><span class="chip-ico sm cielo"><svg class="ico" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M7 20v-4M17 20v-4"/></svg></span>
+        <div><h2>Mesas para reservar</h2><p>Puestos y zona de cada mesa. Apaga las que quieras dejar para quien llega sin reservar.</p></div></div>
+      {% if mesas %}
+      <form method="post">
+        {% csrf_token %}<input type="hidden" name="accion" value="mesas">
+        <datalist id="zonas">{% for z in zonas %}<option value="{{ z }}">{% endfor %}<option value="Salón"><option value="Terraza"><option value="Patio"></datalist>
+        <div class="tabla-wrap"><table class="mesas-t">
+          <thead><tr><th>Mesa</th><th>Puestos</th><th>Zona</th><th>Se puede reservar</th></tr></thead>
+          <tbody>
+          {% for m in mesas %}
+            <tr>
+              <td><strong>{{ m.number }}</strong></td>
+              <td style="width:110px"><input type="number" min="1" max="40" name="puestos_{{ m.id }}" value="{{ m.seats }}"></td>
+              <td><input list="zonas" name="zona_{{ m.id }}" value="{{ m.zona }}" placeholder="Salón, Terraza…"></td>
+              <td><label class="switch"><input type="checkbox" name="reservable_{{ m.id }}" value="1" {% if m.reservable %}checked{% endif %}></label></td>
+            </tr>
+          {% endfor %}
+          </tbody></table></div>
+        <button class="btn" style="margin-top:12px" type="submit">Guardar mesas</button>
+      </form>
+      {% else %}
+        <p class="dim">Primero crea las mesas en <a href="{% url 'panel:configuracion' %}" style="color:var(--brand)">Configuración</a>.</p>
+      {% endif %}
+    </section>
+  </div>
+
+  <aside class="stack">
+    <form class="card" method="post">
+      {% csrf_token %}<input type="hidden" name="accion" value="ajustes">
+      <div class="card-head"><span class="chip-ico sm lavanda"><svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.2"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg></span><h2>Cómo se reciben</h2></div>
+      <label class="switch" style="margin-bottom:10px">{{ form_ajustes.activo }} Recibir reservas por internet</label>
+      <label class="switch" style="margin-bottom:14px">{{ form_ajustes.confirmacion_automatica }} Confirmar solas si hay cupo</label>
+      {% include "master/_campo.html" with campo=form_ajustes.whatsapp %}
+      <div class="form-row">
+        {% include "master/_campo.html" with campo=form_ajustes.anticipacion_horas %}
+        {% include "master/_campo.html" with campo=form_ajustes.dias_maximo %}
+      </div>
+      <div class="form-row">
+        {% include "master/_campo.html" with campo=form_ajustes.max_personas %}
+        {% include "master/_campo.html" with campo=form_ajustes.tolerancia_minutos %}
+      </div>
+      {% include "master/_campo.html" with campo=form_ajustes.recordar_horas_antes %}
+      {% include "master/_campo.html" with campo=form_ajustes.mensaje_recordatorio %}
+      <button class="btn block">Guardar</button>
+    </form>
+
+    <section class="card ancla" id="bloqueos">
+      <div class="card-head"><span class="chip-ico sm rosa"><svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M5.6 5.6l12.8 12.8"/></svg></span>
+        <div><h2>Días sin reservas</h2><p>Festivos cerrados, eventos privados…</p></div></div>
+      <ul class="ul-limpia">
+      {% for b in bloqueos %}
+        <li class="spread" style="padding:8px 0;border-top:1px solid var(--line-soft)">
+          <div><strong>{{ b.fecha|date:"D j M" }}</strong><div class="dim small">{{ b.servicio|default:"Todo el día" }}{% if b.motivo %} · {{ b.motivo }}{% endif %}</div></div>
+          <form class="fin" method="post">{% csrf_token %}<input type="hidden" name="accion" value="quitar_bloqueo"><input type="hidden" name="id" value="{{ b.id }}"><button class="btn sm quiet">Quitar</button></form>
+        </li>
+      {% empty %}<li class="dim small">Ningún día bloqueado.</li>{% endfor %}
+      </ul>
+      <form method="post" style="margin-top:12px">
+        {% csrf_token %}<input type="hidden" name="accion" value="bloqueo">
+        {% include "master/_campo.html" with campo=form_bloqueo.fecha %}
+        {% include "master/_campo.html" with campo=form_bloqueo.servicio %}
+        {% include "master/_campo.html" with campo=form_bloqueo.motivo %}
+        <button class="btn ghost block">Bloquear ese día</button>
+      </form>
+    </section>
+
+    <div class="card plain">
+      <div class="eyebrow">Política de datos para tus clientes</div>
+      <p class="small muted" style="margin:6px 0 10px">El formulario de reservas de tu página enlaza aquí para pedir la autorización de datos (Ley 1581).</p>
+      <a class="btn sm ghost" href="{{ politica }}" target="_blank" rel="noopener">Ver la página</a>
+    </div>
+  </aside>
+</div>
+{% endblock %}

@@ -1,0 +1,6 @@
+<div class="campo">
+  {{ campo.label_tag }}
+  {{ campo }}
+  {% if campo.help_text %}<div class="ayuda">{{ campo.help_text }}</div>{% endif %}
+  {% for e in campo.errors %}<div class="error">{{ e }}</div>{% endfor %}
+</div>

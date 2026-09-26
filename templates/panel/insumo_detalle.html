@@ -1,0 +1,196 @@
+{% extends "panel/_base.html" %}
+{% load static cloudin %}
+{% block title %}{{ insumo.nombre }} — Cloudin{% endblock %}
+{% block titulo %}{{ insumo.nombre }}{% endblock %}
+{% block subtitulo %}
+<p class="sub dim small">
+  Kardex valorado
+  {% if insumo.codigo %}· {{ insumo.codigo }}{% endif %}
+  {% if insumo.categoria %}· {{ insumo.categoria.nombre }}{% endif %}
+</p>
+{% endblock %}
+{% block acciones %}
+  <span class="pill {% if insumo.stock < 0 %}bad{% elif insumo.bajo_minimo %}warn{% else %}ok{% endif %}">
+    <i class="dot"></i>{{ insumo.stock|cantidad }} {{ insumo.unidad_consumo }}
+  </span>
+  <a class="btn quiet" href="{% url 'panel:insumo-editar' insumo.id %}">Editar</a>
+  <a class="btn ghost" href="{% url 'panel:insumos' %}">Volver a insumos</a>
+{% endblock %}
+
+{% block head %}
+{{ block.super }}
+<style>
+  .resumen{position:relative;overflow:hidden;border-radius:var(--r-xl);padding:var(--sp-5);
+    background:linear-gradient(125deg,rgba(239,112,38,.13),transparent 60%),var(--surface);
+    border:1px solid var(--line);margin-bottom:var(--sp-5)}
+  .resumen .marca-agua{position:absolute;right:22px;bottom:-30px;height:160px;opacity:.055}
+  .resumen .dentro{position:relative;z-index:1}
+  .resumen .gran{font-size:40px;font-weight:760;letter-spacing:-.035em;line-height:1}
+  .franja{display:grid;gap:var(--sp-4);grid-template-columns:repeat(auto-fit,minmax(140px,1fr));
+    margin-top:var(--sp-4);padding-top:var(--sp-4);border-top:1px solid var(--line)}
+  .franja .rot{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--text-3);
+    font-weight:600;margin-bottom:3px}
+  .franja .dato{font-size:17px;font-weight:670}
+</style>
+{% endblock %}
+
+{% block content %}
+{% include "panel/_inv_nav.html" %}
+
+<div class="resumen">
+  <img class="marca-agua" src="{% static 'img/cloudin-marca.png' %}" alt="">
+  <div class="dentro">
+    <div class="eyebrow">Stock actual</div>
+    <div class="gran">{{ insumo.stock|cantidad }} <span style="font-size:20px;color:var(--text-3)">{{ insumo.unidad_consumo }}</span></div>
+    <p class="dim small" style="margin-top:6px">
+      Valorizado en <strong>${{ insumo.valor_stock|pesos }}</strong> al costo promedio de hoy
+    </p>
+    <div class="franja">
+      <div><div class="rot">Costo promedio</div>
+           <div class="dato">${{ insumo.costo_promedio|pesos:2 }}</div></div>
+      <div><div class="rot">Por {{ insumo.unidad_compra }}</div>
+           <div class="dato">${{ insumo.costo_unidad_compra|pesos }}</div></div>
+      <div><div class="rot">Última compra</div>
+           <div class="dato">{% if insumo.ultima_compra %}${{ insumo.ultimo_precio_compra|pesos }}{% else %}—{% endif %}</div>
+           <div class="dim small">{{ insumo.ultima_compra|date:"d/m/Y"|default:"sin compras" }}</div></div>
+      <div><div class="rot">Mínimo</div>
+           <div class="dato">{{ insumo.stock_minimo|floatformat:0 }}</div></div>
+      <div><div class="rot">Proveedor</div>
+           <div class="dato" style="font-size:14px">{{ insumo.proveedor.nombre|default:"—" }}</div></div>
+    </div>
+  </div>
+</div>
+
+<div class="cols cols-2">
+  <div>
+    <div class="bloque-cab">
+      <svg class="ico" viewBox="0 0 24 24"><path d="M3 6h18v13a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M3 10h18M7 15h4"/></svg>
+      <h2>Kardex valorado</h2>
+      <span class="dim small fin">{{ movimientos|length }} movimiento(s)</span>
+    </div>
+    <div class="card">
+      <div class="tabla-wrap">
+        <table>
+          <thead>
+            <tr><th>Cuándo</th><th>Qué pasó</th><th class="fin">Entra</th><th class="fin">Sale</th>
+                <th class="fin">Costo</th><th class="fin">Saldo</th><th>Quién / motivo</th></tr>
+          </thead>
+          <tbody>
+            {% for m in movimientos %}
+            <tr>
+              <td class="dim small">{{ m.momento|date:"d/m/y H:i" }}</td>
+              <td>
+                {% if m.es_entrada %}<span class="pill ok"><i class="dot"></i>{{ m.get_tipo_display }}</span>
+                {% else %}<span class="pill {% if m.tipo == 'venta' %}info{% else %}warn{% endif %}">
+                  <i class="dot"></i>{{ m.get_tipo_display }}</span>{% endif %}
+                <div class="dim small">{{ m.bodega.nombre }}</div>
+              </td>
+              <td class="fin">{% if m.es_entrada %}{{ m.cantidad|cantidad }}{% endif %}</td>
+              <td class="fin">{% if not m.es_entrada %}{{ m.cantidad|cantidad }}{% endif %}</td>
+              <td class="fin">
+                ${{ m.costo_unitario|pesos:2 }}
+                <div class="dim small">${{ m.valor_total|pesos }}</div>
+              </td>
+              <td class="fin"><strong>{{ m.saldo_cantidad|cantidad }}</strong>
+                  <div class="dim small">prom. ${{ m.saldo_costo_promedio|pesos:2 }}</div></td>
+              <td class="dim small">
+                {{ m.usuario|default:"—" }}
+                {% if m.motivo %}<div>{{ m.motivo }}</div>{% endif %}
+              </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="7" class="vacio">
+              Sin movimientos. Carga stock con una compra o con el ajuste de la derecha.
+            </td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div>
+    <div class="bloque-cab">
+      <svg class="ico" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+      <h2>Entrada o salida a mano</h2>
+    </div>
+    <div class="card">
+      <form method="post">
+        {% csrf_token %}
+        {% if form.non_field_errors %}
+          {% for e in form.non_field_errors %}<div class="aviso malo">{{ e }}</div>{% endfor %}
+        {% endif %}
+        {% include "master/_campo.html" with campo=form.tipo %}
+        {% include "master/_campo.html" with campo=form.bodega %}
+        <div class="form-row">
+          {% include "master/_campo.html" with campo=form.cantidad %}
+          {% include "master/_campo.html" with campo=form.costo_unitario %}
+        </div>
+        {% include "master/_campo.html" with campo=form.motivo %}
+        <button class="btn" type="submit">Registrar movimiento</button>
+      </form>
+      <div class="sep"></div>
+      <p class="dim small">
+        El motivo es obligatorio: un ajuste sin explicación es un hueco que nadie puede
+        auditar después. Todo queda con tu nombre y la hora exacta.
+      </p>
+    </div>
+
+    {% if existencias|length > 1 %}
+    <div class="bloque-cab" style="margin-top:var(--sp-5)">
+      <svg class="ico" viewBox="0 0 24 24"><path d="M20 7L12 3 4 7v10l8 4 8-4z"/></svg>
+      <h2>Por bodega</h2>
+    </div>
+    <div class="card">
+      <dl class="kv">
+        {% for ex in existencias %}
+          <dt>{{ ex.bodega.nombre }}</dt>
+          <dd>{{ ex.cantidad|cantidad }} {{ insumo.unidad_consumo }}</dd>
+        {% endfor %}
+      </dl>
+    </div>
+    {% endif %}
+
+    {% if lotes %}
+    <div class="bloque-cab" style="margin-top:var(--sp-5)">
+      <svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+      <h2>Lotes</h2>
+    </div>
+    <div class="card">
+      <div class="tabla-wrap">
+        <table>
+          <thead><tr><th>Lote</th><th>Vence</th><th class="fin">Cantidad</th></tr></thead>
+          <tbody>
+            {% for l in lotes %}
+            <tr>
+              <td><code>{{ l.codigo|default:l.id }}</code></td>
+              <td>
+                {% if l.vencido %}<span class="pill bad">{{ l.vence|date:"d/m/Y" }}</span>
+                {% else %}{{ l.vence|date:"d/m/Y"|default:"—" }}{% endif %}
+              </td>
+              <td class="fin">{{ l.cantidad|cantidad }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    {% endif %}
+
+    {% if recetas %}
+    <div class="bloque-cab" style="margin-top:var(--sp-5)">
+      <svg class="ico" viewBox="0 0 24 24"><path d="M4 20h16M6 20V9a6 6 0 0 1 12 0v11"/></svg>
+      <h2>Se usa en</h2>
+    </div>
+    <div class="card">
+      <dl class="kv">
+        {% for it in recetas %}
+          <dt>{{ it.receta.titulo }}</dt>
+          <dd>{{ it.cantidad|cantidad }} {{ insumo.unidad_consumo }}</dd>
+        {% endfor %}
+      </dl>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

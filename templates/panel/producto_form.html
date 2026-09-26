@@ -1,0 +1,170 @@
+{% extends "panel/_form_page.html" %}
+{% load cloudin %}
+{% block title %}{% if es_nuevo %}Nuevo producto{% else %}{{ producto.name }}{% endif %} — Cloudin{% endblock %}
+{% block titulo %}{% if es_nuevo %}Agregar producto{% else %}{{ producto.name }}{% endif %}{% endblock %}
+{% block subtitulo %}<p class="sub dim small"><a href="{% url 'panel:configuracion' %}?paso=menu" style="color:var(--text-3)">← Volver al menú</a></p>{% endblock %}
+
+{% block head %}
+{{ block.super }}
+<style>
+  .hoja{max-width:860px}
+  .foto-caja{display:grid;grid-template-columns:150px 1fr;gap:var(--sp-4);align-items:start}
+  .foto-prev{width:150px;height:150px;border-radius:var(--r-lg);border:1px dashed var(--line);
+    background:var(--surface-2) center/cover no-repeat;display:grid;place-items:center;color:var(--text-3);font-size:12px;text-align:center}
+  @media (max-width:560px){.foto-caja{grid-template-columns:1fr}}
+  .grupo{border:1px solid var(--line);border-radius:var(--r-lg);padding:var(--sp-3);margin-bottom:var(--sp-3);background:var(--surface-2)}
+  .grupo .cab{display:grid;grid-template-columns:minmax(0,1fr) auto auto auto;gap:8px;align-items:center}
+  .grupo .valor{display:grid;grid-template-columns:minmax(0,1fr) 130px auto;gap:8px;margin-top:8px}
+  .grupo .chico{font-size:12px;color:var(--text-3)}
+  .grupo select,.grupo input{min-width:0}
+  .bloqueado{display:flex;gap:8px;align-items:center;padding:10px 12px;border-radius:var(--r);background:var(--surface-2);
+    border:1px solid var(--line);font-size:13px;color:var(--text-2);margin-bottom:var(--sp-3)}
+</style>
+{% endblock %}
+
+{% block seccion_nombre %}Carta del restaurante{% endblock %}
+{% block encabezado %}{% if es_nuevo %}¿Qué se va a vender?{% else %}{{ producto.name }} · ${{ producto.price|pesos }}{% endif %}{% endblock %}
+{% block bajada %}
+  La foto, la descripción y los toppings se ven en la app de los meseros y en el sitio web.
+  Si activas la observación, quien pide puede escribir cosas como «sin cebolla».
+{% endblock %}
+{% block volver %}{% url 'panel:configuracion' %}?paso=menu{% endblock %}
+{% block boton %}{% if es_nuevo %}Agregar a la carta{% else %}Guardar cambios{% endif %}{% endblock %}
+{% block form_attrs %}enctype="multipart/form-data" id="form-producto"{% endblock %}
+
+{% block campos %}
+  {% if form.bloqueados %}
+    <div class="bloqueado">
+      <svg class="ico" viewBox="0 0 24 24" style="width:16px;height:16px"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+      Nombre, precio y categoría quedan fijos para no alterar la facturación. Si hay que cambiarlos, pídeselo al administrador de Cloudin.
+    </div>
+  {% endif %}
+  <div class="form-row">
+    {% include "master/_campo.html" with campo=form.name %}
+    {% include "master/_campo.html" with campo=form.price %}
+    {% include "master/_campo.html" with campo=form.category %}
+  </div>
+  {% include "master/_campo.html" with campo=form.description %}
+
+  <div class="sep"></div>
+  <div class="eyebrow" style="margin-bottom:var(--sp-3)">Foto</div>
+  <div class="foto-caja">
+    <div class="foto-prev" id="foto-prev" {% if producto.foto %}style="background-image:url('{{ producto.foto }}')"{% endif %}>
+      {% if not producto.foto %}Sin foto{% endif %}
+    </div>
+    <div class="stack-sm">
+      {% include "master/_campo.html" with campo=form.imagen %}
+      {% include "master/_campo.html" with campo=form.image_url %}
+      <p class="dim small">JPG, PNG o WebP de hasta 3 MB. Si subes una foto, se usa en vez del enlace.</p>
+    </div>
+  </div>
+
+  <div class="sep"></div>
+  <div class="spread" style="margin-bottom:var(--sp-3)">
+    <div class="eyebrow">Toppings y opciones</div>
+    <button class="btn ghost sm fin" type="button" onclick="agregarGrupo()">+ Agregar grupo</button>
+  </div>
+  <p class="dim small" style="margin-bottom:var(--sp-3)">
+    Un grupo es una pregunta: «Elige la carne» (se elige una) o «Adiciones» (varias). Cada opción
+    puede sumar al precio; déjala en 0 si no cambia.
+  </p>
+  <div id="grupos"></div>
+  {{ form.opciones_json }}
+  {% for e in form.opciones_json.errors %}<div class="error">{{ e }}</div>{% endfor %}
+
+  <div class="sep"></div>
+  <div class="stack-sm">
+    <label class="switch">{{ form.permite_observacion }} {{ form.permite_observacion.label }}</label>
+    <label class="switch">{{ form.is_available }} {{ form.is_available.label }}</label>
+  </div>
+{% endblock %}
+
+{% block despues %}
+{% if producto %}
+<form method="post" action="{% url 'panel:producto-eliminar' producto.id %}" style="margin-top:var(--sp-4)"
+      onsubmit="return confirm('¿Eliminar «{{ producto.name|escapejs }}» de la carta? Deja de verse en el sitio, en la app de meseros y en el QR.')">
+  {% csrf_token %}
+  <div class="spread" style="padding:var(--sp-3);border:1px dashed rgba(242,85,90,.35);border-radius:var(--r-lg)">
+    <div><strong style="font-size:14px">Eliminar de la carta</strong>
+      <div class="dim small">Las ventas y facturas donde aparece no se tocan. Se puede restaurar.</div></div>
+    <button class="btn danger sm fin" type="submit">Eliminar producto</button>
+  </div>
+</form>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+const campoOpciones = document.getElementById("id_opciones_json");
+let grupos = [];
+try { grupos = JSON.parse(campoOpciones.value || "[]"); } catch (e) { grupos = []; }
+
+const esc = (t) => String(t ?? "").replace(/[&<>"']/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+
+function pintar() {
+  const cont = document.getElementById("grupos");
+  cont.innerHTML = grupos.length ? grupos.map((g, gi) => `
+    <div class="grupo">
+      <div class="cab">
+        <input type="text" value="${esc(g.nombre)}" placeholder="Ej. Elige la carne" data-g="${gi}" data-campo="nombre">
+        <select data-g="${gi}" data-campo="tipo">
+          <option value="uno" ${g.tipo === "uno" ? "selected" : ""}>Se elige una</option>
+          <option value="varios" ${g.tipo !== "uno" ? "selected" : ""}>Se eligen varias</option>
+        </select>
+        <label class="switch chico" title="Solo para «se elige una»">
+          <input type="checkbox" data-g="${gi}" data-campo="obligatorio" ${g.obligatorio ? "checked" : ""} ${g.tipo !== "uno" ? "disabled" : ""}> Obligatorio
+        </label>
+        <button class="btn quiet sm" type="button" onclick="quitarGrupo(${gi})" style="color:var(--danger)">Quitar</button>
+      </div>
+      ${(g.valores || []).map((v, vi) => `
+        <div class="valor">
+          <input type="text" value="${esc(v.nombre)}" placeholder="Ej. Brisket" data-g="${gi}" data-v="${vi}" data-campo="nombre">
+          <input type="number" min="0" step="500" value="${Number(v.precio) || 0}" data-g="${gi}" data-v="${vi}" data-campo="precio" title="Suma al precio">
+          <button class="btn quiet sm" type="button" onclick="quitarValor(${gi}, ${vi})">✕</button>
+        </div>`).join("")}
+      <button class="btn quiet sm" type="button" onclick="agregarValor(${gi})" style="margin-top:8px">+ Opción</button>
+      <span class="chico"> · el número es lo que suma al precio</span>
+    </div>`).join("")
+    : '<p class="vacio" style="padding:18px">Este producto no tiene toppings ni opciones.</p>';
+  guardar();
+}
+function guardar() { campoOpciones.value = JSON.stringify(grupos); }
+function agregarGrupo() { grupos.push({nombre: "", tipo: "varios", obligatorio: false, valores: [{nombre: "", precio: 0}]}); pintar(); }
+function quitarGrupo(gi) { grupos.splice(gi, 1); pintar(); }
+function agregarValor(gi) { grupos[gi].valores.push({nombre: "", precio: 0}); pintar(); }
+function quitarValor(gi, vi) { grupos[gi].valores.splice(vi, 1); pintar(); }
+
+document.getElementById("grupos").addEventListener("input", (e) => {
+  const el = e.target, g = grupos[Number(el.dataset.g)];
+  if (!g) return;
+  if (el.dataset.v !== undefined) {
+    const v = g.valores[Number(el.dataset.v)];
+    v[el.dataset.campo] = el.dataset.campo === "precio" ? Number(el.value) || 0 : el.value;
+  } else if (el.dataset.campo === "obligatorio") {
+    g.obligatorio = el.checked;
+  } else {
+    g[el.dataset.campo] = el.value;
+    if (el.dataset.campo === "tipo") { if (el.value !== "uno") g.obligatorio = false; pintar(); return; }
+  }
+  guardar();
+});
+document.getElementById("grupos").addEventListener("change", (e) => {
+  if (e.target.dataset.campo === "obligatorio" || e.target.dataset.campo === "tipo") {
+    e.target.dispatchEvent(new Event("input", {bubbles: true}));
+  }
+});
+
+// Vista previa de la foto antes de guardar.
+const prev = document.getElementById("foto-prev");
+document.getElementById("id_imagen")?.addEventListener("change", (e) => {
+  const f = e.target.files[0];
+  if (f) { prev.style.backgroundImage = `url(${URL.createObjectURL(f)})`; prev.textContent = ""; }
+});
+document.getElementById("id_image_url")?.addEventListener("change", (e) => {
+  if (e.target.value && !document.getElementById("id_imagen").files.length) {
+    prev.style.backgroundImage = `url('${e.target.value.replace(/'/g, "%27")}')`; prev.textContent = "";
+  }
+});
+pintar();
+</script>
+{% endblock %}

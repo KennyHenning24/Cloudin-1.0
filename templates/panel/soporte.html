@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Modo soporte — Cloudin{% endblock %}
+{% block head %}
+<style>
+  .soporte{min-height:100vh;display:grid;place-items:center;padding:24px;
+    background:radial-gradient(900px 500px at 10% -10%,var(--brand-soft),transparent 60%),var(--bg)}
+  .soporte .caja{width:min(460px,100%);background:var(--surface);border:1px solid var(--line);border-radius:var(--r-xl);
+    padding:clamp(24px,5vw,36px);box-shadow:var(--shadow-lg);animation:pop .45s var(--ease-rebote)}
+  .soporte h1{font-size:23px;font-weight:800;letter-spacing:-.02em;margin:14px 0 6px}
+  .soporte p{color:var(--text-2);font-size:14.5px}
+  .soporte form{margin-top:18px}
+  .soporte .otra{display:block;text-align:center;margin-top:14px;font-size:13.5px;color:var(--text-3)}
+  .soporte .otra button{background:none;border:0;color:var(--brand);font:700 13.5px var(--fuente);cursor:pointer}
+</style>
+{% endblock %}
+{% block layout %}
+<main class="soporte">
+  <div class="caja">
+    <span class="chip-ico amarillo"><svg class="ico" viewBox="0 0 24 24"><path d="M12 3l8 3v6c0 4.5-3.4 8.2-8 9-4.6-.8-8-4.5-8-9V6z"/><path d="M12 8v4M12 16h.01"/></svg></span>
+    <h1>Entrar al panel de {{ t.name }}</h1>
+    <p>Estás con tu cuenta de Cloudin, no con la del restaurante. Para entrar en <strong>modo soporte</strong>
+      confirma tu contraseña. El permiso vence tras una hora sin actividad.</p>
+    <form method="post">
+      {% csrf_token %}
+      <input type="hidden" name="tenant" value="{{ t.slug }}">
+      <input type="hidden" name="next" value="{{ next }}">
+      <div class="campo"><label for="clave">Tu contraseña de Cloudin</label>
+        <input id="clave" type="password" name="clave" autocomplete="current-password" required autofocus></div>
+      {% if error %}<div class="aviso malo">{{ error }}</div>{% endif %}
+      <button class="btn block lg" type="submit">Entrar en modo soporte</button>
+    </form>
+    <form method="post" action="{% url 'panel:entrar-como' %}?tenant={{ t.slug }}" class="otra">
+      {% csrf_token %}
+      ¿Querías entrar como el restaurante? <button type="submit">Cerrar mi sesión e ir a su login</button>
+    </form>
+    <a class="otra" href="{% url 'master:home' %}">Volver al panel maestro</a>
+  </div>
+</main>
+{% endblock %}

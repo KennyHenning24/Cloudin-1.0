@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% load static %}
+{% block head %}
+<style>
+  .legal{max-width:820px;margin:0 auto;padding:var(--sp-5) var(--sp-4) 80px}
+  .legal-cab{display:flex;align-items:center;gap:12px;margin-bottom:var(--sp-5)}
+  .legal-cab img.mark{width:34px}
+  .legal-cab img.marca-texto{height:20px}
+  .legal-cab .fin{margin-left:auto;display:flex;gap:8px}
+  .legal .hoja{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-xl);
+    padding:clamp(22px,4vw,44px);box-shadow:var(--shadow)}
+  .legal h1{font-size:clamp(26px,4vw,34px);font-weight:800;letter-spacing:-.03em;line-height:1.15}
+  .legal .version{color:var(--text-3);font-size:13.5px;margin:8px 0 var(--sp-4)}
+  .legal h2{font-size:18px;font-weight:800;margin:30px 0 8px;letter-spacing:-.01em}
+  .legal p,.legal li{color:var(--text-2);font-size:15.5px;line-height:1.7}
+  .legal p+p{margin-top:10px}
+  .legal ul{padding-left:20px;margin:8px 0}
+  .legal li{margin:4px 0}
+  .legal strong{color:var(--text)}
+  .legal .resumen{background:var(--brand-soft);border:1px solid var(--brand-line);border-radius:var(--r-lg);
+    padding:16px 20px;margin-bottom:var(--sp-4)}
+  .legal .resumen p{color:var(--text)}
+  .legal .pie-legal{margin-top:var(--sp-5);font-size:13px;color:var(--text-3)}
+  .tema.mini{width:170px}
+</style>
+{% endblock %}
+{% block layout %}
+<div class="legal">
+  <div class="legal-cab">
+    <img class="mark" src="{% static 'img/cloudin-marca.png' %}" alt="">
+    <img class="marca-texto wm-oscuro" src="{% static 'img/cloudin-texto.png' %}" alt="Cloudin"><img class="marca-texto wm-claro" src="{% static 'img/cloudin-texto-claro.png' %}" alt="" aria-hidden="true">
+    <div class="fin">
+      <div class="tema mini" role="group" aria-label="Color">
+        <button type="button" data-tema="oscuro">Oscuro</button>
+        <button type="button" data-tema="claro">Claro</button>
+      </div>
+    </div>
+  </div>
+  <article class="hoja">{% block legal %}{% endblock %}</article>
+  <p class="pie-legal">{% block pie %}Cloudin · Software para restaurantes · Colombia{% endblock %}</p>
+</div>
+{% endblock %}

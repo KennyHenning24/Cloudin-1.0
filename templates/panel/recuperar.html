@@ -1,0 +1,20 @@
+{% extends "panel/_auth_base.html" %}
+{% block title %}Recuperar contraseña — Cloudin{% endblock %}
+{% block encabezado %}¿Olvidaste tu contraseña?{% endblock %}
+{% block bajada %}Escribe el correo con el que se creó tu usuario y te mandamos un enlace para ponerle una nueva.{% endblock %}
+
+{% block cuerpo %}
+<form method="post">
+  {% csrf_token %}
+  <div class="campo">
+    <label for="id_email">Correo</label>
+    <input type="email" name="email" id="id_email" autocomplete="email" required autofocus
+           placeholder="tucorreo@ejemplo.com">
+    {% for e in form.email.errors %}<div class="error">{{ e }}</div>{% endfor %}
+  </div>
+  <button class="btn block" type="submit">Enviarme el enlace</button>
+</form>
+<p class="dim small" style="text-align:center;margin-top:14px">
+  ¿No sabes con qué correo quedó tu usuario? Pídeselo a quien administra Cloudin.
+</p>
+{% endblock %}

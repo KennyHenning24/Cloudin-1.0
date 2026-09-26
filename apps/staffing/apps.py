@@ -1,0 +1,8 @@
+from django.apps import AppConfig
+
+
+class StaffingConfig(AppConfig):
+    default_auto_field = "django.db.models.BigAutoField"
+    name = "apps.staffing"
+    label = "staffing"
+    verbose_name = "Cloudin Employees"

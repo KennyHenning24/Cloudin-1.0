@@ -1,0 +1,119 @@
+{% load static %}<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+{# viewport-fit=cover para usar la pantalla completa en teléfonos con muesca; #}
+{# sin zoom con doble toque, que en una comanda rápida solo estorba. #}
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>{% block title %}Cloudin Meseros{% endblock %}</title>
+<meta name="theme-color" content="#13151c">
+<meta name="application-name" content="Cloudin Meseros">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Meseros">
+<link rel="manifest" href="{% url 'mesero:manifest' t.slug %}">
+<link rel="icon" href="{% static 'img/favicon.ico' %}" sizes="any">
+<link rel="icon" type="image/png" sizes="32x32" href="{% static 'img/favicon-32.png' %}">
+<link rel="apple-touch-icon" href="{% static 'img/apple-touch-icon.png' %}">
+<script>
+  // El mismo tema que el panel (oscuro o claro), guardado en esta tablet.
+  (function () {
+    var t = null;
+    try { t = localStorage.getItem("cloudin-tema"); } catch (e) {}
+    document.documentElement.dataset.theme = t === "claro" ? "claro" : "oscuro";
+  })();
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+/* ==========================================================
+   Cloudin Meseros · diseño táctil
+   Pensado para usarse de pie, con una mano y con prisa:
+   blancos de toque de 48 px o más, texto de 16 px para que
+   iOS no haga zoom al escribir, y nada que dependa del hover.
+   ========================================================== */
+:root{
+  --bg:#0e1015; --surface:#13151c; --surface-2:#181b24; --surface-3:#20242f;
+  --line:#252a36; --line-soft:#1c202a;
+  --text:#e9ecf3; --text-2:#a9b1c2; --text-3:#767f93;
+  --brand:#f77a27; --brand-grad:linear-gradient(145deg,#ef7026,#e36225);
+  --brand-soft:rgba(247,122,39,.14); --brand-line:rgba(247,122,39,.45);
+  --ok:#3ecf8e; --ok-soft:rgba(62,207,142,.15);
+  --warn:#f0b429; --warn-soft:rgba(240,180,41,.15);
+  --danger:#f2555a; --danger-soft:rgba(242,85,90,.14);
+  --info:#7aa2ff; --info-soft:rgba(122,162,255,.15);
+  --r:14px; --r-lg:20px; --r-xl:26px;
+  --toque:52px;
+  --arriba:env(safe-area-inset-top,0px); --abajo:env(safe-area-inset-bottom,0px);
+  --ease:cubic-bezier(.22,1,.36,1);
+  --topbar:rgba(14,16,21,.88); --velo:rgba(5,6,9,.62); --danger-text:#f7b0b2;
+  --lavanda:#bfb0ff; --lavanda-bg:rgba(191,176,255,.15);
+  --menta:#87e2bd; --menta-bg:rgba(135,226,189,.14);
+  color-scheme:dark;
+}
+[data-theme="claro"]{
+  --bg:#f6f3ee; --surface:#ffffff; --surface-2:#fbf8f4; --surface-3:#f1ebe4;
+  --line:#e7e0d7; --line-soft:#f0eae3;
+  --text:#1d2029; --text-2:#555d6e; --text-3:#878d9b;
+  --brand-soft:rgba(247,122,39,.12);
+  --ok:#1f9d6b; --ok-soft:#dcf4e9; --warn:#b7791f; --warn-soft:#fff0cf;
+  --danger:#d64550; --danger-soft:#ffe3e4; --info:#3f6fd8; --info-soft:#e2ebff;
+  --topbar:rgba(246,243,238,.9); --velo:rgba(40,32,24,.32); --danger-text:#a8313a;
+  --lavanda:#6b55d6; --lavanda-bg:#ece7ff; --menta:#1c8a5e; --menta-bg:#daf3e7;
+  color-scheme:light;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+[hidden]{display:none!important}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--text)}
+body{
+  font:400 16px/1.45 "Plus Jakarta Sans",ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  transition:background-color .35s var(--ease),color .35s var(--ease);
+  -webkit-font-smoothing:antialiased;font-variant-numeric:tabular-nums;
+  overscroll-behavior-y:none;touch-action:manipulation;
+}
+button,input,textarea,select{font:inherit;color:inherit}
+button{cursor:pointer;border:0;background:none;padding:0}
+a{color:inherit;text-decoration:none}
+h1,h2,h3,p{margin:0}
+:focus-visible{outline:3px solid var(--brand);outline-offset:2px;border-radius:10px}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+.boton{display:inline-flex;align-items:center;justify-content:center;gap:10px;
+  min-height:var(--toque);padding:0 22px;border-radius:var(--r);font-weight:680;font-size:17px;
+  background:var(--brand-grad);color:#fff;box-shadow:0 8px 24px rgba(239,112,38,.28);
+  transition:transform .12s var(--ease),filter .12s}
+.boton:active{transform:scale(.98);filter:brightness(.95)}
+.boton:disabled{opacity:.5;box-shadow:none}
+.boton.suave{background:var(--surface-3);color:var(--text);box-shadow:none}
+.boton.bloque{width:100%}
+.ico{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:2;
+  stroke-linecap:round;stroke-linejoin:round;flex:none}
+
+.campo{display:grid;gap:7px}
+.campo label{font-size:14px;color:var(--text-2);font-weight:560}
+.entrada{width:100%;min-height:var(--toque);padding:12px 16px;border-radius:var(--r);
+  background:var(--bg);border:1.5px solid var(--line);font-size:17px;outline:none;
+  transition:border-color .15s,box-shadow .15s}
+.entrada:focus{border-color:var(--brand-line);box-shadow:0 0 0 4px var(--brand-soft)}
+.entrada::placeholder{color:var(--text-3)}
+.wm-claro{display:none!important}
+[data-theme="claro"] .wm-oscuro{display:none!important}
+[data-theme="claro"] .wm-claro{display:block!important}
+</style>
+{% block head %}{% endblock %}
+</head>
+<body>
+{% block body %}{% endblock %}
+{% block scripts %}{% endblock %}
+<script>
+  // Instalable y resistente a bajones de wifi (ver /mesero/sw.js).
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", () => {
+      navigator.serviceWorker.register("{% url 'mesero:sw' %}", {scope: "/mesero/"}).catch(() => {});
+    });
+  }
+</script>
+</body>
+</html>

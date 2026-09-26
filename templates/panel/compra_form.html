@@ -1,0 +1,254 @@
+{% extends "panel/_base.html" %}
+{% load static l10n %}
+{% block title %}Registrar compra — Cloudin{% endblock %}
+{% block titulo %}Registrar una compra{% endblock %}
+{% block subtitulo %}<p class="sub dim small">Esto carga el stock y recalcula el costo promedio</p>{% endblock %}
+{% block acciones %}<a class="btn quiet" href="{% url 'panel:compras' %}">Cancelar</a>{% endblock %}
+
+{% block head %}
+{{ block.super }}
+<style>
+  .lineas{display:grid;gap:var(--sp-3)}
+  .linea{display:grid;gap:var(--sp-3);grid-template-columns:minmax(0,2fr) repeat(2,minmax(0,1fr)) auto;
+    align-items:end;padding:var(--sp-3);border:1px solid var(--line);border-radius:var(--r-lg);
+    background:var(--surface-2)}
+  .linea .perecedero{display:none;grid-column:1/-1;gap:var(--sp-3);
+    grid-template-columns:repeat(2,minmax(0,1fr))}
+  .linea.con-lote .perecedero{display:grid}
+  .linea .campo{margin:0}
+  .linea .quitar{background:transparent;border:1px solid var(--line);color:var(--text-3);
+    border-radius:10px;height:40px;width:40px;cursor:pointer;font-size:17px}
+  .linea .quitar:hover{color:var(--danger);border-color:rgba(242,85,90,.4)}
+  .linea .sub{grid-column:1/-1;font-size:12.5px;color:var(--text-3)}
+  @media (max-width:760px){.linea{grid-template-columns:minmax(0,1fr)}}
+  .totalizador{display:flex;align-items:center;gap:var(--sp-3);margin-top:var(--sp-4);
+    padding:var(--sp-4);border-radius:var(--r-lg);background:var(--surface-2);
+    border:1px solid var(--line)}
+  .totalizador .cifra{font-size:27px;font-weight:730;letter-spacing:-.02em;margin-left:auto}
+</style>
+{% endblock %}
+
+{% block content %}
+{% include "panel/_inv_nav.html" %}
+
+<form method="post" id="forma-compra">
+  {% csrf_token %}
+
+  <div class="bloque-cab" style="margin-top:0">
+    <svg class="ico" viewBox="0 0 24 24"><path d="M6 2h9l5 5v13a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z"/><path d="M14 2v6h6"/></svg>
+    <h2>La factura del proveedor</h2>
+  </div>
+  <div class="card">
+    {% if form.non_field_errors %}
+      {% for e in form.non_field_errors %}<div class="aviso malo">{{ e }}</div>{% endfor %}
+    {% endif %}
+    <div class="form-row">
+      {% include "master/_campo.html" with campo=form.proveedor %}
+      {% include "master/_campo.html" with campo=form.numero_factura %}
+      {% include "master/_campo.html" with campo=form.fecha %}
+      {% include "master/_campo.html" with campo=form.bodega %}
+    </div>
+    <div class="sep"></div>
+    <div class="eyebrow" style="margin-bottom:var(--sp-3)">De dónde salió el dinero</div>
+    <div class="form-row">
+      {% include "master/_campo.html" with campo=form.medio_pago %}
+      {% include "master/_campo.html" with campo=form.cuenta %}
+      {% include "master/_campo.html" with campo=form.vence %}
+      <div class="campo">
+        <label class="switch">{{ form.pagada }} Ya está pagada</label>
+        <div class="ayuda">Si es a crédito, queda como cuenta por pagar.</div>
+      </div>
+    </div>
+    {% include "master/_campo.html" with campo=form.notas %}
+  </div>
+
+  <div class="bloque-cab">
+    <svg class="ico" viewBox="0 0 24 24"><path d="M20 7L12 3 4 7v10l8 4 8-4z"/><path d="M4 7l8 4 8-4M12 11v10"/></svg>
+    <h2>Qué se compró</h2>
+    <span class="dim small fin">Las cantidades van en unidad de compra</span>
+  </div>
+  <div class="card">
+    {{ formset.management_form }}
+    {% if formset.non_form_errors %}
+      {% for e in formset.non_form_errors %}<div class="aviso malo">{{ e }}</div>{% endfor %}
+    {% endif %}
+
+    <div class="lineas" id="lineas">
+      {% for f in formset %}
+        <div class="linea" data-linea>
+          {{ f.id }}
+          <div class="campo">{{ f.insumo.label_tag }}{{ f.insumo }}
+            {% for e in f.insumo.errors %}<div class="error">{{ e }}</div>{% endfor %}</div>
+          <div class="campo">{{ f.cantidad.label_tag }}{{ f.cantidad }}
+            {% for e in f.cantidad.errors %}<div class="error">{{ e }}</div>{% endfor %}</div>
+          <div class="campo">{{ f.valor_unitario.label_tag }}{{ f.valor_unitario }}
+            {% for e in f.valor_unitario.errors %}<div class="error">{{ e }}</div>{% endfor %}</div>
+          <button class="quitar" type="button" title="Quitar esta línea">×</button>
+          <div class="perecedero">
+            <div class="campo">{{ f.lote.label_tag }}{{ f.lote }}</div>
+            <div class="campo">{{ f.vence.label_tag }}{{ f.vence }}</div>
+          </div>
+          <div class="sub" data-sub></div>
+          {% if f.DELETE %}<div hidden>{{ f.DELETE }}</div>{% endif %}
+        </div>
+      {% endfor %}
+    </div>
+
+    <button class="btn ghost" type="button" id="agregar" style="margin-top:var(--sp-3)">
+      <svg class="ico" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+      Agregar otro insumo
+    </button>
+
+    <div class="totalizador">
+      <div>
+        <div class="eyebrow">Total de la compra</div>
+        <div class="dim small">Se guarda junto con el kardex de cada insumo</div>
+      </div>
+      <div class="cifra" id="total">$0</div>
+    </div>
+  </div>
+
+  <div class="row" style="margin-top:var(--sp-4)">
+    <button class="btn" type="submit">
+      <svg class="ico" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg>
+      Registrar compra y cargar stock
+    </button>
+    <a class="btn quiet" href="{% url 'panel:compras' %}">Cancelar</a>
+  </div>
+</form>
+
+{# Plantilla de línea nueva: el navegador la clona al pulsar «Agregar». #}
+<template id="molde">
+  <div class="linea" data-linea>
+    <div class="campo"><label>Insumo</label>
+      <select name="items-__N__-insumo" data-campo="insumo">
+        <option value="">---------</option>
+        {% for i in insumos %}<option value="{{ i.id }}">{{ i.nombre }}</option>{% endfor %}
+      </select></div>
+    <div class="campo"><label>Cantidad (unidad de compra)</label>
+      <input type="number" step="0.001" name="items-__N__-cantidad" data-campo="cantidad" value="1"></div>
+    <div class="campo"><label>Valor por unidad de compra</label>
+      <input type="number" step="0.01" name="items-__N__-valor_unitario" data-campo="valor" value="0"></div>
+    <button class="quitar" type="button" title="Quitar esta línea">×</button>
+    <div class="perecedero">
+      <div class="campo"><label>Lote</label>
+        <input type="text" name="items-__N__-lote"></div>
+      <div class="campo"><label>Vence</label>
+        <input type="date" name="items-__N__-vence"></div>
+    </div>
+    <div class="sub" data-sub></div>
+  </div>
+</template>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Datos de cada insumo para poder explicar en vivo la conversión y el costo:
+// «1 bulto = 50.000 g → $52 por gramo». Sin esto, el usuario tendría que
+// confiar a ciegas en el factor de conversión.
+const INSUMOS = {
+  {% for i in insumos %}
+  "{{ i.id }}": {
+    nombre: "{{ i.nombre|escapejs }}",
+    compra: "{{ i.unidad_compra|escapejs }}",
+    consumo: "{{ i.unidad_consumo }}",
+    // unlocalize: en español Django escribiría 1000,0000 y eso no es un número
+    // válido en JavaScript.
+    factor: {{ i.factor_conversion|unlocalize }},
+    perecedero: {% if i.perecedero %}true{% else %}false{% endif %}
+  }{% if not forloop.last %},{% endif %}
+  {% endfor %}
+};
+
+const contenedor = document.getElementById("lineas");
+const molde = document.getElementById("molde");
+const totalForms = document.querySelector("[name='items-TOTAL_FORMS']");
+const elTotal = document.getElementById("total");
+const pesos = n => "$" + Math.round(n).toLocaleString("es-CO");
+
+function valores(linea) {
+  const sel = linea.querySelector("select");
+  const cant = linea.querySelector("[name$='-cantidad']");
+  const val = linea.querySelector("[name$='-valor_unitario']");
+  return {
+    info: INSUMOS[sel && sel.value] || null,
+    cantidad: parseFloat(cant && cant.value) || 0,
+    unitario: parseFloat(val && val.value) || 0,
+  };
+}
+
+function pintarLinea(linea) {
+  const {info, cantidad, unitario} = valores(linea);
+  const sub = linea.querySelector("[data-sub]");
+  const total = cantidad * unitario;
+  linea.classList.toggle("con-lote", !!(info && info.perecedero));
+  if (!info) {
+    sub.textContent = "";
+    return total;
+  }
+  const unidades = cantidad * info.factor;
+  const porUnidad = unidades ? total / unidades : 0;
+  sub.innerHTML = `${cantidad} ${info.compra} = <strong>${unidades.toLocaleString("es-CO")} ` +
+    `${info.consumo}</strong> · subtotal <strong>${pesos(total)}</strong>` +
+    (porUnidad ? ` · $${porUnidad.toLocaleString("es-CO", {minimumFractionDigits: 2, maximumFractionDigits: 2})} por ${info.consumo}` : "");
+  return total;
+}
+
+function recalcular() {
+  let total = 0;
+  contenedor.querySelectorAll("[data-linea]").forEach(l => { total += pintarLinea(l); });
+  elTotal.textContent = pesos(total);
+}
+
+function conectar(linea) {
+  linea.querySelectorAll("select,input").forEach(c => {
+    c.addEventListener("input", recalcular);
+    c.addEventListener("change", recalcular);
+  });
+  const quitar = linea.querySelector(".quitar");
+  if (quitar) quitar.addEventListener("click", () => {
+    const borrar = linea.querySelector("[name$='-DELETE']");
+    if (borrar) {           // línea ya guardada: se marca para borrar
+      borrar.checked = true;
+      linea.hidden = true;
+    } else if (contenedor.querySelectorAll("[data-linea]:not([hidden])").length > 1) {
+      linea.remove();
+      renumerar();
+    }
+    recalcular();
+  });
+}
+
+function renumerar() {
+  // Django espera índices seguidos: items-0-, items-1-, … sin huecos.
+  const lineas = contenedor.querySelectorAll("[data-linea]");
+  lineas.forEach((linea, i) => {
+    linea.querySelectorAll("[name]").forEach(c => {
+      c.name = c.name.replace(/items-\d+-/, `items-${i}-`);
+    });
+  });
+  totalForms.value = lineas.length;
+}
+
+document.getElementById("agregar").addEventListener("click", () => {
+  const n = contenedor.querySelectorAll("[data-linea]").length;
+  const html = molde.innerHTML.replace(/__N__/g, n);
+  const envoltura = document.createElement("div");
+  envoltura.innerHTML = html.trim();
+  const linea = envoltura.firstElementChild;
+  contenedor.appendChild(linea);
+  conectar(linea);
+  renumerar();
+  recalcular();
+  linea.querySelector("select").focus();
+});
+
+contenedor.querySelectorAll("[data-linea]").forEach(conectar);
+// Si la pantalla abre vacía, arranca con una línea lista para llenar.
+if (!contenedor.querySelectorAll("[data-linea]").length) {
+  document.getElementById("agregar").click();
+} else {
+  recalcular();
+}
+</script>
+{% endblock %}

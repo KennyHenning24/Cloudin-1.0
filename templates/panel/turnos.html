@@ -1,0 +1,253 @@
+{% extends "panel/_base.html" %}
+{% load static cloudin %}
+{% block title %}Turnos — Cloudin{% endblock %}
+{% block titulo %}Turno de caja{% endblock %}
+{% block subtitulo %}<p class="sub dim small">Abrir, cerrar y ver lo que se hizo en cada turno</p>{% endblock %}
+{% block acciones %}
+  {% if abierto %}
+    <span class="pill ok"><i class="dot"></i>Turno {{ abierto.numero }} abierto</span>
+  {% else %}
+    <span class="pill neutro"><i class="dot"></i>Sin turno abierto</span>
+  {% endif %}
+{% endblock %}
+
+{% block head %}
+{{ block.super }}
+<style>
+  .turno-hero{position:relative;overflow:hidden;border-radius:var(--r-xl);padding:var(--sp-5);
+    background:linear-gradient(130deg,rgba(239,112,38,.16),transparent 62%),var(--surface);
+    border:1px solid var(--line)}
+  .turno-hero.cerrado{background:linear-gradient(130deg,rgba(122,162,255,.10),transparent 62%),var(--surface)}
+  .turno-hero .marca-agua{position:absolute;right:24px;bottom:-34px;height:172px;opacity:.06;pointer-events:none}
+  .turno-hero .dentro{position:relative;z-index:1}
+  .cifra{font-size:38px;font-weight:760;letter-spacing:-.03em;line-height:1.05}
+  .mini{display:grid;gap:var(--sp-4);grid-template-columns:repeat(auto-fit,minmax(130px,1fr));
+    margin-top:var(--sp-4)}
+  .mini .rot{font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--text-3);
+    font-weight:600;margin-bottom:4px}
+  .mini .dato{font-size:18px;font-weight:680}
+  .cerrar-caja{display:grid;gap:var(--sp-3)}
+  .aviso-mesas{border:1px dashed var(--brand-line);background:var(--brand-soft);
+    border-radius:var(--r);padding:12px 14px;font-size:13px}
+</style>
+{% endblock %}
+
+{% block content %}
+
+{% if abierto %}
+  <div class="turno-hero">
+    <img class="marca-agua" src="{% static 'img/cloudin-marca.png' %}" alt="">
+    <div class="dentro">
+      <div class="eyebrow">Turno {{ abierto.numero }} · en curso</div>
+      <div class="cifra">${{ vivo.total_ventas|pesos }}</div>
+      <p class="dim small">
+        Abierto el {{ abierto.abierto_en|date:"l j \d\e F"|lower }} a las {{ abierto.abierto_en|date:"H:i" }}
+        {% if abierto.abierto_por %}por {{ abierto.abierto_por }}{% endif %}
+        · lleva {{ abierto.horas }} h
+      </p>
+      <div class="mini">
+        <div><div class="rot">Pedidos</div><div class="dato">{{ vivo.total_pedidos }}</div></div>
+        <div><div class="rot">Mesas</div><div class="dato">{{ vivo.total_mesas }}</div></div>
+        <div><div class="rot">Comensales</div><div class="dato">{{ vivo.total_comensales }}</div></div>
+        <div><div class="rot">Facturado</div><div class="dato">${{ vivo.facturado.total|pesos }}</div></div>
+        <div><div class="rot">Base de caja</div><div class="dato">${{ abierto.base_inicial|pesos }}</div></div>
+      </div>
+      <div class="row" style="margin-top:var(--sp-4)">
+        <a class="btn ghost" href="{% url 'panel:turno-detalle' abierto.id %}">
+          <svg class="ico" viewBox="0 0 24 24"><path d="M6 2h9l5 5v13a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z"/><path d="M14 2v6h6M9 13h6M9 17h4"/></svg>
+          Ver el informe en vivo
+        </a>
+        <button class="btn quiet" type="button" onclick="imprimirTurno({{ abierto.id }})">Imprimir parcial</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="cols cols-2" style="margin-top:var(--sp-5)">
+    <div>
+      <div class="bloque-cab">
+        <svg class="ico" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M7 20v-4M17 20v-4"/></svg>
+        <h2>Mesas del turno</h2>
+        <span class="dim small fin">{{ vivo.mesas|length }} en total</span>
+      </div>
+      <div class="card">
+        <div class="tabla-wrap">
+          <table>
+            <thead><tr><th>Mesa</th><th>Cliente</th><th>Abrió</th><th>Estado</th>
+                       <th class="fin">Total</th><th>Factura</th></tr></thead>
+            <tbody>
+              {% for m in vivo.mesas %}
+              <tr>
+                <td><strong>Mesa {{ m.mesa }}</strong></td>
+                <td>{{ m.cliente|default:"—" }}</td>
+                <td class="dim small">{{ m.abierta }}{% if m.cerrada %} → {{ m.cerrada }}{% endif %}</td>
+                <td>
+                  {% if m.estado == "open" %}<span class="pill warn"><i class="dot"></i>Abierta</span>
+                  {% else %}<span class="pill ok"><i class="dot"></i>Cerrada</span>{% endif %}
+                </td>
+                <td class="fin">${{ m.total|pesos }}</td>
+                <td>
+                  {% if m.documento %}
+                    <a class="pill info" href="{% url 'panel:documento' m.documento_id %}">{{ m.documento }}</a>
+                  {% else %}<span class="dim small">—</span>{% endif %}
+                </td>
+              </tr>
+              {% empty %}
+              <tr><td colspan="6" class="vacio">Todavía no se ha abierto ninguna mesa en este turno.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="bloque-cab">
+        <svg class="ico" viewBox="0 0 24 24"><path d="M3 6h18v13a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M3 10h18M7 15h4"/></svg>
+        <h2>Cerrar el turno</h2>
+      </div>
+      <div class="card">
+        {% if mesas_abiertas %}
+          <div class="aviso-mesas">
+            <strong>Hay {{ mesas_abiertas|length }} mesa(s) todavía abierta(s):</strong>
+            {% for s in mesas_abiertas %}mesa {{ s.table.number }}{% if not forloop.last %}, {% endif %}{% endfor %}.
+            Al cerrar el turno se cierran y se facturan.
+          </div>
+        {% endif %}
+        <form method="post" action="{% url 'panel:turno-cerrar' %}" class="cerrar-caja"
+              onsubmit="return confirm('Se cierra el turno {{ abierto.numero }}. Las mesas abiertas se liquidan y el panel queda en blanco. ¿Seguimos?')">
+          {% csrf_token %}
+          <div class="campo">
+            <label for="efectivo">Efectivo contado en caja</label>
+            <input type="text" id="efectivo" name="efectivo_contado" inputmode="numeric"
+                   placeholder="Ej. 450000" autocomplete="off">
+            <div class="ayuda">
+              Debería haber <strong>${{ esperado|pesos }}</strong>
+              (base ${{ abierto.base_inicial|pesos }} + ventas en efectivo{% if vivo.propinas.efectivo != "0" %} + ${{ vivo.propinas.efectivo|pesos }} de propina en efectivo{% endif %}; las tarjetas y transferencias no entran a la caja). Déjalo vacío si no cuentas la caja.
+            </div>
+          </div>
+          <div class="campo">
+            <label for="notas">Notas del cierre</label>
+            <textarea id="notas" name="notas" rows="2" placeholder="Algo que valga la pena recordar de este turno…"></textarea>
+          </div>
+          <label class="switch">
+            <input type="checkbox" name="facturar_abiertas" value="1" checked>
+            Facturar las mesas que queden abiertas
+          </label>
+          <button class="btn" type="submit">
+            <svg class="ico" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg>
+            Cerrar turno {{ abierto.numero }}
+          </button>
+          {% if not puede_facturar %}
+            <p class="dim small">
+              La facturación electrónica todavía no está habilitada, así que las mesas se
+              cerrarán y la venta quedará registrada, pero sin documento DIAN.
+            </p>
+          {% endif %}
+        </form>
+      </div>
+    </div>
+  </div>
+
+{% else %}
+  <div class="turno-hero cerrado">
+    <img class="marca-agua" src="{% static 'img/cloudin-marca.png' %}" alt="">
+    <div class="dentro">
+      <div class="eyebrow">Caja cerrada</div>
+      <div class="cifra" style="font-size:27px">Abre el turno para empezar</div>
+      <p class="dim small" style="margin-top:6px;max-width:60ch">
+        Mientras no haya un turno abierto, la plataforma está en pausa: no se pueden tomar
+        pedidos, facturar, marcar ni agregar empleados, mover inventario ni cambiar la
+        configuración. Los clientes del QR y los meseros tampoco pueden enviar pedidos.
+        Lo del turno anterior quedó guardado en su informe, no se borró.
+      </p>
+      {% if not puede_abrir %}
+        <div class="aviso-mesas" style="margin-top:var(--sp-4);max-width:60ch">
+          Solo el administrador del restaurante puede abrir el turno. Pídele que lo abra.
+        </div>
+      {% else %}
+      <form method="post" action="{% url 'panel:turno-abrir' %}"
+            style="margin-top:var(--sp-4);display:flex;gap:var(--sp-2);align-items:flex-end;flex-wrap:wrap">
+        {% csrf_token %}
+        <div style="max-width:220px">
+          <label for="base">Base inicial de caja</label>
+          <input type="text" id="base" name="base_inicial" inputmode="numeric" required
+                 placeholder="Mínimo 10.000" autocomplete="off" data-plata>
+          <div class="dim small" style="margin-top:6px">El efectivo con el que arranca la caja. Mínimo $10.000.</div>
+        </div>
+        <button class="btn" type="submit">
+          <svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></svg>
+          Abrir turno {{ siguiente }}
+        </button>
+      </form>
+      {% endif %}
+    </div>
+  </div>
+{% endif %}
+
+<div class="bloque">
+  <div class="bloque-cab">
+    <svg class="ico" viewBox="0 0 24 24"><path d="M3 6h18v13a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M8 3v4M16 3v4M3 10h18"/></svg>
+    <h2>Turnos cerrados</h2>
+  </div>
+  <div class="card">
+    <div class="tabla-wrap">
+      <table>
+        <thead>
+          <tr><th>Turno</th><th>Apertura</th><th>Cierre</th><th class="fin">Ventas</th>
+              <th class="fin">Facturado</th><th class="fin">Mesas</th><th class="fin">Caja</th>
+              <th class="fin"></th></tr>
+        </thead>
+        <tbody>
+          {% for t in cerrados %}
+          <tr>
+            <td><strong>#{{ t.numero }}</strong><div class="dim small">{{ t.horas }} h</div></td>
+            <td class="dim small">{{ t.abierto_en|date:"d/m H:i" }}</td>
+            <td class="dim small">{{ t.cerrado_en|date:"d/m H:i" }}<div>{{ t.cerrado_por }}</div></td>
+            <td class="fin">${{ t.total_ventas|pesos }}</td>
+            <td class="fin">
+              ${{ t.total_facturado|pesos }}
+              {% if t.docs_pendientes %}<div class="dim small">{{ t.docs_pendientes }} por enviar</div>{% endif %}
+            </td>
+            <td class="fin">{{ t.total_mesas }}</td>
+            <td class="fin">
+              {% if t.diferencia == None %}<span class="dim small">no se contó</span>
+              {% elif t.diferencia == 0 %}<span class="pill ok"><i class="dot"></i>cuadró</span>
+              {% elif t.diferencia > 0 %}<span class="pill info">+${{ t.diferencia|pesos }}</span>
+              {% else %}<span class="pill bad">${{ t.diferencia|pesos }}</span>{% endif %}
+            </td>
+            <td class="fin">
+              <a class="btn ghost sm" href="{% url 'panel:turno-detalle' t.id %}">Ver informe</a>
+            </td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="8" class="vacio">Todavía no se ha cerrado ningún turno.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  // Mismo truco que la comanda: iframe oculto para no abrir pestañas.
+  function imprimirTurno(id) {
+    let marco = document.getElementById("impresora-cloudin");
+    if (!marco) {
+      marco = document.createElement("iframe");
+      marco.id = "impresora-cloudin";
+      marco.setAttribute("aria-hidden", "true");
+      marco.style.cssText =
+        "position:fixed;right:0;bottom:0;width:1px;height:1px;opacity:0;border:0;pointer-events:none";
+      document.body.appendChild(marco);
+    }
+    const url = `/panel/turnos/${id}/imprimir/?t=${Date.now()}`;
+    marco.onload = () => {
+      try { marco.contentWindow.focus(); marco.contentWindow.print(); }
+      catch (e) { window.open(url, "_blank", "width=420,height=700"); }
+    };
+    marco.src = url;
+  }
+</script>
+{% endblock %}

@@ -1,0 +1,47 @@
+{% load static %}<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<link rel="icon" href="{% static 'img/favicon.ico' %}" sizes="any">
+<title>Comanda #{{ pedido.id }}</title>
+<style>
+  /* Tirilla de 80 mm para impresora térmica */
+  @page { size: 80mm auto; margin: 3mm; }
+  body { font-family: "Courier New", monospace; font-size: 13px; color:#000; background:#fff;
+         width: 74mm; margin: 0 auto; }
+  h1 { font-size: 16px; text-align:center; margin: 0 0 2px; }
+  .sep { border-top: 1px dashed #000; margin: 6px 0; }
+  .fila { display:flex; justify-content:space-between; gap:8px; }
+  .item { margin: 3px 0; font-size: 14px; }
+  .nota { font-style: italic; }
+  @media print { .noprint { display: none; } }
+</style>
+</head>
+<body>
+  <h1>{{ tenant.name }}</h1>
+  <div style="text-align:center">COMANDA #{{ pedido.id }}</div>
+  <div class="sep"></div>
+  <div class="fila"><span>Mesa</span><strong>{{ pedido.session.table.number }}</strong></div>
+  <div class="fila"><span>Hora</span><span>{{ pedido.created_at|date:"d/m/Y H:i" }}</span></div>
+  <div class="fila"><span>Origen</span><span>{{ pedido.get_source_display }}</span></div>
+  {% if pedido.mesero_nombre %}<div class="fila"><span>Mesero</span><strong>{{ pedido.mesero_nombre }}</strong></div>{% endif %}
+  <div class="sep"></div>
+  {% for item in pedido.items.all %}
+    <div class="item"><strong>{{ item.quantity }} x</strong> {{ item.product_name }}
+      {% if item.note %}<div class="nota">— {{ item.note }}</div>{% endif %}
+    </div>
+  {% endfor %}
+  {% if pedido.note %}<div class="sep"></div><div class="nota">Nota: {{ pedido.note }}</div>{% endif %}
+  <div class="sep"></div>
+  <div style="text-align:center">Cloudin</div>
+  <p class="noprint" style="text-align:center;margin-top:16px">
+    <button onclick="window.print()">Imprimir</button>
+    <button onclick="window.close()">Cerrar</button>
+  </p>
+<script>
+  // Si la tirilla se abrió en su propia pestaña, imprime sola. Dentro de un
+  // iframe no: ahí el panel es quien dispara la impresión, para no hacerlo dos veces.
+  if (window.self === window.top) window.addEventListener("load", () => window.print());
+</script>
+</body>
+</html>

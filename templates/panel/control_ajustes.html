@@ -1,0 +1,38 @@
+{% extends "panel/_form_page.html" %}
+{% block title %}Sensibilidad — Cloudin Control{% endblock %}
+{% block titulo %}Sensibilidad de Cloudin Control{% endblock %}
+{% block seccion_nombre %}Cloudin Control{% endblock %}
+{% block encabezado %}¿Desde cuándo algo merece una alerta?{% endblock %}
+{% block bajada %}Cada restaurante es distinto. Ajusta estos límites a tu realidad: si te llegan demasiadas
+alertas pequeñas, súbelos; si quieres vigilar más de cerca, bájalos.{% endblock %}
+{% block volver %}{% url 'panel:control' %}{% endblock %}
+{% block boton %}Guardar sensibilidad{% endblock %}
+{% block campos %}
+  <div class="eyebrow" style="margin-bottom:var(--sp-3)">Caja y turnos</div>
+  <div class="form-row">
+    {% include "master/_campo.html" with campo=form.tolerancia_caja %}
+    {% include "master/_campo.html" with campo=form.turno_horas %}
+  </div>
+  <div class="sep"></div>
+  <div class="eyebrow" style="margin-bottom:var(--sp-3)">Cuentas</div>
+  <div class="form-row">
+    {% include "master/_campo.html" with campo=form.anulaciones_por_turno %}
+    {% include "master/_campo.html" with campo=form.descuento_pct %}
+    {% include "master/_campo.html" with campo=form.cortesias_pct %}
+  </div>
+  <div class="sep"></div>
+  <div class="eyebrow" style="margin-bottom:var(--sp-3)">Inventario y costos</div>
+  <div class="form-row">
+    {% include "master/_campo.html" with campo=form.inventario_pct %}
+    {% include "master/_campo.html" with campo=form.compra_alza_pct %}
+  </div>
+  <div class="form-row">
+    {% include "master/_campo.html" with campo=form.food_cost_objetivo %}
+    {% include "master/_campo.html" with campo=form.margen_caida_puntos %}
+  </div>
+  <div class="sep"></div>
+  <div class="eyebrow" style="margin-bottom:var(--sp-3)">Cocina</div>
+  <div class="form-row">
+    {% include "master/_campo.html" with campo=form.cocina_minutos %}
+  </div>
+{% endblock %}

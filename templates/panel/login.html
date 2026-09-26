@@ -1,0 +1,263 @@
+{% extends "panel/_base.html" %}
+{% load static %}
+{% block title %}Entrar — Cloudin{% endblock %}
+
+{% block head %}
+<style>
+/* ============================================================
+   Entrada a Cloudin.
+   El mismo efecto del componente de React (vidrio, resplandor,
+   haces de luz en el borde e inclinación 3D), hecho en CSS con
+   los colores de la marca: naranja #F77A27 sobre #13151C.
+   ============================================================ */
+body{overflow:hidden}
+.entrada{position:relative;min-height:100vh;display:grid;place-items:center;padding:24px;
+         background:var(--bg);overflow:hidden}
+
+/* --- ambiente: resplandores que respiran --- */
+.aura{position:absolute;border-radius:50%;filter:blur(90px);pointer-events:none}
+.aura.arriba{top:-30vh;left:50%;transform:translateX(-50%);width:120vh;height:70vh;
+  background:radial-gradient(closest-side,rgba(247,122,39,.30),transparent);
+  animation:respirar 9s ease-in-out infinite}
+.aura.abajo{bottom:-40vh;left:50%;transform:translateX(-50%);width:100vh;height:70vh;
+  background:radial-gradient(closest-side,rgba(227,98,37,.24),transparent);
+  animation:respirar 7s ease-in-out infinite reverse}
+.aura.izq{left:-10vw;top:30%;width:44vh;height:44vh;
+  background:radial-gradient(closest-side,rgba(247,122,39,.13),transparent);
+  animation:respirar 11s ease-in-out infinite}
+@keyframes respirar{
+  0%,100%{opacity:.55;transform:translateX(-50%) scale(.97)}
+  50%{opacity:1;transform:translateX(-50%) scale(1.04)}
+}
+.aura.izq{animation-name:respirar-izq}
+@keyframes respirar-izq{0%,100%{opacity:.4;transform:scale(.95)}50%{opacity:.8;transform:scale(1.08)}}
+
+/* grano sutil, para que el degradado no se vea plano */
+.grano{position:absolute;inset:0;opacity:.035;mix-blend-mode:soft-light;pointer-events:none;
+  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.65' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size:200px 200px}
+
+/* --- la tarjeta --- */
+.escena{perspective:1500px;width:100%;max-width:392px;position:relative;z-index:2}
+.tarjeta{position:relative;transform-style:preserve-3d;transition:transform .18s ease-out;
+  animation:entrar .7s cubic-bezier(.22,1,.36,1) both}
+@keyframes entrar{from{opacity:0;transform:translateY(22px)}}
+
+.vidrio{position:relative;border-radius:22px;padding:30px 28px 26px;overflow:hidden;
+  background:rgba(19,21,28,.72);backdrop-filter:blur(22px);
+  border:1px solid rgba(255,255,255,.06);
+  box-shadow:0 30px 80px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.05)}
+/* trama interior apenas perceptible */
+.vidrio::before{content:"";position:absolute;inset:0;opacity:.03;pointer-events:none;
+  background-image:linear-gradient(135deg,#fff .5px,transparent .5px),
+                   linear-gradient(45deg,#fff .5px,transparent .5px);
+  background-size:30px 30px}
+
+/* --- haces de luz recorriendo el borde --- */
+.haces{position:absolute;inset:-1px;border-radius:23px;overflow:hidden;pointer-events:none}
+.haces i{position:absolute;background:linear-gradient(90deg,transparent,#f77a27,transparent);
+  filter:blur(1.5px);opacity:.85}
+.haces .t{top:0;height:2px;width:45%;left:-45%;animation:recorre-x 3.4s ease-in-out infinite}
+.haces .b{bottom:0;height:2px;width:45%;right:-45%;
+  animation:recorre-x-inv 3.4s ease-in-out infinite 1.7s}
+.haces .r{right:0;width:2px;height:45%;top:-45%;
+  background:linear-gradient(180deg,transparent,#f77a27,transparent);
+  animation:recorre-y 3.4s ease-in-out infinite .85s}
+.haces .l{left:0;width:2px;height:45%;bottom:-45%;
+  background:linear-gradient(180deg,transparent,#f77a27,transparent);
+  animation:recorre-y-inv 3.4s ease-in-out infinite 2.55s}
+@keyframes recorre-x{0%{left:-45%}100%{left:100%}}
+@keyframes recorre-x-inv{0%{right:-45%}100%{right:100%}}
+@keyframes recorre-y{0%{top:-45%}100%{top:100%}}
+@keyframes recorre-y-inv{0%{bottom:-45%}100%{bottom:100%}}
+/* chispas en las esquinas */
+.haces b{position:absolute;width:6px;height:6px;border-radius:50%;background:rgba(247,122,39,.75);
+  filter:blur(2px);animation:latir 2.4s ease-in-out infinite}
+.haces b:nth-of-type(1){top:0;left:0}
+.haces b:nth-of-type(2){top:0;right:0;animation-delay:.6s}
+.haces b:nth-of-type(3){bottom:0;right:0;animation-delay:1.2s}
+.haces b:nth-of-type(4){bottom:0;left:0;animation-delay:1.8s}
+@keyframes latir{0%,100%{opacity:.25}50%{opacity:.7}}
+
+/* --- contenido --- */
+.marca{text-align:center;margin-bottom:22px}
+.marca .simbolo{height:58px;width:auto;filter:drop-shadow(0 10px 26px rgba(239,112,38,.35));
+  animation:flotar 6s ease-in-out infinite}
+.marca .palabra{height:26px;width:auto;display:block;margin:12px auto 0}
+@keyframes flotar{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
+.marca h1{font-size:19px;font-weight:700;letter-spacing:-.015em;margin-top:16px;
+  background:linear-gradient(180deg,#fff,#cfd6e4);-webkit-background-clip:text;
+  background-clip:text;color:transparent}
+.marca p{font-size:12.5px;color:var(--text-3);margin-top:4px}
+
+.campo-ico{position:relative;display:flex;align-items:center;margin-bottom:12px}
+.campo-ico svg{position:absolute;left:13px;width:17px;height:17px;stroke:var(--text-3);
+  fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;
+  transition:stroke .2s;pointer-events:none}
+.campo-ico input{height:46px;padding-left:40px;padding-right:42px;background:rgba(255,255,255,.04);
+  border-color:rgba(255,255,255,.07);border-radius:12px}
+.campo-ico input:focus{background:rgba(255,255,255,.07)}
+.campo-ico:focus-within svg{stroke:var(--brand)}
+.ojo{position:absolute;right:6px;background:none;border:0;color:var(--text-3);cursor:pointer;
+  padding:8px;display:flex;border-radius:8px}
+.ojo:hover{color:var(--text)}
+.ojo svg{position:static;stroke:currentColor}
+
+.fila-extra{display:flex;align-items:center;justify-content:space-between;margin:14px 0 18px;
+  font-size:12.5px}
+.fila-extra a{color:var(--text-2)}
+.fila-extra a:hover{color:var(--brand)}
+
+.entrar{position:relative;width:100%;height:46px;border:0;border-radius:12px;cursor:pointer;
+  background:var(--brand-grad);color:#fff;font:inherit;font-weight:650;font-size:15px;
+  display:flex;align-items:center;justify-content:center;gap:8px;overflow:hidden;
+  box-shadow:0 10px 28px rgba(239,112,38,.32);transition:transform .07s,filter .2s}
+.entrar:hover{filter:brightness(1.06)}
+.entrar:active{transform:translateY(1px)}
+.entrar .brillo{position:absolute;inset:0;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.35),transparent);
+  transform:translateX(-100%)}
+.entrar:hover .brillo{animation:pasar 1.1s ease-in-out}
+@keyframes pasar{to{transform:translateX(100%)}}
+.entrar[data-cargando="true"] .brillo{animation:pasar 1.2s ease-in-out infinite}
+.entrar svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:2.2;
+  stroke-linecap:round;stroke-linejoin:round;transition:transform .25s}
+.entrar:hover svg{transform:translateX(3px)}
+.girando{width:17px;height:17px;border:2px solid rgba(255,255,255,.45);border-top-color:#fff;
+  border-radius:50%;animation:girar .7s linear infinite}
+@keyframes girar{to{transform:rotate(360deg)}}
+
+.separador{display:flex;align-items:center;gap:12px;margin:18px 0 14px;
+  font-size:11.5px;color:var(--text-3)}
+.separador::before,.separador::after{content:"";flex:1;height:1px;background:rgba(255,255,255,.06)}
+
+.google{width:100%;height:44px;border-radius:12px;background:rgba(255,255,255,.03);
+  border:1px solid rgba(255,255,255,.07);color:var(--text-3);font:inherit;font-size:13px;
+  display:flex;align-items:center;justify-content:center;gap:9px;cursor:not-allowed}
+.google span.pronto{font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;
+  background:var(--surface-3);padding:3px 7px;border-radius:99px}
+
+.pie-nota{text-align:center;font-size:11.5px;color:var(--text-3);margin-top:18px}
+
+@media (prefers-reduced-motion:reduce){
+  .aura,.haces i,.haces b,.marca img,.entrar .brillo{animation:none!important}
+  .tarjeta{transition:none}
+}
+/* --- tema claro: vidrio blanco sobre crema, mismas luces naranjas --- */
+[data-theme="claro"] .vidrio{background:rgba(255,255,255,.82);border-color:var(--line);
+  box-shadow:0 30px 80px rgba(80,50,20,.14),inset 0 1px 0 rgba(255,255,255,.9)}
+[data-theme="claro"] .vidrio::before{opacity:0}
+[data-theme="claro"] .marca h1{background:none;color:var(--text)}
+[data-theme="claro"] .campo-ico input{background:var(--surface-2);border-color:var(--line)}
+[data-theme="claro"] .separador::before,[data-theme="claro"] .separador::after{background:var(--line)}
+[data-theme="claro"] .google{background:var(--surface-2);border-color:var(--line)}
+.pie-legal{text-align:center;font-size:11.5px;color:var(--text-3);margin-top:10px}
+.pie-legal a{color:var(--text-2);text-decoration:underline}
+</style>
+{% endblock %}
+
+{% block anonimo %}
+<div class="entrada">
+  <div class="aura arriba"></div>
+  <div class="aura abajo"></div>
+  <div class="aura izq"></div>
+  <div class="grano"></div>
+
+  <div class="escena">
+    <div class="tarjeta" id="tarjeta">
+      <div class="vidrio">
+        <div class="haces">
+          <i class="t"></i><i class="r"></i><i class="b"></i><i class="l"></i>
+          <b></b><b></b><b></b><b></b>
+        </div>
+
+        <div class="marca">
+          <img class="simbolo" src="{% static 'img/cloudin-marca.png' %}" alt="">
+          <img class="palabra wm-oscuro" src="{% static 'img/cloudin-texto.png' %}" alt="Cloudin"><img class="palabra wm-claro" src="{% static 'img/cloudin-texto-claro.png' %}" alt="" aria-hidden="true">
+          <h1>{% if tenant %}{{ tenant.name }}{% else %}Bienvenido{% endif %}</h1>
+          <p>Entra al panel de tu restaurante</p>
+        </div>
+
+        {% if form.errors %}
+          <div class="aviso malo">{% for e in form.non_field_errors %}{% if "Demasiados" in e %}{{ e }}{% else %}Usuario o contraseña incorrectos.{% endif %}{% empty %}Usuario o contraseña incorrectos.{% endfor %}</div>
+        {% endif %}
+
+        <form method="post" id="form-entrar">
+          {% csrf_token %}
+          <div class="campo-ico">
+            <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            <input type="text" name="username" placeholder="Usuario" autocomplete="username"
+                   autofocus required>
+          </div>
+
+          <div class="campo-ico">
+            <svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+            <input type="password" name="password" id="clave" placeholder="Contraseña"
+                   autocomplete="current-password" required>
+            <button class="ojo" type="button" id="ver-clave" aria-label="Mostrar contraseña">
+              <svg viewBox="0 0 24 24" id="ojo-abierto"><path d="M1.5 12S5 5.5 12 5.5 22.5 12 22.5 12 19 18.5 12 18.5 1.5 12 1.5 12z"/><circle cx="12" cy="12" r="3"/></svg>
+              <svg viewBox="0 0 24 24" id="ojo-cerrado" hidden><path d="M9.9 5.7A9.8 9.8 0 0 1 12 5.5c7 0 10.5 6.5 10.5 6.5a17 17 0 0 1-3.3 4.1M6.3 7.9A17 17 0 0 0 1.5 12S5 18.5 12 18.5a9.6 9.6 0 0 0 4-.85M3 3l18 18"/></svg>
+            </button>
+          </div>
+
+          <div class="fila-extra">
+            <span class="dim">La sesión queda abierta en este equipo</span>
+            <a href="{% url 'panel:recuperar' %}">¿Olvidaste tu contraseña?</a>
+          </div>
+
+          <button class="entrar" type="submit" id="btn-entrar">
+            <span class="brillo"></span>
+            <span id="etiqueta-entrar">Entrar</span>
+            <svg id="flecha-entrar" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+          </button>
+
+          <div class="separador">o</div>
+
+          <button class="google" type="button" disabled title="Todavía no está disponible">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M21.35 11.1H12v3.2h5.35c-.25 1.5-1.8 4.4-5.35 4.4a6.2 6.2 0 1 1 0-12.4c1.9 0 3.2.8 3.9 1.5l2.4-2.3C16.8 3.9 14.6 3 12 3a9 9 0 1 0 0 18c5.2 0 8.6-3.6 8.6-8.7 0-.6-.1-1-.25-1.2z"/></svg>
+            Entrar con Google
+            <span class="pronto">Pronto</span>
+          </button>
+        </form>
+
+        <p class="pie-nota">Cloudin · pedidos y facturación para restaurantes</p>
+        <p class="pie-legal"><a href="{% url 'legal-terminos' %}" target="_blank" rel="noopener">Términos</a> ·
+          <a href="{% url 'legal-privacidad' %}" target="_blank" rel="noopener">Privacidad</a></p>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Inclinación 3D: la tarjeta sigue al mouse, como el componente de React.
+const tarjeta = document.getElementById("tarjeta");
+const escena = tarjeta.parentElement;
+escena.addEventListener("mousemove", e => {
+  const caja = escena.getBoundingClientRect();
+  const x = e.clientX - caja.left - caja.width / 2;
+  const y = e.clientY - caja.top - caja.height / 2;
+  tarjeta.style.transform =
+    `rotateX(${(-y / caja.height * 18).toFixed(2)}deg) rotateY(${(x / caja.width * 18).toFixed(2)}deg)`;
+});
+escena.addEventListener("mouseleave", () => { tarjeta.style.transform = ""; });
+
+// Mostrar u ocultar la contraseña.
+const clave = document.getElementById("clave");
+document.getElementById("ver-clave").addEventListener("click", () => {
+  const oculta = clave.type === "password";
+  clave.type = oculta ? "text" : "password";
+  document.getElementById("ojo-abierto").hidden = oculta;
+  document.getElementById("ojo-cerrado").hidden = !oculta;
+});
+
+// Al enviar, el botón muestra que está trabajando.
+document.getElementById("form-entrar").addEventListener("submit", () => {
+  const boton = document.getElementById("btn-entrar");
+  boton.dataset.cargando = "true";
+  document.getElementById("flecha-entrar").remove();
+  document.getElementById("etiqueta-entrar").outerHTML = '<span class="girando"></span>';
+});
+</script>
+{% endblock %}

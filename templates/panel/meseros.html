@@ -1,0 +1,315 @@
+{% extends "panel/_base.html" %}
+{% load static cloudin %}
+{% block title %}Meseros — Cloudin{% endblock %}
+{% block titulo %}Cloudin <span style="color:var(--brand)">Meseros</span>{% endblock %}
+{% block subtitulo %}<p class="sub dim small">Cómo se toman los pedidos y quién los toma</p>{% endblock %}
+{% block acciones %}
+  {% if tenant.usa_meseros %}
+    <a class="btn ghost" href="{{ enlace }}" target="_blank" rel="noopener">Abrir la app</a>
+  {% endif %}
+  <a class="btn" href="{% url 'panel:mesero-nuevo' %}">
+    <svg class="ico" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M19 8v6M22 11h-6"/></svg>
+    Agregar mesero
+  </a>
+{% endblock %}
+
+{% block head %}
+{{ block.super }}
+<style>
+  .modos{display:grid;gap:var(--sp-3);grid-template-columns:repeat(auto-fit,minmax(230px,1fr))}
+  .modo{position:relative;display:block;cursor:pointer;border-radius:var(--r-lg);padding:var(--sp-4);
+    background:var(--surface);border:1.5px solid var(--line);transition:border-color .15s,background .15s}
+  .modo:hover{border-color:var(--brand-line)}
+  .modo input{position:absolute;opacity:0;pointer-events:none}
+  .modo .ico-modo{width:42px;height:42px;border-radius:13px;display:grid;place-items:center;
+    background:var(--surface-3);margin-bottom:var(--sp-3)}
+  .modo .ico-modo svg{width:22px;height:22px;stroke:var(--text-2);fill:none;stroke-width:1.8;
+    stroke-linecap:round;stroke-linejoin:round}
+  .modo h3{font-size:15.5px;font-weight:680}
+  .modo p{font-size:13px;color:var(--text-3);margin-top:4px;line-height:1.55}
+  .modo .check{position:absolute;top:14px;right:14px;width:22px;height:22px;border-radius:50%;
+    border:1.5px solid var(--line);display:grid;place-items:center}
+  .modo.on{border-color:var(--brand);background:linear-gradient(150deg,rgba(247,122,39,.12),transparent 65%),var(--surface)}
+  .modo.on .ico-modo{background:var(--brand-grad)}
+  .modo.on .ico-modo svg{stroke:#fff}
+  .modo.on .check{border-color:var(--brand);background:var(--brand)}
+  .modo.on .check::after{content:"";width:8px;height:8px;border-radius:50%;background:#fff}
+
+  .tablet{display:grid;gap:var(--sp-4);grid-template-columns:auto 1fr;align-items:center}
+  .tablet img.qr{width:132px;height:132px;border-radius:14px;background:#fff;padding:8px}
+  .persona{display:flex;align-items:center;gap:12px}
+  .avatar{width:38px;height:38px;border-radius:12px;display:grid;place-items:center;flex:none;
+    background:var(--brand-grad);color:#fff;font-weight:700;font-size:14px}
+  .persona.fuera .avatar{background:var(--surface-3);color:var(--text-3)}
+
+  .clave-celda{display:inline-flex;align-items:center;gap:6px}
+  .clave-texto{letter-spacing:.06em;min-width:92px;display:inline-block}
+  .clave-texto.visible{letter-spacing:0;color:var(--brand);background:var(--brand-soft)}
+  .ojo{padding:5px 8px}
+  .ojo .ico{width:16px;height:16px}
+
+  dialog.confirmar{border:1px solid var(--line);border-radius:var(--r-xl);background:var(--surface);
+    color:var(--text);padding:0;width:min(420px,calc(100% - 32px));box-shadow:0 30px 80px rgba(0,0,0,.55)}
+  dialog.confirmar::backdrop{background:rgba(6,7,10,.66);backdrop-filter:blur(3px)}
+  dialog.confirmar form{padding:var(--sp-5);display:grid;gap:var(--sp-3)}
+  dialog.confirmar .candado{width:46px;height:46px;border-radius:14px;display:grid;place-items:center;
+    background:var(--brand-soft);color:var(--brand)}
+  dialog.confirmar h3{font-size:18px;font-weight:700}
+</style>
+{% endblock %}
+
+{% block content %}
+
+<form method="post" id="form-modo">
+  {% csrf_token %}
+  <input type="hidden" name="accion" value="modo">
+  <div class="bloque-cab" style="margin-top:0">
+    <svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.2"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>
+    <h2>¿Cómo se toman los pedidos?</h2>
+  </div>
+  <div class="modos">
+    {% for valor, texto in MODOS %}
+    <label class="modo {% if tenant.modo_servicio == valor %}on{% endif %}">
+      <input type="radio" name="modo" value="{{ valor }}" {% if tenant.modo_servicio == valor %}checked{% endif %}
+             onchange="this.form.submit()">
+      <span class="check"></span>
+      <span class="ico-modo">
+        {% if valor == "autoservicio" %}
+          <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3M21 14v7h-7"/></svg>
+        {% elif valor == "meseros" %}
+          <svg viewBox="0 0 24 24"><rect x="5" y="2" width="14" height="20" rx="2.5"/><path d="M11 18h2"/></svg>
+        {% else %}
+          <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9.5" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8"/></svg>
+        {% endif %}
+      </span>
+      {% if valor == "autoservicio" %}
+        <h3>Autoservicio</h3>
+        <p>El cliente escanea el QR de la mesa y pide solo. Así funciona hoy.</p>
+      {% elif valor == "meseros" %}
+        <h3>Meseros</h3>
+        <p>El mesero toma el pedido en la tablet. El QR del cliente ya no envía pedidos.</p>
+      {% else %}
+        <h3>Ambos</h3>
+        <p>El cliente puede pedir por QR y el mesero también toma pedidos.</p>
+      {% endif %}
+    </label>
+    {% endfor %}
+  </div>
+  <noscript><button class="btn" type="submit" style="margin-top:var(--sp-3)">Guardar modo</button></noscript>
+</form>
+
+{% if tenant.usa_meseros %}
+<div class="bloque cols cols-2" style="display:grid">
+  <div>
+    <div class="kpis">
+      <div class="kpi destacado">
+        <div class="cab">
+          <svg class="ico" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          Meseros activos
+        </div>
+        <div class="valor">{{ activos }}</div>
+        <div class="pie">de {{ equipo|length }} registrados</div>
+      </div>
+      <div class="kpi">
+        <div class="cab">
+          <svg class="ico" viewBox="0 0 24 24"><path d="M6 2h9l5 5v13a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z"/></svg>
+          Pedidos de hoy
+        </div>
+        <div class="valor">{{ pedidos_hoy }}</div>
+        <div class="pie">tomados en la tablet</div>
+      </div>
+      <div class="kpi">
+        <div class="cab">
+          <svg class="ico" viewBox="0 0 24 24"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+          Vendido hoy
+        </div>
+        <div class="valor">${{ ventas_hoy|pesos }}</div>
+        <div class="pie">por los meseros</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="tablet">
+      <img class="qr" src="{{ qr }}" alt="QR de la app de meseros">
+      <div>
+        <div class="eyebrow">App de meseros</div>
+        <p class="small" style="margin:6px 0 10px;line-height:1.6">
+          Escanéalo con la tablet o el celular del mesero y usa <strong>«Agregar a la pantalla
+          de inicio»</strong>: queda instalada como una app.
+        </p>
+        <div class="row">
+          <code style="font-size:12px">{{ enlace }}</code>
+          <button class="btn quiet sm" type="button" onclick="copiar('{{ enlace|escapejs }}', this)">Copiar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<div class="bloque">
+  <div class="bloque-cab">
+    <svg class="ico" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+    <h2>El equipo de meseros</h2>
+  </div>
+  <div class="card">
+    <div class="tabla-wrap">
+      <table>
+        <thead>
+          <tr><th>Mesero</th><th>Usuario</th><th>Contraseña</th><th>Último ingreso</th><th class="fin">Pedidos hoy</th>
+              <th class="fin">Vendido hoy</th><th class="fin"></th></tr>
+        </thead>
+        <tbody>
+          {% for e in equipo %}
+          <tr>
+            <td>
+              <div class="persona {% if not e.m.activo %}fuera{% endif %}">
+                <span class="avatar">{{ e.m.iniciales }}</span>
+                <span>
+                  <strong>{{ e.m.nombre }}</strong>
+                  <div class="dim small">
+                    {% if not e.m.activo %}inactivo{% elif e.m.empleado %}también en Employees{% else %}mesero{% endif %}
+                  </div>
+                </span>
+              </div>
+            </td>
+            <td><code>{{ e.m.usuario }}</code></td>
+            <td>
+              <span class="clave-celda">
+                <code class="clave-texto" data-clave-de="{{ e.m.id }}">••••••••</code>
+                <button class="btn quiet sm ojo" type="button" data-ver-clave="{{ e.m.id }}"
+                        data-nombre="{{ e.m.nombre }}" aria-label="Ver la contraseña de {{ e.m.nombre }}"
+                        title="Ver contraseña">
+                  <svg class="ico" viewBox="0 0 24 24"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>
+                </button>
+              </span>
+            </td>
+            <td class="dim small">{{ e.m.ultimo_ingreso|date:"d/m H:i"|default:"nunca" }}</td>
+            <td class="fin">{{ e.pedidos }}</td>
+            <td class="fin">${{ e.ventas|pesos }}</td>
+            <td class="fin">
+              <div class="acciones">
+                <a class="btn ghost sm" href="{% url 'panel:mesero-editar' e.m.id %}">Editar</a>
+                <form method="post" action="{% url 'panel:mesero-activo' e.m.id %}">
+                  {% csrf_token %}
+                  <button class="btn quiet sm" type="submit">{% if e.m.activo %}Desactivar{% else %}Activar{% endif %}</button>
+                </form>
+              </div>
+            </td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="7" class="vacio">
+            Todavía no hay meseros.
+            <a href="{% url 'panel:mesero-nuevo' %}" style="color:var(--brand)">Agrega al primero</a>.
+          </td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <div class="sep"></div>
+    <p class="dim small">
+      La cuenta de un mesero sirve <strong>solo para la tablet</strong>: no entra a este panel.
+      Cada pedido que toma llega a la cocina con su nombre.
+      {% if not tenant.usa_meseros %}Para que puedan entrar, elige «Meseros» o «Ambos» arriba.{% endif %}
+    </p>
+  </div>
+</div>
+
+<dialog class="confirmar" id="dlg-clave">
+  <form method="dialog" id="form-clave">
+    <span class="candado">
+      <svg class="ico" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+    </span>
+    <div>
+      <h3>Confirma que eres tú</h3>
+      <p class="dim small" style="margin-top:4px">
+        Para ver la contraseña de <strong id="dlg-nombre"></strong>, escribe
+        <strong>tu contraseña del panel</strong>. Durante 5 minutos no te la volveremos a pedir.
+      </p>
+    </div>
+    <div class="campo">
+      <label for="clave-panel">Tu contraseña del panel</label>
+      <input type="password" id="clave-panel" autocomplete="current-password">
+      <div class="ayuda" id="dlg-error" style="color:var(--danger)" hidden></div>
+    </div>
+    <div class="row" style="justify-content:flex-end">
+      <button class="btn quiet" type="button" id="dlg-cancelar">Cancelar</button>
+      <button class="btn" type="submit" id="dlg-ok">Ver contraseña</button>
+    </div>
+  </form>
+</dialog>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let claveConfirmada = {{ clave_confirmada|yesno:"true,false" }};
+let pendiente = null;
+const dlg = document.getElementById("dlg-clave");
+const OJO = '<svg class="ico" viewBox="0 0 24 24"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>';
+const OJO_TACHADO = '<svg class="ico" viewBox="0 0 24 24"><path d="M3 3l18 18M10.6 5.1A10.8 10.8 0 0 1 12 5c6.4 0 10 7 10 7a17.6 17.6 0 0 1-3.2 4.1M6.6 6.6A17.4 17.4 0 0 0 2 12s3.6 7 10 7a9.9 9.9 0 0 0 5.4-1.6"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/></svg>';
+
+async function pedirClave(id, clavePanel) {
+  const datos = new FormData();
+  datos.append("csrfmiddlewaretoken", CSRF);
+  if (clavePanel) datos.append("clave_panel", clavePanel);
+  const r = await fetch(`/panel/meseros/${id}/clave/`, {method: "POST", body: datos, credentials: "same-origin"});
+  return {estado: r.status, ...(await r.json().catch(() => ({detail: "No se pudo consultar."})))};
+}
+
+function verClave(id, clave) {
+  const celda = document.querySelector(`[data-clave-de="${id}"]`);
+  const boton = document.querySelector(`[data-ver-clave="${id}"]`);
+  const visible = clave !== null;
+  celda.textContent = visible ? clave : "••••••••";
+  celda.classList.toggle("visible", visible);
+  boton.dataset.visible = visible ? "1" : "";
+  boton.innerHTML = visible ? OJO_TACHADO : OJO;
+  boton.title = visible ? "Ocultar" : "Ver contraseña";
+}
+
+document.addEventListener("click", async (e) => {
+  const boton = e.target.closest("[data-ver-clave]");
+  if (!boton) return;
+  const id = boton.dataset.verClave;
+  if (boton.dataset.visible) { verClave(id, null); return; }
+  if (claveConfirmada) {
+    const r = await pedirClave(id);
+    if (r.ok) { verClave(id, r.clave); return; }
+    if (!r.pide_clave) { alert(r.detail); return; }
+    claveConfirmada = false;
+  }
+  pendiente = id;
+  document.getElementById("dlg-nombre").textContent = boton.dataset.nombre;
+  document.getElementById("dlg-error").hidden = true;
+  document.getElementById("clave-panel").value = "";
+  dlg.showModal();
+});
+
+document.getElementById("dlg-cancelar").addEventListener("click", () => dlg.close());
+
+document.getElementById("form-clave").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const error = document.getElementById("dlg-error");
+  const ok = document.getElementById("dlg-ok");
+  const campo = document.getElementById("clave-panel");
+  if (!campo.value) { campo.focus(); return; }
+  ok.disabled = true;
+  const r = await pedirClave(pendiente, campo.value);
+  ok.disabled = false;
+  if (r.ok) {
+    claveConfirmada = true;
+    dlg.close();
+    verClave(pendiente, r.clave);
+  } else if (r.estado === 404) {
+    claveConfirmada = true;
+    dlg.close();
+    alert(r.detail);
+  } else {
+    error.textContent = r.detail;
+    error.hidden = false;
+    campo.select();
+  }
+});
+</script>
+{% endblock %}

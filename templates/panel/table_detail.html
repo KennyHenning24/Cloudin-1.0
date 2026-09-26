@@ -1,0 +1,517 @@
+{% extends "panel/_base.html" %}
+{% load cloudin l10n %}
+{% block title %}{{ mesa }} — Cloudin{% endblock %}
+{% block titulo %}{{ mesa }}{% endblock %}
+{% block subtitulo %}
+  <p class="sub dim small">
+    <a href="{% url 'panel:tables' %}" style="color:var(--text-3)">← Todas las mesas</a>
+  </p>
+{% endblock %}
+{% block acciones %}
+  <span class="pill {% if cuenta %}busy{% else %}free{% endif %}" id="estado">
+    <i class="dot"></i>{% if cuenta %}Ocupada{% else %}Libre{% endif %}
+  </span>
+{% endblock %}
+
+{% block content %}
+<div class="cols cols-2">
+
+  <div class="card">
+    <div class="card-head">
+      <div><h2>Tomar pedido</h2></div>
+      <input id="buscar" placeholder="Buscar producto…" class="fin" style="max-width:230px">
+    </div>
+    <div id="menu" style="max-height:62vh;overflow:auto;margin:0 calc(var(--sp-2)*-1);padding:0 var(--sp-2)">
+      {% for cat in categorias %}
+        <div class="eyebrow" style="margin:var(--sp-3) 0 var(--sp-1)">{{ cat.name }}</div>
+        {% for p in cat.products.all %}{% if p.is_available %}
+          <div class="prod-fila spread" data-nombre="{{ p.name|lower }}"
+               style="padding:9px 0;border-top:1px solid var(--line-soft)">
+            {% if p.foto %}<span class="miniatura" style="background-image:url('{{ p.foto }}')"></span>{% endif %}
+            <div>
+              <div>{{ p.name }}</div>
+              <div class="dim small">${{ p.price|pesos }}{% if p.opciones %} · <span style="color:var(--info)">con opciones</span>{% endif %}</div>
+            </div>
+            <button class="btn ghost sm fin" onclick="agregar({{ p.id }})">
+              Agregar
+            </button>
+          </div>
+        {% endif %}{% endfor %}
+      {% empty %}
+        <p class="vacio">Este restaurante todavía no tiene menú cargado.</p>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="stack">
+    <div class="card">
+      <div class="card-head"><div><h2>Pedido nuevo</h2></div></div>
+      <div id="borrador" class="dim small" style="margin-bottom:var(--sp-3)">Sin productos.</div>
+      <div class="campo">
+        <textarea id="nota" rows="2" placeholder="Nota para cocina (opcional)"></textarea>
+      </div>
+      <button class="btn block" id="enviar" disabled onclick="enviarPedido()">Enviar a cocina</button>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><div><h2>Cuenta de la mesa</h2></div></div>
+      <div id="cuenta"></div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block head %}
+{{ block.super }}
+<style>
+  .prop-grupo{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+  .prop-op{display:grid;gap:2px;text-align:center;padding:9px 6px;border-radius:var(--r);cursor:pointer;
+    background:var(--surface-2);border:1.5px solid var(--line);color:var(--text-2);font:inherit}
+  .prop-op strong{font-size:13px;font-weight:650;color:var(--text)}
+  .prop-op small{font-size:12px;color:var(--text-3)}
+  .prop-op.on{border-color:var(--brand);background:var(--brand-soft)}
+  .prop-op.on small{color:var(--brand)}
+  .miniatura{width:40px;height:40px;border-radius:11px;flex:none;background:var(--surface-3) center/cover no-repeat}
+  dialog.opciones{border:1px solid var(--line);border-radius:var(--r-xl);background:var(--surface);color:var(--text);
+    padding:0;width:min(480px,calc(100% - 32px));max-height:86vh;box-shadow:0 30px 80px rgba(0,0,0,.55)}
+  dialog.opciones::backdrop{background:rgba(6,7,10,.66);backdrop-filter:blur(3px)}
+  dialog.opciones .cuerpo{padding:var(--sp-4) var(--sp-5);overflow:auto;max-height:calc(86vh - 80px)}
+  dialog.opciones .pie{padding:var(--sp-3) var(--sp-5);border-top:1px solid var(--line);display:flex;gap:8px;align-items:center}
+  .grupo-op{margin-top:var(--sp-3)}
+  .grupo-op .op{display:flex;align-items:center;gap:10px;padding:8px 10px;border:1px solid var(--line);border-radius:var(--r);
+    margin-top:6px;cursor:pointer;font-size:14px}
+  .grupo-op .op:has(input:checked){border-color:var(--brand);background:var(--brand-soft)}
+  .grupo-op .op input{width:auto;accent-color:var(--brand)}
+  .grupo-op .op .fin{margin-left:auto;color:var(--text-3)}
+  .pedido-c{border:1px solid var(--line);border-radius:var(--r);padding:10px 12px;margin-bottom:10px;background:var(--surface-2)}
+  .linea{display:flex;align-items:center;gap:8px;padding:5px 0;font-size:14px}
+  .linea .fin{margin-left:auto;display:flex;align-items:center;gap:6px}
+  .linea.novedad .nom{text-decoration:line-through;color:var(--text-3)}
+  .mas{width:30px;height:30px;border-radius:9px;border:1px solid var(--line);background:var(--surface);color:var(--text-2);
+    cursor:pointer;font-weight:800;line-height:1;transition:background .2s}
+  .mas:hover{background:var(--surface-3);color:var(--text)}
+  .reserva-b{display:flex;gap:10px;align-items:center;padding:10px 12px;border-radius:var(--r);margin-bottom:12px;
+    background:var(--lavanda-bg);color:var(--text)}
+  .tipos-n{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:12px 0}
+  .tipo-n{display:grid;gap:4px;justify-items:center;text-align:center;padding:14px 8px;border-radius:16px;cursor:pointer;
+    border:1.5px solid var(--line);background:var(--surface-2);font:inherit;color:var(--text);transition:all .2s var(--ease)}
+  .tipo-n strong{font-size:14px}
+  .tipo-n small{font-size:11.5px;color:var(--text-3)}
+  .tipo-n.on{border-color:var(--brand);background:var(--brand-soft);transform:translateY(-2px)}
+  .chips-m{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0 10px}
+  .chips-m button{border:1px solid var(--line);background:var(--surface-2);color:var(--text-2);border-radius:99px;
+    padding:6px 12px;font:600 12.5px var(--fuente);cursor:pointer}
+  .chips-m button:hover{border-color:var(--brand-line);color:var(--text)}
+  .totales .spread{padding:3px 0}
+</style>
+{% endblock %}
+
+{% block scripts %}
+{{ productos_js|json_script:"productos-js" }}
+<dialog class="opciones" id="dlg-novedad">
+  <form id="form-novedad" onsubmit="guardarNovedad(event)">
+    <div class="cuerpo" id="n-cuerpo"></div>
+    <div class="pie">
+      <button class="btn quiet" type="button" onclick="document.getElementById('dlg-novedad').close()">Cancelar</button>
+      <button class="btn fin" type="submit" id="n-ok">Guardar</button>
+    </div>
+  </form>
+</dialog>
+<dialog class="opciones" id="dlg-opciones">
+  <form method="dialog" id="form-opciones">
+    <div class="cuerpo" id="opciones-cuerpo"></div>
+    <div class="pie">
+      <button class="btn quiet" type="button" onclick="document.getElementById('dlg-opciones').close()">Cancelar</button>
+      <button class="btn fin" type="submit" id="opciones-ok">Agregar</button>
+    </div>
+  </form>
+</dialog>
+<script>
+const MESA_ID = {{ mesa.id }};
+const PRODUCTOS = JSON.parse(document.getElementById("productos-js").textContent);
+let sesionId = {{ cuenta.id|default:"null" }};
+let borrador = [];
+
+document.getElementById("buscar").addEventListener("input", e => {
+  const q = e.target.value.toLowerCase();
+  document.querySelectorAll(".prod-fila").forEach(el => {
+    el.hidden = !el.dataset.nombre.includes(q);
+  });
+});
+
+
+function agregar(id) {
+  const p = PRODUCTOS[id];
+  if (!p) return;
+  if ((p.opciones || []).length) { abrirOpciones(id); return; }
+  sumarLinea({product_id: id, quantity: 1, nombre: p.nombre, precio: p.precio, opciones: [], note: "", clave: String(id)});
+}
+function sumarLinea(linea) {
+  const ya = borrador.find(i => i.clave === linea.clave);
+  if (ya) ya.quantity += linea.quantity;
+  else borrador.push(linea);
+  pintarBorrador();
+}
+function quitar(clave) {
+  borrador = borrador.filter(i => i.clave !== clave);
+  pintarBorrador();
+}
+
+/* Toppings: el precio que se muestra es orientativo; el definitivo lo calcula el servidor. */
+let productoOpciones = null;
+function abrirOpciones(id) {
+  productoOpciones = id;
+  const p = PRODUCTOS[id];
+  const esc = (t) => String(t ?? "").replace(/[&<>"']/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+  document.getElementById("opciones-cuerpo").innerHTML = `
+    <h2 style="font-size:18px">${esc(p.nombre)}</h2>
+    <p class="dim small">${money(p.precio)}</p>
+    ${p.opciones.map((g, gi) => `
+      <div class="grupo-op">
+        <div class="eyebrow">${esc(g.nombre)} ${g.obligatorio ? '<span class="pill warn" style="margin-left:6px">obligatorio</span>' : ""}</div>
+        ${g.valores.map((v, vi) => `
+          <label class="op">
+            <input type="${g.tipo === "uno" ? "radio" : "checkbox"}" name="g${gi}" value="${vi}" data-g="${gi}"
+                   ${g.tipo === "uno" && g.obligatorio && vi === 0 ? "" : ""}>
+            <span>${esc(v.nombre)}</span><span class="fin">${Number(v.precio) ? "+" + money(v.precio) : ""}</span>
+          </label>`).join("")}
+      </div>`).join("")}
+    ${p.observacion ? `<div class="campo" style="margin-top:var(--sp-3)"><label for="op-nota">Observación</label>
+      <input id="op-nota" maxlength="200" placeholder="Ej. sin cebolla"></div>` : ""}
+    <div class="aviso alerta" id="op-error" hidden style="margin-top:var(--sp-3)"></div>`;
+  document.getElementById("dlg-opciones").showModal();
+}
+document.getElementById("form-opciones").addEventListener("submit", (e) => {
+  e.preventDefault();
+  const p = PRODUCTOS[productoOpciones];
+  const form = e.target;
+  const opciones = [], nombres = [];
+  let precio = p.precio;
+  for (const [gi, g] of p.opciones.entries()) {
+    const marcadas = [...form.querySelectorAll(`input[data-g="${gi}"]:checked`)].map((i) => Number(i.value));
+    if (g.tipo === "uno" && g.obligatorio && !marcadas.length) {
+      const err = document.getElementById("op-error");
+      err.textContent = `Falta elegir «${g.nombre}».`;
+      err.hidden = false;
+      return;
+    }
+    if (g.maximo && marcadas.length > g.maximo) {
+      const err = document.getElementById("op-error");
+      err.textContent = `En «${g.nombre}» se eligen máximo ${g.maximo}.`;
+      err.hidden = false;
+      return;
+    }
+    marcadas.forEach((vi) => {
+      opciones.push({grupo: gi, valor: vi});
+      nombres.push(g.valores[vi].nombre);
+      precio += Number(g.valores[vi].precio) || 0;
+    });
+  }
+  const nota = (document.getElementById("op-nota")?.value || "").trim();
+  sumarLinea({
+    product_id: productoOpciones, quantity: 1, precio, opciones, note: nota,
+    nombre: p.nombre + (nombres.length ? " · " + nombres.join(", ") : "") + (nota ? ` (${nota})` : ""),
+    clave: productoOpciones + "|" + JSON.stringify(opciones) + "|" + nota,
+  });
+  document.getElementById("dlg-opciones").close();
+});
+
+function pintarBorrador() {
+  const cont = document.getElementById("borrador");
+  document.getElementById("enviar").disabled = borrador.length === 0;
+  if (!borrador.length) { cont.innerHTML = '<span class="dim">Sin productos.</span>'; return; }
+  const total = borrador.reduce((s, i) => s + i.precio * i.quantity, 0);
+  cont.innerHTML = borrador.map(i => `
+    <div class="spread" style="padding:4px 0">
+      <span>${i.quantity} × ${escHTML(i.nombre)}</span>
+      <span class="fin">${money(i.precio * i.quantity)}
+        <button class="btn quiet sm" onclick='quitar(${JSON.stringify(i.clave).replace(/'/g, "&#39;")})' 
+                style="color:var(--danger)">✕</button></span>
+    </div>`).join("") + `
+    <div class="spread" style="border-top:1px solid var(--line);margin-top:var(--sp-2);padding-top:var(--sp-2);
+         font-weight:700"><span>Total</span><span class="fin">${money(total)}</span></div>`;
+}
+
+async function enviarPedido() {
+  const pedido = await api(`/api/v1/staff/tables/${MESA_ID}/orders/`, {
+    method: "POST",
+    body: JSON.stringify({
+      items: borrador.map(({product_id, quantity, opciones, note}) => ({product_id, quantity, opciones, note})),
+      note: document.getElementById("nota").value
+    })
+  });
+  borrador = [];
+  document.getElementById("nota").value = "";
+  pintarBorrador();
+  await refrescarCuenta();
+  imprimir(pedido.id);
+}
+
+const ESTADOS = {pending: "Pendiente", preparing: "En preparación", served: "Servido"};
+const ES_ADMIN = {{ es_admin|yesno:"true,false" }};
+const NOVEDAD = {anulado: ["Anulado", "amarillo"], cortesia: ["Cortesía", "menta"], devolucion: ["Devolución", "rosa"]};
+
+async function refrescarCuenta() {
+  const mesas = await api("/api/v1/staff/tables/");
+  const mesa = mesas.find(m => m.id === MESA_ID);
+  sesionId = mesa ? mesa.session_id : null;
+
+  const estado = document.getElementById("estado");
+  estado.innerHTML = `<i class="dot"></i>${sesionId ? "Ocupada" : "Libre"}`;
+  estado.className = "pill " + (sesionId ? "busy" : "free");
+
+  const cont = document.getElementById("cuenta");
+  if (!sesionId) {
+    pintarSiCambia(cont, '<p class="dim small">La mesa está libre.</p>');
+    return;
+  }
+
+  const cuenta = await api(`/api/v1/staff/sessions/${sesionId}/`);
+  CUENTA = cuenta;
+  const esc = (t) => String(t ?? "").replace(/[&<>"']/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+  const reserva = cuenta.reserva ? `<div class="reserva-b"><span class="chip-ico sm lavanda"><svg class="ico" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M8 3v4M16 3v4M3 10h18"/></svg></span>
+      <div><strong>Reserva ${esc(cuenta.reserva.codigo)} · ${esc(cuenta.reserva.nombre)}</strong>
+      <div class="small dim">${cuenta.reserva.personas} personas${cuenta.reserva.observaciones ? " · «" + esc(cuenta.reserva.observaciones) + "»" : ""}</div></div></div>` : "";
+  const pedidos = cuenta.orders.map(o => `
+    <div class="pedido-c">
+      <div class="spread" style="margin-bottom:4px">
+        <strong class="small">Pedido #${o.id}${o.mesero_nombre ? " · " + esc(o.mesero_nombre) : ""}</strong>
+        ${o.status === "cancelled" ? '<span class="pill amarillo fin">Anulado</span>' : `
+        <select class="fin" onchange="cambiarEstado(${o.id}, this.value)"
+                style="width:auto;min-height:34px;padding:4px 26px 4px 8px;font-size:12.5px">
+          ${Object.entries(ESTADOS).map(([k, v]) =>
+            `<option value="${k}" ${o.status === k ? "selected" : ""}>${v}</option>`).join("")}
+        </select>`}
+      </div>
+      ${o.items.map(i => i.novedad ? `<div class="linea novedad">
+          <span class="nom">${i.quantity} × ${esc(i.product_name)}</span>
+          <span class="fin"><span class="pill ${NOVEDAD[i.novedad][1]}">${NOVEDAD[i.novedad][0]}</span>
+          <span class="dim small">${money(Number(i.precio_original || 0) * i.quantity)}</span></span></div>`
+        : `<div class="linea"><span class="nom muted">${i.quantity} × ${esc(i.product_name)}</span>
+          <span class="fin"><span class="dim">${money(i.line_total)}</span>
+          <button class="mas" title="Anular, cortesía o devolución" aria-label="Anular, cortesía o devolución de ${esc(i.product_name)}"
+            onclick='abrirNovedad(${JSON.stringify({id: i.id, nombre: i.product_name, cantidad: i.quantity, precio: Number(i.unit_price)}).replace(/'/g, "&#39;")})'>⋯</button></span></div>`).join("")}
+      ${o.note ? `<div class="dim small" style="margin-top:4px">Nota: ${esc(o.note)}</div>` : ""}
+      <div style="margin-top:6px">${botonImprimir(o)}</div>
+    </div>`).join("");
+
+  totalCuenta = Number(cuenta.current_total) || 0;
+  const descuento = Number(cuenta.descuento) || 0;
+  const sinCobrar = (cuenta.novedades || []).filter(n => n.tipo !== "descuento");
+  const cambio = pintarSiCambia(cont, reserva + pedidos + `
+    <div class="totales" style="margin:var(--sp-3) 0">
+      ${descuento ? `<div class="spread small"><span class="dim">Consumo</span><span class="fin">${money(cuenta.subtotal)}</span></div>
+        <div class="spread small"><span class="dim">Descuento · ${esc(cuenta.descuento_motivo)}</span><span class="fin" style="color:var(--ok)">− ${money(descuento)}</span></div>` : ""}
+      <div class="spread"><span>Total</span><span class="fin metric-sm">${money(cuenta.current_total)}</span></div>
+      ${sinCobrar.length ? `<div class="dim small" style="margin-top:4px">No se cobra: ${sinCobrar.map(n => `${n.cantidad} × ${esc(n.producto)} (${n.tipo_texto.toLowerCase()})`).join(", ")}</div>` : ""}
+      <button class="btn quiet sm" style="margin-top:6px;padding-left:0" onclick="abrirDescuento()">
+        <svg class="ico" viewBox="0 0 24 24"><path d="M19 5L5 19"/><circle cx="7" cy="7" r="2.5"/><circle cx="17" cy="17" r="2.5"/></svg>
+        ${descuento ? "Cambiar o quitar el descuento" : "Hacer un descuento"}</button>
+    </div>
+    <div class="campo" style="margin-bottom:var(--sp-3)">
+      <label for="medio-pago">Cómo paga el cliente</label>
+      <select id="medio-pago" onchange="medioPago = this.value">
+        ${MEDIOS.map(([v, t]) => `<option value="${v}" ${v === medioPago ? "selected" : ""}>${t}</option>`).join("")}
+      </select>
+    </div>
+    <div id="propina-caja"></div>
+    <div class="row">
+      <a class="btn ghost" href="/panel/cuenta/${sesionId}/imprimir/" target="_blank">Precuenta</a>
+      <button class="btn ghost" onclick="cerrarSinFacturar()">Cerrar sin facturar</button>
+      <button class="btn ok" onclick="cerrarYFacturar()">Cerrar y facturar</button>
+    </div>`);
+  if (cambio || !document.getElementById("propina-opciones")) pintarPropina();
+}
+
+/* Propina voluntaria (Ley 1935 de 2018). Se le pregunta al cliente; la sugerida
+   es el 10 %. No va en la factura electrónica: se anota aparte y se reparte
+   entre el equipo del turno. Vive fuera del sondeo para no perder la elección. */
+let totalCuenta = 0;
+let propinaModo = "no";      // "no" | "sugerida" | "otra"
+let propinaOtra = "";
+function valorPropina() {
+  if (propinaModo === "sugerida") return Math.round(totalCuenta * 0.10);
+  if (propinaModo === "otra") return Number(String(propinaOtra).replace(/[^0-9]/g, "")) || 0;
+  return 0;
+}
+function pintarPropina() {
+  const caja = document.getElementById("propina-caja");
+  if (!caja) return;
+  const sugerida = Math.round(totalCuenta * 0.10);
+  const opcion = (modo, texto, sub) => `<button type="button" class="prop-op ${propinaModo === modo ? "on" : ""}"
+      onclick="elegirPropina('${modo}')"><strong>${texto}</strong>${sub ? `<small>${sub}</small>` : ""}</button>`;
+  caja.innerHTML = `
+    <div class="campo" style="margin-bottom:var(--sp-3)">
+      <label>Propina voluntaria <span class="dim small">· pregúntale al cliente</span></label>
+      <div class="prop-grupo" id="propina-opciones">
+        ${opcion("no", "Sin propina", "")}
+        ${opcion("sugerida", "10 % sugerida", money(sugerida))}
+        ${opcion("otra", "Otro valor", "")}
+      </div>
+      ${propinaModo === "otra" ? `<input id="propina-otra" inputmode="numeric" placeholder="Ej. 5000"
+          value="${propinaOtra}" oninput="propinaOtra = this.value; pintarTotalPropina()" style="margin-top:8px">` : ""}
+    </div>
+    <div class="spread" id="total-propina" style="margin-bottom:var(--sp-3)"></div>`;
+  pintarTotalPropina();
+}
+function pintarTotalPropina() {
+  const el = document.getElementById("total-propina");
+  if (!el) return;
+  const p = valorPropina();
+  el.innerHTML = p
+    ? `<span class="dim small">Cuenta ${money(totalCuenta)} + propina ${money(p)}</span>
+       <strong class="fin">A cobrar ${money(totalCuenta + p)}</strong>`
+    : "";
+}
+function elegirPropina(modo) {
+  propinaModo = modo;
+  pintarPropina();
+  if (modo === "otra") { const c = document.getElementById("propina-otra"); if (c) c.focus(); }
+}
+
+async function cambiarEstado(id, status) {
+  await api(`/api/v1/staff/orders/${id}/status/`, {method: "PATCH", body: JSON.stringify({status})});
+  refrescarCuenta();
+}
+
+// El medio de pago va en la factura electrónica (la DIAN lo exige). Vive fuera
+// del bloque que se repinta por sondeo, para que no se pierda la elección.
+const MEDIOS = [["10", "Efectivo"], ["49", "Tarjeta débito"], ["48", "Tarjeta crédito"],
+                ["47", "Transferencia"]];
+let medioPago = "10";
+
+function enviarA(ruta) {
+  const form = document.createElement("form");
+  form.method = "post";
+  form.action = ruta;
+  form.innerHTML = `<input type="hidden" name="csrfmiddlewaretoken" value="${CSRF}">
+                    <input type="hidden" name="medio_pago" value="${medioPago}">
+                    <input type="hidden" name="propina" value="${valorPropina()}">`;
+  document.body.appendChild(form);
+  form.submit();
+}
+
+// Cierra la mesa y emite la factura de una vez. Termina en el comprobante,
+// donde se ve el CUFE y qué respondió la DIAN.
+function cerrarYFacturar() {
+  const p = valorPropina();
+  const extra = p ? "\n\nPropina voluntaria: " + money(p) + " (va aparte de la factura)." : "";
+  if (!confirm("¿Cerrar la mesa y emitir su factura electrónica?" + extra)) return;
+  enviarA(`/panel/cuenta/${sesionId}/cerrar-y-facturar/`);
+}
+
+// Para cuando el cliente no pide factura o todavía no está habilitada.
+async function cerrarSinFacturar() {
+  if (!confirm("¿Cerrar la mesa sin facturar? La venta queda registrada igual.")) return;
+  const id = sesionId;
+  await api(`/api/v1/staff/sessions/${id}/close/`, {
+    method: "POST", body: JSON.stringify({propina: valorPropina(), propina_medio: medioPago}),
+  });
+  window.open(`/panel/cuenta/${id}/imprimir/`, "_blank", "width=420,height=620");
+  propinaModo = "no"; propinaOtra = "";
+  refrescarCuenta();
+}
+
+/* ---------- anular, cortesía, devolución y descuento ----------
+   Siempre con motivo. Un cajero necesita la clave de un administrador en ese
+   momento; todo queda registrado y Cloudin Control lo vigila. */
+let CUENTA = null;
+const MOTIVOS = {
+  anulacion: ["Error al tomar el pedido", "El cliente cambió de opinión", "Se demoró demasiado", "Producto agotado"],
+  cortesia: ["Cliente frecuente", "Cumpleaños", "Compensación por demora", "Degustación"],
+  devolucion: ["Llegó frío", "No era lo que pidió", "Problema de calidad", "Mal preparado"],
+  descuento: ["Cliente frecuente", "Convenio o empresa", "Compensación por un reclamo", "Promoción del día"],
+};
+let nov = null;
+const dlgN = () => document.getElementById("dlg-novedad");
+function claveAdmin() {
+  return ES_ADMIN ? "" : `<div class="campo"><label for="n-clave">Clave de un administrador</label>
+    <input id="n-clave" type="password" autocomplete="off" placeholder="La escribe el administrador"></div>`;
+}
+function chipsMotivo(tipo) {
+  return `<div class="chips-m">${MOTIVOS[tipo].map(m => `<button type="button" onclick="document.getElementById('n-motivo').value=this.textContent">${m}</button>`).join("")}</div>`;
+}
+function abrirNovedad(item) {
+  nov = {item, tipo: "anulacion"};
+  pintarNovedad();
+  dlgN().showModal();
+}
+function pintarNovedad() {
+  const {item, tipo} = nov;
+  const op = (t, titulo, sub) => `<button type="button" class="tipo-n ${tipo === t ? "on" : ""}" onclick="nov.tipo='${t}';pintarNovedad()">
+      <strong>${titulo}</strong><small>${sub}</small></button>`;
+  document.getElementById("n-cuerpo").innerHTML = `
+    <h2 style="font-size:19px">¿Qué pasó con este producto?</h2>
+    <p class="dim small">${item.cantidad} × ${escHTML(item.nombre)}</p>
+    <div class="tipos-n">
+      ${op("anulacion", "Anular", "No se preparó o fue un error")}
+      ${op("cortesia", "Cortesía", "Lo invita la casa")}
+      ${op("devolucion", "Devolución", "El cliente lo devolvió")}
+    </div>
+    ${item.cantidad > 1 ? `<div class="campo"><label for="n-cant">¿Cuántos?</label>
+      <input id="n-cant" type="number" min="1" max="${item.cantidad}" value="${item.cantidad}"></div>` : ""}
+    <div class="campo" style="margin-bottom:0"><label for="n-motivo">Motivo (obligatorio)</label>
+      <input id="n-motivo" maxlength="200" placeholder="Escribe o toca una opción"></div>
+    ${chipsMotivo(tipo)}
+    ${claveAdmin()}
+    <p class="dim small">No se cobra: queda registrado con tu nombre y el motivo.</p>
+    <div class="aviso malo" id="n-error" hidden></div>`;
+  document.getElementById("n-ok").textContent = {anulacion: "Anular", cortesia: "Dar en cortesía", devolucion: "Registrar devolución"}[tipo];
+}
+function abrirDescuento() {
+  if (!CUENTA) return;
+  nov = {tipo: "descuento"};
+  const actual = Number(CUENTA.descuento) || 0;
+  document.getElementById("n-cuerpo").innerHTML = `
+    <h2 style="font-size:19px">Descuento sobre la cuenta</h2>
+    <p class="dim small">Consumo de la mesa: ${money(CUENTA.subtotal)}</p>
+    <div class="chips-m" style="margin-top:12px">${[5, 10, 15, 20].map(p => `<button type="button" onclick="document.getElementById('n-pct').value=${p};document.getElementById('n-valor').value=''">${p} %</button>`).join("")}</div>
+    <div class="form-row">
+      <div class="campo"><label for="n-pct">Porcentaje</label><input id="n-pct" type="number" min="0" max="100" placeholder="%"></div>
+      <div class="campo"><label for="n-valor">o un valor</label><input id="n-valor" inputmode="numeric" placeholder="$" value="${actual || ""}"></div>
+    </div>
+    <div class="campo" style="margin-bottom:0"><label for="n-motivo">Motivo (obligatorio)</label>
+      <input id="n-motivo" maxlength="200" value="${CUENTA.descuento_motivo || ""}"></div>
+    ${chipsMotivo("descuento")}
+    ${claveAdmin()}
+    ${actual ? '<p class="dim small">Para quitarlo, deja el valor en 0.</p>' : ""}
+    <div class="aviso malo" id="n-error" hidden></div>`;
+  document.getElementById("n-ok").textContent = "Aplicar descuento";
+  dlgN().showModal();
+}
+async function guardarNovedad(e) {
+  e.preventDefault();
+  const err = document.getElementById("n-error");
+  const motivo = (document.getElementById("n-motivo").value || "").trim();
+  const clave = document.getElementById("n-clave")?.value || "";
+  let url, cuerpo;
+  if (nov.tipo === "descuento") {
+    const pct = document.getElementById("n-pct").value;
+    const valor = (document.getElementById("n-valor").value || "").replace(/[^0-9]/g, "");
+    url = `/api/v1/staff/sessions/${sesionId}/descuento/`;
+    cuerpo = pct !== "" ? {porcentaje: pct} : {valor: valor || 0};
+  } else {
+    url = `/api/v1/staff/items/${nov.item.id}/novedad/`;
+    cuerpo = {tipo: nov.tipo, cantidad: Number(document.getElementById("n-cant")?.value || nov.item.cantidad)};
+  }
+  Object.assign(cuerpo, {motivo, clave_admin: clave});
+  const r = await fetch(url, {method: "POST", credentials: "same-origin",
+    headers: {"Content-Type": "application/json", "X-CSRFToken": CSRF}, body: JSON.stringify(cuerpo)});
+  if (!r.ok) {
+    let d = {};
+    try { d = await r.json(); } catch (x) {}
+    err.textContent = d.detail || "No se pudo registrar.";
+    err.hidden = false;
+    return;
+  }
+  dlgN().close();
+  avisar(nov.tipo === "descuento" ? "Descuento aplicado" : "Registrado. Ya no se cobra.");
+  document.getElementById("cuenta").dataset.firma = "";
+  refrescarCuenta();
+}
+
+pintarBorrador();
+refrescarCuenta();
+setInterval(refrescarCuenta, 8000);
+</script>
+{% endblock %}
