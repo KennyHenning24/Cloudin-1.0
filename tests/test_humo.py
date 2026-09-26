@@ -105,9 +105,17 @@ def test_panel_maestro_abre_para_el_superusuario(client, django_user_model, rest
     tenant, *_ = restaurante_listo
     jefe = django_user_model.objects.create_superuser("jefe", "jefe@example.com", "clave-jefe-123")
     client.force_login(jefe)
-    for url in (reverse("master:home"), reverse("master:restaurante-nuevo"),
-                reverse("master:restaurante", args=[tenant.slug]), "/admin/"):
+    for url in (reverse("master:home"), reverse("master:restaurante-nuevo"), reverse("master:tokens"),
+                reverse("master:restaurante", args=[tenant.slug]), "/admin/", "/api/docs/", "/api/schema/"):
         assert client.get(url).status_code == 200, url
+
+
+@pytest.mark.django_db
+def test_documentacion_de_la_api_solo_para_el_superusuario(client, restaurante_listo):
+    _, user, _, _ = restaurante_listo
+    assert client.get("/api/docs/").status_code == 404
+    client.force_login(user)
+    assert client.get("/api/schema/").status_code == 404
 
 
 @pytest.mark.django_db

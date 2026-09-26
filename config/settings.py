@@ -65,12 +65,14 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "rest_framework",
     "corsheaders",
+    "drf_spectacular",
     "simple_history",
     "apps.common",
     "apps.tenants",
     "apps.business",
     "apps.catalog",
     "apps.public_menu",
+    "apps.importer",
     "apps.dining",
     "apps.orders",
     "apps.billing",
@@ -171,6 +173,11 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 # Una dirección escrita sin "http" se completa con https (lo que hará Django 6).
 FORMS_URLFIELD_ASSUME_HTTPS = True
 
+# Se entra con el usuario o con el correo (apps/tenants/auth.py).
+AUTHENTICATION_BACKENDS = ["apps.tenants.auth.UsuarioOCorreo"]
+# Enlaces de invitación y de recuperar contraseña: 7 días.
+PASSWORD_RESET_TIMEOUT = 7 * 24 * 60 * 60
+
 LOGIN_URL = "/panel/login/"
 LOGIN_REDIRECT_URL = "/panel/"
 LOGOUT_REDIRECT_URL = "/panel/login/"
@@ -234,6 +241,15 @@ REST_FRAMEWORK = {
     "DEFAULT_RENDERER_CLASSES": [
         "rest_framework.renderers.JSONRenderer",
     ],
+    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+}
+
+SPECTACULAR_SETTINGS = {
+    "TITLE": "API de Cloudin",
+    "DESCRIPTION": "Menú público (cloudin.menu/v1), panel del dueño, pedidos y facturación. "
+                   "Ver docs/API.md para ejemplos.",
+    "VERSION": "1.0.0",
+    "SERVE_INCLUDE_SCHEMA": False,
 }
 
 # La web de cada restaurante vive en otro dominio y consume la API. No se abre

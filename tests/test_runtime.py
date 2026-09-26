@@ -153,18 +153,6 @@ class ApiFalsa:
                                "Access-Control-Expose-Headers": "ETag"})
 
 
-@pytest.fixture(scope="module")
-def navegador():
-    sync_api = pytest.importorskip("playwright.sync_api")
-    with sync_api.sync_playwright() as p:
-        try:
-            browser = p.chromium.launch(channel="msedge", headless=True)
-        except Exception as e:  # pragma: no cover - depende del equipo
-            pytest.skip(f"No se pudo abrir Edge para las pruebas del runtime: {e}")
-        yield browser
-        browser.close()
-
-
 @pytest.fixture
 def entorno(navegador):
     contexto = navegador.new_context()

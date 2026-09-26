@@ -11,7 +11,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
 from apps.tenants.crypto import hay_llave
-from apps.tenants.models import Tenant, TenantMembership
+from apps.tenants.models import ApiToken, Tenant, TenantMembership
 from apps.tenants.services import (
     aprovisionar,
     cambiar_password,
@@ -50,6 +50,7 @@ def restaurante_nuevo(request):
             tenant = crear_restaurante(
                 nombre=form.cleaned_data["name"],
                 slug=form.cleaned_data["slug"],
+                plan=form.cleaned_data["plan"],
                 site_url=form.cleaned_data["site_url"],
                 legal_name=form.cleaned_data["legal_name"],
                 nit=form.cleaned_data["nit"],
@@ -59,10 +60,11 @@ def restaurante_nuevo(request):
             )
             # Crea el archivo/base del restaurante y le corre las migraciones.
             aprovisionar(tenant)
+            # El primer usuario es el dueño: administra todo y maneja al equipo.
             user, password = crear_usuario(
                 tenant,
                 form.cleaned_data["admin_usuario"],
-                rol=TenantMembership.ROLE_ADMIN,
+                rol=TenantMembership.ROLE_OWNER,
                 nombre=form.cleaned_data["admin_nombre"],
                 correo=form.cleaned_data["admin_correo"],
             )
@@ -191,3 +193,32 @@ def restaurante_api_key(request, slug):
         "API key regenerada. La web del restaurante deja de funcionar hasta que se actualice.",
     )
     return redirect("master:restaurante", slug=tenant.slug)
+
+
+@solo_superusuario
+def tokens(request):
+    """Tokens personales para la API de superadmin (importar menús). El token en claro
+    se muestra una sola vez; en la base queda solo su huella."""
+    nuevo = request.session.pop("token_nuevo", None)
+    if request.method == "POST":
+        nombre = (request.POST.get("nombre") or "").strip()[:80]
+        if not nombre:
+            messages.warning(request, "Ponle un nombre al token (para qué o en qué equipo lo usas).")
+        else:
+            _, token = ApiToken.crear(request.user, nombre)
+            request.session["token_nuevo"] = {"nombre": nombre, "token": token}
+        return redirect("master:tokens")
+    return render(request, "master/tokens.html", {
+        "tokens": ApiToken.objects.select_related("user").all(), "nuevo": nuevo, "seccion": "tokens"})
+
+
+@solo_superusuario
+@require_POST
+def token_revocar(request, token_id):
+    from django.utils import timezone
+
+    registro = get_object_or_404(ApiToken, pk=token_id, revoked_at__isnull=True)
+    registro.revoked_at = timezone.now()
+    registro.save(update_fields=["revoked_at"])
+    messages.success(request, f"Token «{registro.name}» revocado: ya no sirve.")
+    return redirect("master:tokens")

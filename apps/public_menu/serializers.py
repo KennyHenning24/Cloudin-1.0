@@ -98,7 +98,9 @@ def producto(p, construir_url=None) -> dict:
                      for v in p.variants.all()],
         "modifier_groups": [
             {
-                "id": str(enlace.group.uuid), "key": enlace.group.key, "name": enlace.group.name,
+                # Un grupo importado conserva la clave que tenía en la semilla (dentro del producto).
+                "id": str(enlace.group.uuid), "key": (enlace.group.import_snapshot or {}).get("seed_key")
+                or enlace.group.key, "name": enlace.group.name,
                 "min": enlace.group.min_select, "max": enlace.group.max_select,
                 "options": [{"id": str(o.uuid), "key": o.key, "name": o.name, "price": _pesos(o.price_delta)}
                             for o in enlace.group.options.all()],

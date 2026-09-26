@@ -129,6 +129,35 @@ def crear_restaurante(db, plantilla_restaurante):
         _olvidar_conexion(alias)
 
 
+@pytest.fixture(scope="module")
+def navegador():
+    """Edge del sistema, sin ventana, para probar el runtime y las pantallas.
+    Si el equipo no tiene Edge, las pruebas que lo usan se saltan."""
+    sync_api = pytest.importorskip("playwright.sync_api")
+    with sync_api.sync_playwright() as p:
+        try:
+            browser = p.chromium.launch(channel="msedge", headless=True)
+        except Exception as e:  # pragma: no cover - depende del equipo
+            pytest.skip(f"No se pudo abrir Edge: {e}")
+        yield browser
+        browser.close()
+
+
+@pytest.fixture
+def bases_creadas_en_la_prueba():
+    """Para pruebas que crean restaurantes «de verdad» (importar con --create-tenant,
+    create_restaurant): anota aquí su slug y al final se cierra y borra su base."""
+    slugs = []
+    yield slugs
+    for slug in slugs:
+        _olvidar_conexion(f"tenant_{slug}")
+        for archivo in settings.TENANT_DB_DIR.glob(f"cloudin_{slug}.sqlite3"):
+            try:
+                archivo.unlink()
+            except OSError:
+                pass
+
+
 @pytest.fixture
 def crear_usuario(db):
     """Fábrica: usuario del restaurante que ya aceptó los términos vigentes."""

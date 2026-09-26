@@ -17,7 +17,7 @@ from django.contrib import messages
 from django.contrib.admin.forms import AdminAuthenticationForm
 from django.contrib.auth import logout
 from django.contrib.auth.decorators import login_required
-from django.contrib.auth.views import LoginView, PasswordResetView
+from django.contrib.auth.views import LoginView, PasswordResetConfirmView, PasswordResetView
 from django.core.cache import cache
 from django.shortcuts import redirect, render
 from django.urls import reverse
@@ -123,6 +123,39 @@ class RecuperarSeguro(PasswordResetView):
             return self.form_invalid(form)
         cache.set(llave, cache.get(llave, 0) + 1, 3600)
         return super().form_valid(form)
+
+
+class CrearClave(PasswordResetConfirmView):
+    """Crear la contraseña desde un enlace: la invitación del dueño o «Olvidé mi contraseña».
+
+    Deja la sesión iniciada (lo que promete la pantalla) y guarda también la copia
+    cifrada que el panel maestro puede mostrar (requisito de Juan, ver crypto.py).
+    """
+
+    post_reset_login = True
+    post_reset_login_backend = "apps.tenants.auth.UsuarioOCorreo"
+    success_url = "/panel/"
+
+    def form_valid(self, form):
+        respuesta = super().form_valid(form)
+        from django.utils import timezone
+
+        from apps.tenants.crypto import cifrar, hay_llave
+        from apps.tenants.models import TenantMembership
+
+        membresia = TenantMembership.objects.filter(user=form.user).first()
+        if membresia is not None and hay_llave():
+            membresia.password_cifrada = cifrar(form.cleaned_data["new_password1"])
+            membresia.password_actualizada = timezone.now()
+            membresia.save(update_fields=["password_cifrada", "password_actualizada"])
+        return respuesta
+
+    def get_context_data(self, **kwargs):
+        contexto = super().get_context_data(**kwargs)
+        usuario = getattr(self, "user", None)  # lo deja Django si el enlace es válido
+        membresia = getattr(usuario, "tenant_membership", None) if usuario is not None else None
+        contexto["restaurante"] = membresia.tenant.name if membresia else ""
+        return contexto
 
 
 # ------------------------------------------------------------ modo soporte

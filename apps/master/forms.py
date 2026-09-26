@@ -29,8 +29,9 @@ class RestauranteForm(forms.ModelForm):
 
     class Meta:
         model = Tenant
-        fields = ["name", "slug", "site_url", "legal_name", "nit", "address", "city", "phone"]
+        fields = ["name", "slug", "plan", "site_url", "legal_name", "nit", "address", "city", "phone"]
         labels = {
+            "plan": "Plan",
             "name": "Nombre del restaurante",
             "slug": "Identificador (subdominio)",
             "site_url": "Link del sitio web",
@@ -41,6 +42,8 @@ class RestauranteForm(forms.ModelForm):
             "phone": "Teléfono",
         }
         help_texts = {
+            "plan": "Menú digital: carta, personalización y QR. Completo: además pedidos, turnos, "
+            "facturación e inventario.",
             "slug": "Solo minúsculas, números y guiones. Es su subdominio y el nombre de su base de datos.",
             "site_url": "La página desde la que el restaurante enviará los pedidos. "
             "Si todavía no existe, se puede registrar después desde su panel.",

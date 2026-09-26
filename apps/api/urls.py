@@ -1,8 +1,17 @@
 from django.urls import path
+from rest_framework.routers import SimpleRouter
 
-from . import analitica, avisos, mesa_views, reservas_views, views
+from . import analitica, avisos, catalogo_views, mesa_views, reservas_views, views
 
 app_name = "api"
+
+# Administración de la carta v1 (panel del dueño). Todo por UUID público.
+carta = SimpleRouter()
+carta.register("staff/catalog/menus", catalogo_views.MenuViewSet, basename="catalogo-menu")
+carta.register("staff/catalog/categories", catalogo_views.CategoryViewSet, basename="catalogo-categoria")
+carta.register("staff/catalog/products", catalogo_views.ProductViewSet, basename="catalogo-producto")
+carta.register("staff/catalog/modifier-groups", catalogo_views.ModifierGroupViewSet, basename="catalogo-grupo")
+carta.register("staff/catalog/tags", catalogo_views.TagViewSet, basename="catalogo-etiqueta")
 
 urlpatterns = [
     path("ping/", views.ping, name="ping"),
@@ -51,4 +60,17 @@ urlpatterns = [
     path("staff/kitchen/", views.staff_kitchen, name="staff-kitchen"),
     path("staff/sessions/<int:session_id>/", views.staff_session, name="staff-session"),
     path("staff/sessions/<int:session_id>/close/", views.staff_close_session, name="staff-close"),
+    # Carta v1: orden, acciones masivas, historial, ajustes del negocio, mesas y QR (sin turno)
+    path("staff/catalog/reorder/", catalogo_views.ReordenarView.as_view(), name="catalogo-reordenar"),
+    path("staff/catalog/bulk/", catalogo_views.AccionesMasivasView.as_view(), name="catalogo-masivo"),
+    path("staff/catalog/history/", catalogo_views.HistorialView.as_view(), name="catalogo-historial"),
+    path("staff/settings/", catalogo_views.AjustesView.as_view(), name="ajustes"),
+    path("staff/settings/logo/", catalogo_views.ImagenDeMarcaView.as_view(campo="logo"), name="ajustes-logo"),
+    path("staff/settings/cover/", catalogo_views.ImagenDeMarcaView.as_view(campo="cover"), name="ajustes-portada"),
+    path("staff/mesas/", catalogo_views.MesasView.as_view(), name="mesas-qr"),
+    path("staff/qr/menu.<str:formato>", catalogo_views.QrView.as_view(), name="qr-menu"),
+    path("staff/qr/mesa/<int:mesa_id>.<str:formato>", catalogo_views.QrView.as_view(), name="qr-mesa"),
+    path("staff/qr/mesas.pdf", catalogo_views.QrView.as_view(), {"formato": "pdf", "todas": True},
+         name="qr-mesas-pdf"),
+    *carta.urls,
 ]

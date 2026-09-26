@@ -24,6 +24,10 @@
         <svg class="ico" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
         Nuevo restaurante
       </a>
+      <a href="{% url 'master:tokens' %}" class="{% if seccion == 'tokens' %}on{% endif %}">
+        <svg class="ico" viewBox="0 0 24 24"><circle cx="8" cy="15" r="4"/><path d="m10.8 12.2 8.2-8.2M17 6l2 2M15 8l2 2"/></svg>
+        Tokens de API
+      </a>
       <a href="/admin/">
         <svg class="ico" viewBox="0 0 24 24"><ellipse cx="12" cy="5.5" rx="8" ry="3"/><path d="M4 5.5v13c0 1.7 3.6 3 8 3s8-1.3 8-3v-13M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3"/></svg>
         Datos en crudo

@@ -34,6 +34,8 @@ def nombre_usuario_completo(tenant: Tenant, usuario: str) -> str:
 
 def enlace_panel(tenant: Tenant) -> str:
     """El enlace que se le comparte al restaurante para entrar a su panel."""
+    if settings.CLOUDIN_PUBLIC_URL:
+        return f"{settings.CLOUDIN_PUBLIC_URL}/panel/login/"
     if settings.DEBUG:
         return f"http://localhost:8000/panel/login/?tenant={tenant.slug}"
     return f"https://{tenant.domain}/panel/login/"

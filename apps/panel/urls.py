@@ -22,9 +22,11 @@ urlpatterns = [
     ), name="recuperar"),
     path("recuperar/enviado/", auth_views.PasswordResetDoneView.as_view(
         template_name="panel/recuperar_enviado.html"), name="recuperar-enviado"),
-    path("recuperar/<uidb64>/<token>/", auth_views.PasswordResetConfirmView.as_view(
-        template_name="panel/recuperar_nueva.html",
-        success_url="/panel/recuperar/listo/"), name="password_reset_confirm"),
+    path("recuperar/<uidb64>/<token>/", seguridad.CrearClave.as_view(
+        template_name="panel/recuperar_nueva.html"), name="password_reset_confirm"),
+    # Invitación del dueño (llega por correo al importar su menú o al darlo de alta)
+    path("invitacion/<uidb64>/<token>/", seguridad.CrearClave.as_view(
+        template_name="panel/invitacion.html"), name="invitacion"),
     path("recuperar/listo/", auth_views.PasswordResetCompleteView.as_view(
         template_name="panel/recuperar_listo.html"), name="recuperar-listo"),
 
