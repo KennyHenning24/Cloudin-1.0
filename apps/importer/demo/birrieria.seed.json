@@ -1,0 +1,239 @@
+{
+  "schema": "cloudin.menu/v1",
+  "business": {
+    "slug": "demo-birrieria",
+    "name": "Birriería La Demo",
+    "legal_name": null,
+    "nit": null,
+    "tagline": "Tacos de birria y consomé, al estilo de Jalisco",
+    "description": "Restaurante de demostración de Cloudin. Birria de res cocinada 8 horas, tortillas hechas a mano y consomé para mojar.",
+    "logo": null,
+    "cover": null,
+    "brand": { "primary": "#9F1D20", "secondary": "#F2A93B", "background": "#FFF8F0", "text": "#2A1D14" },
+    "contact": {
+      "whatsapp": "+573000000000",
+      "phone": null,
+      "email": null,
+      "address": "Cra 70 # 00-00",
+      "city": "Medellín",
+      "maps_url": null
+    },
+    "social": { "instagram": null, "facebook": null, "tiktok": null },
+    "hours": [
+      { "day": "mon", "closed": true },
+      { "day": "tue", "open": "12:00", "close": "21:00" },
+      { "day": "wed", "open": "12:00", "close": "21:00" },
+      { "day": "thu", "open": "12:00", "close": "21:00" },
+      { "day": "fri", "open": "12:00", "close": "23:00" },
+      { "day": "sat", "open": "09:00", "close": "23:00" },
+      { "day": "sun", "open": "09:00", "close": "20:00" }
+    ],
+    "services": { "dine_in": true, "takeaway": true, "delivery": true },
+    "payment_methods": ["efectivo", "nequi", "daviplata", "tarjeta"],
+    "owner": { "name": "Dueño Demo", "email": "dueno@demo-birrieria.test", "phone": null }
+  },
+  "menus": [
+    {
+      "key": "carta",
+      "name": "Carta",
+      "description": null,
+      "categories": [
+        {
+          "key": "tacos",
+          "name": "Tacos",
+          "description": "En tortilla de maíz, con cebolla, cilantro y consomé para mojar.",
+          "image": null,
+          "products": [
+            {
+              "key": "tacos-de-birria",
+              "name": "Tacos de birria",
+              "description": "3 tacos de birria de res con queso fundido y un consomé pequeño.",
+              "price": 22000,
+              "image": null,
+              "available": true,
+              "featured": true,
+              "tags": ["recomendado"],
+              "tax": "INC8",
+              "variants": [
+                { "key": "cinco", "name": "5 tacos", "price": 34000 }
+              ],
+              "modifier_groups": [
+                {
+                  "key": "salsa",
+                  "name": "Elige tu salsa",
+                  "min": 1,
+                  "max": 1,
+                  "options": [
+                    { "key": "verde", "name": "Verde", "price": 0 },
+                    { "key": "roja", "name": "Roja", "price": 0 },
+                    { "key": "habanero", "name": "Habanero", "price": 0 }
+                  ]
+                },
+                {
+                  "key": "adiciones",
+                  "name": "Adiciones",
+                  "min": 0,
+                  "max": 3,
+                  "options": [
+                    { "key": "queso-extra", "name": "Queso extra", "price": 3000 },
+                    { "key": "cebolla-asada", "name": "Cebolla asada", "price": 1500 },
+                    { "key": "aguacate", "name": "Aguacate", "price": 3500 }
+                  ]
+                }
+              ],
+              "source": "cliente"
+            },
+            {
+              "key": "quesabirria",
+              "name": "Quesabirria",
+              "description": "3 tortillas doradas con birria y queso gratinado. Para los que aman el queso.",
+              "price": 26000,
+              "image": null,
+              "available": true,
+              "featured": true,
+              "tags": ["nuevo"],
+              "tax": "INC8",
+              "variants": [],
+              "modifier_groups": [],
+              "source": "cliente"
+            },
+            {
+              "key": "tacos-veganos",
+              "name": "Tacos de birria vegana",
+              "description": "Con yaca (jackfruit) en adobo de chiles, sin queso.",
+              "price": 24000,
+              "image": null,
+              "available": true,
+              "featured": false,
+              "tags": ["vegano"],
+              "tax": "INC8",
+              "variants": [],
+              "modifier_groups": [],
+              "source": "cliente"
+            }
+          ]
+        },
+        {
+          "key": "consome-y-caldos",
+          "name": "Consomé y caldos",
+          "description": null,
+          "image": null,
+          "products": [
+            {
+              "key": "consome-de-birria",
+              "name": "Consomé de birria",
+              "description": "El caldo de la birria con cebolla, cilantro y limón.",
+              "price": 9000,
+              "image": null,
+              "available": true,
+              "featured": false,
+              "tags": [],
+              "tax": "INC8",
+              "variants": [
+                { "key": "grande", "name": "Grande", "price": 14000 }
+              ],
+              "modifier_groups": [],
+              "source": "cliente"
+            },
+            {
+              "key": "birria-ramen",
+              "name": "Birria ramen",
+              "description": "Fideos en consomé de birria, huevo marinado y carne deshilachada.",
+              "price": 28000,
+              "image": null,
+              "available": true,
+              "featured": false,
+              "tags": ["picante", "nuevo"],
+              "tax": "INC8",
+              "variants": [],
+              "modifier_groups": [],
+              "source": "cliente"
+            }
+          ]
+        },
+        {
+          "key": "para-compartir",
+          "name": "Para compartir",
+          "description": null,
+          "image": null,
+          "products": [
+            {
+              "key": "mulitas",
+              "name": "Mulitas",
+              "description": "4 quesadillas dobles de birria. Alcanzan para dos.",
+              "price": 30000,
+              "image": null,
+              "available": true,
+              "featured": false,
+              "tags": ["para-compartir"],
+              "tax": "INC8",
+              "variants": [],
+              "modifier_groups": [],
+              "source": "cliente"
+            },
+            {
+              "key": "birria-por-libra",
+              "name": "Birria por libra",
+              "description": "Para llevar, con tortillas y consomé. El precio cambia según el día.",
+              "price": null,
+              "image": null,
+              "available": true,
+              "featured": false,
+              "tags": ["para-compartir"],
+              "tax": "INC8",
+              "variants": [],
+              "modifier_groups": [],
+              "source": "cliente"
+            }
+          ]
+        },
+        {
+          "key": "bebidas",
+          "name": "Bebidas",
+          "description": null,
+          "image": null,
+          "products": [
+            { "key": "horchata", "name": "Horchata", "description": "De arroz y canela, hecha en casa.", "price": 8000, "image": null, "available": true, "featured": false, "tags": [], "tax": "INC8", "variants": [], "modifier_groups": [], "source": "cliente" },
+            { "key": "agua-de-jamaica", "name": "Agua de Jamaica", "description": null, "price": 7000, "image": null, "available": true, "featured": false, "tags": ["vegano"], "tax": "INC8", "variants": [], "modifier_groups": [], "source": "cliente" },
+            { "key": "michelada", "name": "Michelada", "description": "Cerveza con limón, sal y salsas.", "price": 12000, "image": null, "available": false, "featured": false, "tags": [], "tax": "INC8", "variants": [], "modifier_groups": [], "source": "cliente" },
+            { "key": "gaseosa", "name": "Gaseosa", "description": null, "price": 5000, "image": null, "available": true, "featured": false, "tags": [], "tax": "INC8", "variants": [], "modifier_groups": [], "source": "cliente" }
+          ]
+        },
+        {
+          "key": "postres",
+          "name": "Postres",
+          "description": null,
+          "image": null,
+          "products": [
+            { "key": "churros", "name": "Churros con arequipe", "description": "5 churros con azúcar y canela.", "price": 9000, "image": null, "available": true, "featured": false, "tags": ["vegetariano"], "tax": "INC8", "variants": [], "modifier_groups": [], "source": "cliente" }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "desayunos",
+      "name": "Desayunos",
+      "description": "Sábados y domingos de 9:00 a 12:00.",
+      "categories": [
+        {
+          "key": "desayunos",
+          "name": "Desayunos",
+          "description": null,
+          "image": null,
+          "products": [
+            { "key": "chilaquiles-con-birria", "name": "Chilaquiles con birria", "description": "Totopos en salsa roja, birria, crema y huevo.", "price": 21000, "image": null, "available": true, "featured": false, "tags": ["picante"], "tax": "INC8", "variants": [], "modifier_groups": [], "source": "cliente" },
+            { "key": "huevos-rancheros", "name": "Huevos rancheros", "description": "Dos huevos fritos sobre tortilla, salsa ranchera y frijoles.", "price": 16000, "image": null, "available": true, "featured": false, "tags": ["vegetariano"], "tax": "INC8", "variants": [], "modifier_groups": [], "source": "cliente" }
+          ]
+        }
+      ]
+    }
+  ],
+  "tables": { "count": 8 },
+  "meta": {
+    "built_with": "cloudin-demo",
+    "site_url": null,
+    "menu_page": null,
+    "generated_at": "2026-09-26T12:00:00-05:00",
+    "missing": []
+  }
+}
