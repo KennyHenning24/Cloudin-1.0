@@ -17,7 +17,6 @@ from apps.billing.services import empresa_actual
 from apps.orders.models import TableSession
 from apps.shifts.models import TurnoCaja
 from apps.shifts.services import abrir_turno, cerrar_turno, resumen_turno
-from apps.tenants.models import TenantMembership
 
 from .views import panel_view
 
@@ -31,7 +30,7 @@ def _es_admin(request) -> bool:
     if request.user.is_superuser:
         return True
     membership = getattr(request.user, "tenant_membership", None)
-    return membership is not None and membership.role == TenantMembership.ROLE_ADMIN
+    return membership is not None and membership.es_admin
 
 
 def _plata(valor, por_defecto=None):

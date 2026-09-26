@@ -1,12 +1,21 @@
 from rest_framework import serializers
 
+from apps.catalog.legacy import PREFETCH_LEGACY
 from apps.catalog.models import Category, Product
 from apps.dining.models import Table
 from apps.orders.models import Order, OrderItem, TableSession
 
+# Para listar categorías con sus productos sin una consulta por producto.
+PREFETCH_PRODUCTOS = ["products", *(f"products__{r}" for r in PREFETCH_LEGACY)]
+
 
 class ProductSerializer(serializers.ModelSerializer):
+    """Producto en la forma de la API v1 vieja: `price` es el precio desde el que
+    suman las `opciones` (con tamaños, el del más barato; ver catalog/legacy.py)."""
+
     foto = serializers.SerializerMethodField()
+    price = serializers.DecimalField(source="precio_legacy", max_digits=12, decimal_places=2, read_only=True)
+    opciones = serializers.ListField(read_only=True)
 
     class Meta:
         model = Product
@@ -30,7 +39,7 @@ class CategorySerializer(serializers.ModelSerializer):
         fields = ["id", "name", "position", "products"]
 
     def get_products(self, obj):
-        productos = [p for p in obj.products.all() if p.is_available]
+        productos = [p for p in obj.products.all() if p.is_available and not p.eliminado]
         return ProductSerializer(productos, many=True, context=self.context).data
 
 
@@ -52,7 +61,7 @@ class ProductWriteSerializer(serializers.ModelSerializer):
         return datos
 
     def validate_price(self, value):
-        if value < 0:
+        if value is not None and value < 0:
             raise serializers.ValidationError("El precio no puede ser negativo.")
         return value
 

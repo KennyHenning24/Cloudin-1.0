@@ -15,7 +15,7 @@ SHARED_APPS = {
 
 # Apps cuyos datos son privados de cada restaurante.
 TENANT_APPS = {"catalog", "dining", "orders", "billing", "staffing", "shifts", "inventory", "waiters",
-               "reservas", "control"}
+               "reservas", "control", "business"}
 
 TENANT_ALIAS_PREFIX = "tenant_"
 

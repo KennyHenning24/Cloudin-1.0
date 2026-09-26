@@ -32,12 +32,11 @@ def _nombre(user) -> str:
 
 
 def es_admin(user) -> bool:
-    from apps.tenants.models import TenantMembership
 
     if user.is_superuser:
         return True
     membresia = getattr(user, "tenant_membership", None)
-    return bool(membresia and membresia.role == TenantMembership.ROLE_ADMIN)
+    return bool(membresia and membresia.es_admin)
 
 
 def autorizar(request, clave: str = "") -> str:
@@ -59,7 +58,7 @@ def autorizar(request, clave: str = "") -> str:
         raise PermissionDenied("Hace falta la contraseña de un administrador para autorizarlo.")
 
     admins = TenantMembership.objects.filter(
-        tenant=request.tenant, role=TenantMembership.ROLE_ADMIN
+        tenant=request.tenant, role__in=TenantMembership.ROLES_ADMIN
     ).select_related("user")
     for membresia in admins:
         if membresia.user.is_active and membresia.user.check_password(clave):

@@ -30,7 +30,7 @@
             {% if p.foto %}<span class="miniatura" style="background-image:url('{{ p.foto }}')"></span>{% endif %}
             <div>
               <div>{{ p.name }}</div>
-              <div class="dim small">${{ p.price|pesos }}{% if p.opciones %} · <span style="color:var(--info)">con opciones</span>{% endif %}</div>
+              <div class="dim small">${{ p.precio_legacy|pesos }}{% if p.opciones %} · <span style="color:var(--info)">con opciones</span>{% endif %}</div>
             </div>
             <button class="btn ghost sm fin" onclick="agregar({{ p.id }})">
               Agregar

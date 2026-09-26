@@ -60,7 +60,10 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "rest_framework",
     "corsheaders",
+    "simple_history",
+    "apps.common",
     "apps.tenants",
+    "apps.business",
     "apps.catalog",
     "apps.dining",
     "apps.orders",
@@ -85,6 +88,8 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "apps.tenants.middleware.TenantMiddleware",
+    # Quién hizo cada cambio de la carta (precios incluidos) queda en el historial.
+    "simple_history.middleware.HistoryRequestMiddleware",
     "config.seguridad.CabecerasSeguridad",
 ]
 

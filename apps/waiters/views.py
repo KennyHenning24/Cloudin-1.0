@@ -261,12 +261,15 @@ def _mis_numeros(mesero, turno, mesas) -> dict:
 @app_mesero(api=True)
 def api_menu(request, tenant, mesero):
     categorias = []
-    for c in Category.objects.filter(is_active=True).prefetch_related("products"):
+    from apps.catalog.legacy import PREFETCH_LEGACY
+
+    prefetch = ["products", *(f"products__{r}" for r in PREFETCH_LEGACY)]
+    for c in Category.objects.filter(is_active=True, deleted_at__isnull=True).prefetch_related(*prefetch):
         productos = [
-            {"id": p.id, "nombre": p.name, "precio": _dinero(p.price),
+            {"id": p.id, "nombre": p.name, "precio": _dinero(p.precio_legacy),
              "descripcion": p.description, "imagen": p.foto,
              "opciones": p.opciones or [], "observacion": p.permite_observacion}
-            for p in c.products.all() if p.is_available
+            for p in c.products.all() if p.is_available and not p.eliminado
         ]
         if productos:
             categorias.append({"id": c.id, "nombre": c.name, "productos": productos})

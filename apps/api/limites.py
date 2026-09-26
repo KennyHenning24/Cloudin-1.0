@@ -69,4 +69,6 @@ def precio_seguro(nombre: str, precio_enviado):
         precio = Decimal(str(precio_enviado))
     except (InvalidOperation, TypeError, ValueError):
         precio = Decimal("0")
+    if producto.price is None:
+        return producto, precio
     return producto, max(precio, producto.price)

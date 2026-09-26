@@ -1,6 +1,7 @@
 """Toppings, adiciones y variantes de un producto.
 
-Un producto guarda sus opciones como una lista de grupos:
+Un producto expone sus opciones como una lista de grupos (se arma desde las
+tablas del catálogo en `legacy.py`):
 
     [{"nombre": "Elige la carne", "tipo": "uno", "obligatorio": true,
       "valores": [{"nombre": "Brisket", "precio": 0}, {"nombre": "Pastrami", "precio": 0}]},
@@ -76,7 +77,12 @@ def aplicar(producto, elegidas, nota=""):
 
     Devuelve (nombre_linea, precio_unitario, opciones_json, nota). Lanza
     ValidationError con un mensaje para mostrarle a quien pide.
+
+    Las opciones salen de las tablas del catálogo en la forma vieja (ver
+    legacy.py): si el producto tiene tamaños, son el primer grupo.
     """
+    if producto.price is None:
+        raise ValidationError(f"«{producto.name}» todavía no tiene precio.")
     grupos = producto.opciones or []
     elegidas = elegidas or []
     if not isinstance(elegidas, list):
@@ -94,7 +100,7 @@ def aplicar(producto, elegidas, nota=""):
         if vi not in por_grupo[gi]:
             por_grupo[gi].append(vi)
 
-    precio = producto.price
+    precio = producto.precio_legacy
     resumen, detalle = [], []
     for gi, grupo in enumerate(grupos):
         vis = por_grupo.get(gi, [])
@@ -103,8 +109,11 @@ def aplicar(producto, elegidas, nota=""):
                 raise ValidationError(f"En «{grupo['nombre']}» se elige solo una opción.")
             if grupo.get("obligatorio") and not vis:
                 raise ValidationError(f"Falta elegir «{grupo['nombre']}» para {producto.name}.")
-        elif grupo.get("maximo") and len(vis) > grupo["maximo"]:
-            raise ValidationError(f"En «{grupo['nombre']}» se eligen máximo {grupo['maximo']}.")
+        else:
+            if grupo.get("maximo") and len(vis) > grupo["maximo"]:
+                raise ValidationError(f"En «{grupo['nombre']}» se eligen máximo {grupo['maximo']}.")
+            if grupo.get("minimo") and len(vis) < grupo["minimo"]:
+                raise ValidationError(f"En «{grupo['nombre']}» elige al menos {grupo['minimo']} para {producto.name}.")
         for vi in vis:
             valor = grupo["valores"][vi]
             extra = Decimal(str(valor.get("precio") or 0))

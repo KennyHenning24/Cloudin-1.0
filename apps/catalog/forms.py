@@ -3,6 +3,7 @@ import json
 from django import forms
 from django.core.exceptions import ValidationError
 
+from .legacy import guardar_opciones_legacy, opciones_legacy
 from .models import Category, Product
 from .opciones import limpiar_grupos
 
@@ -12,10 +13,9 @@ MAX_FOTO = 3 * 1024 * 1024
 class ProductoForm(forms.ModelForm):
     """Alta y edición de un producto desde el panel.
 
-    El restaurante configura lo que ve el cliente: foto, descripción, toppings y
-    si se permite escribir una observación. Nombre y precio se ponen al crear el
-    producto; después solo los cambia el administrador de Cloudin (superusuario),
-    para que la carta y la facturación no cambien por accidente.
+    El dueño o el administrador del restaurante cambian todo: nombre, precio,
+    categoría, foto, descripción, toppings y observación. Las comandas y facturas
+    ya emitidas guardan su propio precio, y cada cambio queda en el historial.
     """
 
     opciones_json = forms.CharField(widget=forms.HiddenInput, required=False)
@@ -40,13 +40,11 @@ class ProductoForm(forms.ModelForm):
 
     def __init__(self, *args, puede_todo=False, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields["category"].queryset = Category.objects.all()
-        self.fields["opciones_json"].initial = json.dumps(self.instance.opciones or [], ensure_ascii=False)
+        self.fields["category"].queryset = Category.objects.filter(deleted_at__isnull=True)
+        # Los tamaños no van aquí: este formulario solo edita las adiciones.
+        iniciales = opciones_legacy(self.instance, incluir_variantes=False) if self.instance.pk else []
+        self.fields["opciones_json"].initial = json.dumps(iniciales, ensure_ascii=False)
         self.bloqueados = []
-        if self.instance.pk and not puede_todo:
-            for campo in ("name", "price", "category"):
-                self.fields[campo].disabled = True
-                self.bloqueados.append(campo)
 
     def clean_imagen(self):
         foto = self.cleaned_data.get("imagen")
@@ -56,7 +54,9 @@ class ProductoForm(forms.ModelForm):
 
     def clean_price(self):
         precio = self.cleaned_data.get("price")
-        if precio is not None and precio < 0:
+        if precio is None:
+            raise ValidationError("Escribe el precio.")
+        if precio < 0:
             raise ValidationError("El precio no puede ser negativo.")
         return precio
 
@@ -69,7 +69,7 @@ class ProductoForm(forms.ModelForm):
 
     def save(self, commit=True):
         producto = super().save(commit=False)
-        producto.opciones = self.cleaned_data.get("opciones_json") or []
         if commit:
             producto.save()
+            guardar_opciones_legacy(producto, self.cleaned_data.get("opciones_json") or [])
         return producto

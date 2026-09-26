@@ -23,7 +23,7 @@ from apps.dining.models import Table
 from apps.orders.models import Order, OrderItem, TableDraft, TableSession
 from apps.shifts.services import turno_actual
 
-from .serializers import CategorySerializer
+from .serializers import PREFETCH_PRODUCTOS, CategorySerializer
 
 MAX_ITEMS = 60
 
@@ -150,7 +150,8 @@ def mesa_inicio(request, token):
     tenant.site_last_seen = timezone.now()
     tenant.save(update_fields=["site_last_seen"])
 
-    categorias = Category.objects.filter(is_active=True).prefetch_related("products")
+    categorias = Category.objects.filter(is_active=True, deleted_at__isnull=True).prefetch_related(
+        *PREFETCH_PRODUCTOS)
     datos = _estado(table)
     datos["restaurante"] = tenant.name
     datos["categorias"] = CategorySerializer(categorias, many=True, context={"request": request}).data

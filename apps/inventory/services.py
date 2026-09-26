@@ -387,7 +387,8 @@ def rentabilidad_por_plato(db=None) -> list:
 
     qs = Product.objects.using(db) if db else Product.objects
     filas = []
-    for producto in qs.filter(eliminado=False).select_related("category").prefetch_related("receta__items"):
+    for producto in (qs.filter(eliminado=False, price__isnull=False)
+                     .select_related("category").prefetch_related("receta__items")):
         receta = receta_de(producto)
         costo = receta.costo() if receta else None
         precio = producto.price

@@ -16,7 +16,6 @@ from django.views.decorators.http import require_POST
 from apps.catalog.models import Category
 from apps.dining.models import Table
 from apps.orders.models import Order, TableSession
-from apps.tenants.models import TenantMembership
 
 
 def panel_view(solo_admin=False, requiere_turno=True):
@@ -46,7 +45,7 @@ def panel_view(solo_admin=False, requiere_turno=True):
                 membership = getattr(request.user, "tenant_membership", None)
                 if membership is None or membership.tenant_id != tenant.id:
                     raise PermissionDenied("No tienes acceso a este restaurante.")
-                if solo_admin and membership.role != TenantMembership.ROLE_ADMIN:
+                if solo_admin and not membership.es_admin:
                     raise PermissionDenied(
                         "Esta sección es solo para el administrador del restaurante. "
                         "Pídele a quien administra el local que haga este cambio."
@@ -111,7 +110,7 @@ def table_detail(request, table_id):
             "es_admin": es_admin(request.user),
             # Lo que el JS necesita para elegir toppings al agregar.
             "productos_js": {
-                p.id: {"nombre": p.name, "precio": float(p.price), "opciones": p.opciones or [],
+                p.id: {"nombre": p.name, "precio": float(p.precio_legacy), "opciones": p.opciones or [],
                        "observacion": p.permite_observacion, "foto": p.foto}
                 for c in categorias for p in c.products.all() if p.is_available
             },

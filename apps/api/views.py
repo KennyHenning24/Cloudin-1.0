@@ -21,6 +21,7 @@ from apps.shifts.services import MENSAJE_SIN_TURNO_CLIENTE, exigir_turno, turno_
 
 from .permissions import IsTenantAdminParaEscribir, IsTenantStaff
 from .serializers import (
+    PREFETCH_PRODUCTOS,
     CategorySerializer,
     CategoryWriteSerializer,
     MenuCategorySerializer,
@@ -124,7 +125,8 @@ def menu(request):
         from apps.catalog.formato import exportar
 
         return Response(exportar(request.tenant.name, request.build_absolute_uri))
-    categorias = Category.objects.filter(is_active=True).prefetch_related("products")
+    categorias = Category.objects.filter(is_active=True, deleted_at__isnull=True).prefetch_related(
+        *PREFETCH_PRODUCTOS)
     return Response(
         {
             "restaurante": request.tenant.name,
@@ -212,7 +214,8 @@ def site_info(request):
     tenant = request.tenant
     _marcar_sitio_conectado(tenant)
     mesas = Table.objects.filter(is_active=True)
-    categorias = Category.objects.filter(is_active=True).prefetch_related("products")
+    categorias = Category.objects.filter(is_active=True, deleted_at__isnull=True).prefetch_related(
+        *PREFETCH_PRODUCTOS)
     return Response(
         {
             "restaurante": tenant.name,
@@ -524,7 +527,7 @@ def staff_site_status(request):
 @permission_classes([IsTenantStaff])
 def staff_menu(request):
     """El menú completo para editarlo: incluye categorías y productos apagados."""
-    categorias = Category.objects.all().prefetch_related("products")
+    categorias = Category.objects.filter(deleted_at__isnull=True).prefetch_related(*PREFETCH_PRODUCTOS)
     return Response(MenuCategorySerializer(categorias, many=True).data)
 
 

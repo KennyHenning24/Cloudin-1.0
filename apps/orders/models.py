@@ -286,7 +286,7 @@ class OrderItem(models.Model):
         if not self.product_name and self.product_id:
             self.product_name = self.product.name
         if self.unit_price is None and self.product_id:
-            self.unit_price = self.product.price
+            self.unit_price = self.product.price if self.product.price is not None else Decimal("0")
         super().save(*args, **kwargs)
 
     def line_total(self) -> Decimal:

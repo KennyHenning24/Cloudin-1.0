@@ -54,6 +54,22 @@ class Tenant(models.Model):
         "Cómo se toman los pedidos", max_length=14, choices=MODOS_SERVICIO, default=AUTOSERVICIO
     )
 
+    # Qué contrató: solo el menú digital, o Cloudin completo (pedidos, turnos,
+    # facturación, inventario…). Define qué secciones ve en su panel.
+    PLAN_MENU = "menu"
+    PLAN_COMPLETO = "completo"
+    PLANES = [
+        (PLAN_MENU, "Menú digital"),
+        (PLAN_COMPLETO, "Cloudin completo"),
+    ]
+    plan = models.CharField("Plan", max_length=12, choices=PLANES, default=PLAN_MENU)
+
+    # Página del menú para las mesas (la del QR), p. ej. https://x.pages.dev/menu.html.
+    # Si está vacía, el QR lleva al menú de respaldo de Cloudin.
+    menu_page = models.URLField("Página del menú (QR)", max_length=500, blank=True)
+    # Otros orígenes autorizados además de site_url (dominio propio, pages.dev…).
+    allowed_origins = models.JSONField("Otros sitios autorizados", default=list, blank=True)
+
     # Nombre físico de su base de datos (archivo sqlite o base postgres).
     db_name = models.CharField(max_length=80, blank=True, editable=False)
 
@@ -68,6 +84,22 @@ class Tenant(models.Model):
 
     def __str__(self):
         return self.name
+
+    @property
+    def es_plan_menu(self) -> bool:
+        return self.plan == self.PLAN_MENU
+
+    @property
+    def origenes_permitidos(self) -> set[str]:
+        """site_url + allowed_origins, reducidos a su origen (esquema://host:puerto)."""
+        from urllib.parse import urlsplit
+
+        origenes = set()
+        for url in [self.site_url, *(self.allowed_origins or [])]:
+            partes = urlsplit(str(url or "").strip())
+            if partes.scheme in ("http", "https") and partes.netloc:
+                origenes.add(f"{partes.scheme}://{partes.netloc}")
+        return origenes
 
     @property
     def usa_meseros(self) -> bool:
@@ -118,12 +150,16 @@ class Tenant(models.Model):
 class TenantMembership(models.Model):
     """Vincula un usuario de Django (base de control) con su restaurante."""
 
+    ROLE_OWNER = "owner"
     ROLE_ADMIN = "admin"
     ROLE_STAFF = "staff"
     ROLES = [
+        (ROLE_OWNER, "Dueño del restaurante"),
         (ROLE_ADMIN, "Administrador del restaurante"),
         (ROLE_STAFF, "Mesero / cajero"),
     ]
+    # Roles que administran: cambian la carta, los precios, las mesas y los ajustes.
+    ROLES_ADMIN = (ROLE_OWNER, ROLE_ADMIN)
 
     user = models.OneToOneField(
         "auth.User", on_delete=models.CASCADE, related_name="tenant_membership"
@@ -144,6 +180,15 @@ class TenantMembership(models.Model):
 
     def __str__(self):
         return f"{self.user.username} @ {self.tenant.slug}"
+
+    @property
+    def es_admin(self) -> bool:
+        """Dueño o administrador: puede cambiar la carta, los precios y los ajustes."""
+        return self.role in self.ROLES_ADMIN
+
+    @property
+    def es_dueno(self) -> bool:
+        return self.role == self.ROLE_OWNER
 
     @property
     def password_visible(self):
@@ -175,3 +220,56 @@ class AceptacionLegal(models.Model):
 
     def __str__(self):
         return f"{self.user.username} · versión {self.version}"
+
+
+class ApiToken(models.Model):
+    """Token personal del superadministrador para la API de Cloudin.
+
+    Lo usa, por ejemplo, `POST /api/admin/import-menu/` con
+    `Authorization: Bearer <token>`. Solo se guarda su huella (SHA-256): el
+    token en claro se muestra una única vez, al crearlo en el panel maestro.
+    """
+
+    user = models.ForeignKey("auth.User", on_delete=models.CASCADE, related_name="api_tokens")
+    name = models.CharField("Nombre", max_length=80, help_text="Para qué es, p. ej. «Portátil de Juan».")
+    prefix = models.CharField(max_length=12, editable=False)
+    token_hash = models.CharField(max_length=64, unique=True, editable=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    last_used_at = models.DateTimeField(null=True, blank=True, editable=False)
+    revoked_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        verbose_name = "Token de API"
+        verbose_name_plural = "Tokens de API"
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"{self.name} ({self.prefix}…)"
+
+    @staticmethod
+    def huella(token: str) -> str:
+        import hashlib
+
+        return hashlib.sha256(token.encode("utf-8")).hexdigest()
+
+    @classmethod
+    def crear(cls, user, name: str) -> tuple["ApiToken", str]:
+        """Crea el token y devuelve (registro, token en claro). El claro no se guarda."""
+        token = "cld_" + secrets.token_urlsafe(32)
+        registro = cls.objects.create(user=user, name=name[:80], prefix=token[:12], token_hash=cls.huella(token))
+        return registro, token
+
+    @classmethod
+    def validar(cls, token: str):
+        """El registro vigente de ese token (de un superusuario activo), o None."""
+        from django.utils import timezone
+
+        if not token:
+            return None
+        registro = (cls.objects.select_related("user")
+                    .filter(token_hash=cls.huella(token), revoked_at__isnull=True,
+                            user__is_active=True, user__is_superuser=True)
+                    .first())
+        if registro is not None:
+            cls.objects.filter(pk=registro.pk).update(last_used_at=timezone.now())
+        return registro

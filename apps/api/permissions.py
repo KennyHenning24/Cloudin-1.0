@@ -46,10 +46,8 @@ class IsTenantAdminParaEscribir(IsTenantStaff):
             return False
         if request.method in SAFE_METHODS or request.user.is_superuser:
             return True
-        from apps.tenants.models import TenantMembership
-
         membership = getattr(request.user, "tenant_membership", None)
-        if membership is None or membership.role != TenantMembership.ROLE_ADMIN:
+        if membership is None or not membership.es_admin:
             self.message = "Solo el administrador del restaurante puede cambiar la carta y las mesas."
             return False
         return True

@@ -12,8 +12,11 @@ Reglas de la importación (el panel manda):
     foto o los toppings, se respeta. Solo se completan los campos que estén vacíos.
   - Nada se borra: si el sitio quitó un producto, en el panel sigue (se apaga a mano).
   - Lo que el restaurante eliminó en el panel no vuelve, aunque siga en el sitio.
-  - Un producto se reconoce por su `id` del sitio (`clave_externa`) o, si no lo
-    trae, por el nombre dentro de la misma categoría.
+  - Un producto se reconoce por su `id` del sitio (que en Cloudin es su `key`) o,
+    si no lo trae, por el nombre dentro de la misma categoría.
+
+Desde la carta v1 las opciones viven en tablas (ver legacy.py); aquí se siguen
+leyendo y escribiendo en la forma vieja para los sitios que la usan.
 """
 
 import ipaddress
@@ -27,6 +30,7 @@ from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import transaction
 
+from .legacy import PREFETCH_LEGACY, guardar_opciones_legacy
 from .models import Category, Product
 from .opciones import limpiar_grupos
 
@@ -35,6 +39,16 @@ MAX_BYTES = 2 * 1024 * 1024
 SCRIPT_INCRUSTADO = re.compile(
     r'<script[^>]+id=["\']cloudin-menu["\'][^>]*>(.*?)</script>', re.S | re.I
 )
+# Un id del sitio se guarda tal cual como clave si es un «slug»; si no, se normaliza.
+ID_COMO_CLAVE = re.compile(r"^[-a-zA-Z0-9_]{1,60}$")
+
+
+def _clave_del_sitio(id_sitio: str) -> str:
+    from apps.common.keys import key_from
+
+    if not id_sitio:
+        return ""
+    return id_sitio if ID_COMO_CLAVE.match(id_sitio) else key_from(id_sitio)
 
 
 # ------------------------------------------------------------------- leer
@@ -156,16 +170,18 @@ def normalizar(datos: dict, url_base: str = "") -> list:
 # ----------------------------------------------------------------- importar
 
 def _buscar_categoria(c):
-    if c["id"]:
-        encontrada = Category.objects.filter(clave_externa=c["id"]).first()
+    clave = _clave_del_sitio(c["id"])
+    if clave:
+        encontrada = Category.objects.filter(key=clave).first()
         if encontrada:
             return encontrada
-    return Category.objects.filter(name__iexact=c["nombre"]).first()
+    return Category.objects.filter(name__iexact=c["nombre"], deleted_at__isnull=True).first()
 
 
 def _buscar_producto(p, categoria):
-    if p["id"]:
-        encontrado = Product.objects.filter(clave_externa=p["id"]).first()
+    clave = _clave_del_sitio(p["id"])
+    if clave:
+        encontrado = Product.objects.filter(key=clave).first()
         if encontrado:
             return encontrado
     if categoria is None:
@@ -183,16 +199,17 @@ def importar(datos: dict, url_base: str = "", aplicar: bool = True) -> dict:
         for c in categorias:
             resumen["errores"].extend(c["errores"])
             categoria = _buscar_categoria(c)
+            if categoria is not None and categoria.deleted_at is not None:
+                # El restaurante archivó la categoría: no se revive ni se le agregan platos.
+                resumen["eliminados"] += len(c["productos"])
+                continue
             if categoria is None:
                 resumen["categorias_nuevas"] += 1
                 if aplicar:
                     categoria = Category.objects.create(name=c["nombre"], position=c["orden"],
-                                                        clave_externa=c["id"], secciones=c["secciones"])
+                                                        key=_clave_del_sitio(c["id"]), secciones=c["secciones"])
             elif aplicar:
                 cambios = []
-                if c["id"] and not categoria.clave_externa:
-                    categoria.clave_externa = c["id"]
-                    cambios.append("clave_externa")
                 if c["secciones"] and not categoria.secciones:
                     categoria.secciones = c["secciones"]
                     cambios.append("secciones")
@@ -209,12 +226,14 @@ def importar(datos: dict, url_base: str = "", aplicar: bool = True) -> dict:
                     resumen["productos_nuevos"] += 1
                     resumen["nuevos"].append(f"{c['nombre']} · {p['nombre']}")
                     if aplicar:
-                        Product.objects.create(
+                        nuevo = Product.objects.create(
                             category=categoria, name=p["nombre"], price=p["precio"],
                             description=p["descripcion"], image_url=p["imagen"], position=pi,
-                            is_available=p["disponible"], opciones=p["opciones"],
-                            permite_observacion=p["permite_observacion"], clave_externa=p["id"],
+                            is_available=p["disponible"],
+                            permite_observacion=p["permite_observacion"], key=_clave_del_sitio(p["id"]),
                         )
+                        if p["opciones"]:
+                            guardar_opciones_legacy(nuevo, p["opciones"])
                     continue
                 # Ya existe: el panel manda. Solo se llena lo que esté vacío.
                 cambios = []
@@ -224,16 +243,17 @@ def importar(datos: dict, url_base: str = "", aplicar: bool = True) -> dict:
                 if not producto.image_url and not producto.imagen and p["imagen"]:
                     producto.image_url = p["imagen"]
                     cambios.append("image_url")
-                if not producto.opciones and p["opciones"]:
-                    producto.opciones = p["opciones"]
+                opciones_nuevas = not producto.modifier_links.exists() and p["opciones"]
+                if opciones_nuevas:
                     cambios.append("opciones")
-                if not producto.clave_externa and p["id"]:
-                    producto.clave_externa = p["id"]
-                    cambios.append("clave_externa")
                 if cambios:
                     resumen["productos_completados"] += 1
                     if aplicar:
-                        producto.save(update_fields=cambios)
+                        campos = [c for c in cambios if c != "opciones"]
+                        if campos:
+                            producto.save(update_fields=campos)
+                        if opciones_nuevas:
+                            guardar_opciones_legacy(producto, p["opciones"])
                 else:
                     resumen["sin_cambios"] += 1
         if not aplicar:
@@ -248,19 +268,20 @@ def importar(datos: dict, url_base: str = "", aplicar: bool = True) -> dict:
 def exportar(restaurante: str, construir_url=None, solo_disponibles: bool = True) -> dict:
     """La carta del panel en el mismo formato: lo que lee el sitio para pintarse."""
     categorias = []
-    for c in Category.objects.filter(is_active=True).prefetch_related("products"):
+    prefetch = ["products", *(f"products__{r}" for r in PREFETCH_LEGACY)]
+    for c in Category.objects.filter(is_active=True, deleted_at__isnull=True).prefetch_related(*prefetch):
         productos = []
         for p in c.products.all():
-            if p.eliminado or (solo_disponibles and not p.is_available):
+            if p.eliminado or p.price is None or (solo_disponibles and not p.is_available):
                 continue
             foto = p.foto
             if foto and foto.startswith("/") and construir_url:
                 foto = construir_url(foto)
             productos.append({
-                "id": p.clave_externa or f"cloudin-{p.id}",
+                "id": p.key,
                 "cloudin_id": p.id,
                 "nombre": p.name,
-                "precio": int(p.price),
+                "precio": int(p.precio_legacy),
                 "descripcion": p.description,
                 "imagen": foto,
                 "disponible": p.is_available,
@@ -268,7 +289,7 @@ def exportar(restaurante: str, construir_url=None, solo_disponibles: bool = True
                 "opciones": p.opciones or [],
             })
         if productos or not solo_disponibles:
-            categorias.append({"id": c.clave_externa or f"cloudin-{c.id}", "cloudin_id": c.id,
+            categorias.append({"id": c.key, "cloudin_id": c.id,
                                "nombre": c.name, "orden": c.position, "secciones": c.secciones or [],
                                "productos": productos})
     return {"cloudin_menu": VERSION, "restaurante": restaurante, "moneda": "COP",
