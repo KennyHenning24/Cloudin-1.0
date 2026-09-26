@@ -2,15 +2,17 @@
 
 Lo que solo se puede probar con el navegador: agotar con «Deshacer», el precio en
 línea, el editor con su vista previa en vivo y que ninguna pantalla se salga de lo
-ancho en un celular de 375 px. Si el equipo no tiene Edge, se saltan.
+ancho en un celular de 375 px. Sin Edge se usa Chromium; sin ninguno, se saltan.
 """
 
 import os
 import time
 from decimal import Decimal
+from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
+from django.conf import settings
 
 from apps.business.models import RestaurantSettings
 from apps.catalog.models import Category, Product
@@ -113,8 +115,36 @@ def test_buscar_filtra_al_instante(navegador, panel):
     assert errores == []
 
 
+@pytest.fixture
+def menu_externo(panel, tmp_path):
+    """La página del menú digital del restaurante vive en otro origen (en producción,
+    su sitio en Cloudflare Pages). Aquí es el ejemplo del contrato (client/example),
+    servido por un servidor estático aparte, con la API y el runtime de este servidor."""
+    import shutil
+    import threading
+    from functools import partial
+    from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
+
+    ejemplo = Path(settings.BASE_DIR) / "client" / "example"
+    shutil.copytree(ejemplo, tmp_path, dirs_exist_ok=True)
+    html = (ejemplo / "index.html").read_text(encoding="utf-8")
+    html = html.replace("http://localhost:8000", panel.url).replace("restaurante-ejemplo", panel.tenant.slug)
+    (tmp_path / "menu.html").write_text(html, encoding="utf-8")
+
+    class Silencioso(SimpleHTTPRequestHandler):
+        def log_message(self, *args):
+            pass
+
+    servidor = ThreadingHTTPServer(("127.0.0.1", 0), partial(Silencioso, directory=str(tmp_path)))
+    threading.Thread(target=servidor.serve_forever, daemon=True).start()
+    panel.tenant.menu_page = f"http://127.0.0.1:{servidor.server_port}/menu.html"
+    panel.tenant.save()
+    yield panel.tenant.menu_page
+    servidor.shutdown()
+
+
 @pytest.mark.django_db(transaction=True)
-def test_el_editor_crea_el_producto_y_la_vista_previa_lo_muestra(navegador, panel):
+def test_el_editor_crea_el_producto_y_la_vista_previa_lo_muestra(navegador, panel, menu_externo):
     ruta = f"/panel/mi-menu/producto/nuevo/?categoria={panel.cat.uuid}"
     contexto, page, errores = _abrir(navegador, panel, ruta, ancho=1440, alto=900)
     page.locator("#e-nombre").fill("Consomé grande")

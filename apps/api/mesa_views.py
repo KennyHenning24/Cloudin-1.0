@@ -17,11 +17,12 @@ from rest_framework import status
 from rest_framework.decorators import api_view, authentication_classes
 from rest_framework.response import Response
 
+from apps.catalog.legacy import linea_desde_v1
 from apps.catalog.models import Category, Product
 from apps.catalog.opciones import aplicar as aplicar_opciones
 from apps.dining.models import Table
 from apps.orders.models import Order, OrderItem, TableDraft, TableSession
-from apps.shifts.services import turno_actual
+from apps.tenants.context import get_current_tenant
 
 from .serializers import PREFETCH_PRODUCTOS, CategorySerializer
 
@@ -56,11 +57,16 @@ def _pedidos_de(session):
 
 
 def _estado(table) -> dict:
-    """La foto completa de la mesa: lo pedido, lo que se está armando y avisos."""
+    """La foto completa de la mesa: lo pedido, lo que se está armando y avisos.
+
+    `recibe_pedidos` le dice al menú digital si muestra el carrito: es falso con el
+    plan «Menú digital» o si el restaurante trabaja solo con meseros."""
     session = table.open_session
     draft = _borrador(table)
+    tenant = get_current_tenant()
     return {
         "mesa": table.number,
+        "recibe_pedidos": bool(tenant and tenant.recibe_pedidos_del_menu),
         "ocupada": session is not None,
         "cuenta": (
             {
@@ -99,14 +105,30 @@ def _linea_del_menu(i):
 def _limpiar_items(items):
     """Deja los ítems del carrito en una forma segura y mínima.
 
-    Acepta las dos formas de línea: del menú del panel (`product_id` + `opciones`)
-    o armada en el sitio (`name` + `unit_price`)."""
+    Acepta las formas de línea del pedido: con los id de la carta pública
+    (`product` + `variant` + `options`, la del menú digital), del menú de la API
+    vieja (`product_id` + `opciones`) o armada en el sitio (`name` + `unit_price`).
+    Una línea que no se puede cobrar (producto agotado o que ya no existe, falta
+    un topping obligatorio) no entra al carrito."""
     limpios = []
     for i in items[:MAX_ITEMS]:
+        if not isinstance(i, dict):
+            continue
         base = {
             "quantity": max(1, min(int(i.get("quantity", 1) or 1), 99)),
             "by": str(i.get("by", ""))[:60],
         }
+        v1 = {}
+        if i.get("product"):
+            try:
+                i = linea_desde_v1(i)
+            except ValidationError:
+                continue
+            # Se guardan también los id de la carta, para que el menú digital pinte
+            # y edite el carrito compartido con los mismos id que ya conoce.
+            v1 = {"product": str(i["product"]).lower(),
+                  "variant": str(i["variant"]).lower() if i.get("variant") else None,
+                  "options": [str(o).lower() for o in i.get("options") or []]}
         if i.get("product_id"):
             try:
                 linea = _linea_del_menu(i)
@@ -116,7 +138,8 @@ def _limpiar_items(items):
                 continue
             producto, nombre, precio, opciones, nota = linea
             limpios.append({**base, "key": str(i.get("key", producto.id))[:120], "product_id": producto.id,
-                            "opciones": opciones, "name": nombre, "unit_price": float(precio), "note": nota})
+                            "opciones": opciones, "name": nombre, "unit_price": float(precio), "note": nota,
+                            **v1})
             continue
         nombre = str(i.get("name", "")).strip()[:120]
         if not nombre:
@@ -216,20 +239,19 @@ def mesa_aviso(request, token):
 @api_view(["POST"])
 @authentication_classes([])  # se identifica con la API key, no con sesión
 def mesa_enviar(request, token):
-    """Convierte el carrito compartido en un pedido para la cocina."""
+    """Convierte el carrito compartido en un pedido para la cocina.
+
+    Si la mesa estaba libre, este primer pedido la ocupa: abre su cuenta y el
+    panel la ve ocupada hasta que el restaurante la cierre."""
     from .limites import demasiados, permitido
 
     if not permitido(request, "mesa-enviar", 20, 600):
         return demasiados()
-    if not request.tenant.usa_autoservicio:
-        from .views import autoservicio_apagado
+    from .views import pedidos_del_menu_apagados
 
-        return autoservicio_apagado()
-    turno = turno_actual()
-    if turno is None:
-        from .views import sin_turno
-
-        return sin_turno()
+    apagado = pedidos_del_menu_apagados(request.tenant)
+    if apagado is not None:
+        return apagado
     table = _mesa(token)
     if table is None:
         return Response({"detail": "Mesa no encontrada."}, status=status.HTTP_404_NOT_FOUND)
@@ -248,6 +270,8 @@ def mesa_enviar(request, token):
     for i in draft.items:
         if i.get("product_id"):
             try:
+                if i.get("product"):
+                    i = linea_desde_v1(i)  # con los id: inmune a que se reordenen las opciones
                 linea = _linea_del_menu(i)
             except ValidationError as e:
                 return Response({"detail": e.messages[0], "codigo": "opciones"},
@@ -263,9 +287,7 @@ def mesa_enviar(request, token):
     with transaction.atomic(using=table._state.db):
         session = table.open_session
         if session is None:
-            session = TableSession.objects.create(
-                table=table, customer_name=quien, turno=turno
-            )
+            session = TableSession.objects.create(table=table, customer_name=quien)
         order = Order.objects.create(
             session=session, source=Order.SOURCE_QR, customer_name=quien, note=nota
         )

@@ -13,7 +13,6 @@ Nunca se tocan `control.sqlite3` ni `tenant_dbs/` reales.
 
 import shutil
 import uuid
-from decimal import Decimal
 from types import SimpleNamespace
 
 import pytest
@@ -132,13 +131,23 @@ def crear_restaurante(db, plantilla_restaurante):
 @pytest.fixture(scope="module")
 def navegador():
     """Edge del sistema, sin ventana, para probar el runtime y las pantallas.
-    Si el equipo no tiene Edge, las pruebas que lo usan se saltan."""
+    Sin Edge se prueba con Chromium (CLOUDIN_CHROMIUM: la ruta del ejecutable, si
+    no es el de Playwright). Si no hay ninguno, las pruebas que lo usan se saltan."""
+    import os
+
     sync_api = pytest.importorskip("playwright.sync_api")
+    chromium = os.getenv("CLOUDIN_CHROMIUM")
+    intentos = [{"channel": "msedge"}, {"executable_path": chromium} if chromium else {}]
     with sync_api.sync_playwright() as p:
-        try:
-            browser = p.chromium.launch(channel="msedge", headless=True)
-        except Exception as e:  # pragma: no cover - depende del equipo
-            pytest.skip(f"No se pudo abrir Edge: {e}")
+        browser, errores = None, []
+        for opciones in intentos:
+            try:
+                browser = p.chromium.launch(headless=True, **opciones)
+                break
+            except Exception as e:  # pragma: no cover - depende del equipo
+                errores.append(str(e).splitlines()[0])
+        if browser is None:  # pragma: no cover
+            pytest.skip(f"No se pudo abrir Edge ni Chromium: {' / '.join(errores)}")
         yield browser
         browser.close()
 
@@ -170,19 +179,6 @@ def crear_usuario(db):
         return user
 
     return _crear
-
-
-@pytest.fixture
-def abrir_turno():
-    """Abre el turno de caja del restaurante (sin turno, el panel no deja operar)."""
-    from apps.shifts.services import abrir_turno as abrir
-    from apps.tenants.context import tenant_context
-
-    def _abrir(tenant):
-        with tenant_context(tenant):
-            return abrir(por="Pruebas", base_inicial=Decimal("10000"))
-
-    return _abrir
 
 
 @pytest.fixture

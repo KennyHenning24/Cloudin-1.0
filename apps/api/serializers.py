@@ -125,16 +125,21 @@ class OrderSerializer(serializers.ModelSerializer):
 
 
 class OrderItemInputSerializer(serializers.Serializer):
-    """Una línea del pedido, en cualquiera de sus dos formas.
+    """Una línea del pedido, en cualquiera de sus formas.
 
-    - Del menú del panel:  {"product_id": 12, "quantity": 2}
-    - Armada en el sitio:  {"name": "Sandwich brisket · 250 g", "unit_price": 42000}
+    - Con los id de la carta pública (cloudin.menu/v1), la del menú digital:
+          {"product": "<uuid>", "variant": "<uuid>" | null, "options": ["<uuid>"], "quantity": 2}
+    - Del menú de la API vieja:  {"product_id": 12, "opciones": [{"grupo": 0, "valor": 1}]}
+    - Armada en el sitio:        {"name": "Sandwich brisket · 250 g", "unit_price": 42000}
 
-    La segunda existe para los sitios que ya tienen su propio catálogo con
+    La última existe para los sitios que ya tienen su propio catálogo con
     opciones y combinaciones, donde el precio final no corresponde a un
-    producto suelto del menú.
+    producto suelto del menú. En las dos primeras el precio lo pone el servidor.
     """
 
+    product = serializers.UUIDField(required=False)
+    variant = serializers.UUIDField(required=False, allow_null=True)
+    options = serializers.ListField(child=serializers.UUIDField(), required=False)
     product_id = serializers.IntegerField(required=False)
     name = serializers.CharField(max_length=120, required=False, allow_blank=True)
     unit_price = serializers.DecimalField(
@@ -146,6 +151,15 @@ class OrderItemInputSerializer(serializers.Serializer):
     opciones = serializers.ListField(child=serializers.DictField(), required=False)
 
     def validate(self, datos):
+        if datos.get("product"):
+            from django.core.exceptions import ValidationError as ErrorDjango
+
+            from apps.catalog.legacy import linea_desde_v1
+
+            try:
+                return linea_desde_v1(datos)
+            except ErrorDjango as e:
+                raise serializers.ValidationError(e.messages[0])
         if datos.get("product_id"):
             return datos
         if datos.get("name") and datos.get("unit_price") is not None:
@@ -159,7 +173,7 @@ class OrderItemInputSerializer(serializers.Serializer):
                 raise serializers.ValidationError(str(e))
             return datos
         raise serializers.ValidationError(
-            "Cada ítem necesita 'product_id', o bien 'name' y 'unit_price'."
+            "Cada ítem necesita 'product' (el id de la carta), o 'product_id', o bien 'name' y 'unit_price'."
         )
 
 
@@ -201,7 +215,6 @@ class TableSessionSerializer(serializers.ModelSerializer):
     current_total = serializers.SerializerMethodField()
     subtotal = serializers.SerializerMethodField()
     novedades = serializers.SerializerMethodField()
-    reserva = serializers.SerializerMethodField()
     table_number = serializers.IntegerField(source="table.number", read_only=True)
 
     class Meta:
@@ -217,13 +230,10 @@ class TableSessionSerializer(serializers.ModelSerializer):
             "closed_at",
             "total",
             "current_total",
-            "propina",
-            "propina_medio",
             "subtotal",
             "descuento",
             "descuento_motivo",
             "novedades",
-            "reserva",
             "orders",
         ]
 
@@ -241,20 +251,13 @@ class TableSessionSerializer(serializers.ModelSerializer):
             for n in obj.novedades.all()
         ]
 
-    def get_reserva(self, obj):
-        r = obj.reserva
-        if r is None:
-            return None
-        return {"codigo": r.codigo, "nombre": r.nombre, "personas": r.personas, "telefono": r.telefono,
-                "observaciones": r.observaciones, "cliente": r.cliente_id}
-
 
 class TableWriteSerializer(serializers.ModelSerializer):
     """Alta y edición de mesas desde el panel del restaurante."""
 
     class Meta:
         model = Table
-        fields = ["number", "seats", "is_active", "zona", "reservable"]
+        fields = ["number", "seats", "is_active", "zona"]
 
     def validate_number(self, value):
         existentes = Table.objects.filter(number=value)
@@ -271,7 +274,6 @@ class TableSerializer(serializers.ModelSerializer):
     session_total = serializers.SerializerMethodField()
     session_customer = serializers.SerializerMethodField()
     pending_orders = serializers.SerializerMethodField()
-    proxima_reserva = serializers.SerializerMethodField()
 
     class Meta:
         model = Table
@@ -280,8 +282,6 @@ class TableSerializer(serializers.ModelSerializer):
             "number",
             "seats",
             "zona",
-            "reservable",
-            "proxima_reserva",
             "is_active",
             "is_occupied",
             "session_id",
@@ -301,20 +301,6 @@ class TableSerializer(serializers.ModelSerializer):
     def get_session_total(self, obj):
         s = obj.open_session
         return s.current_total() if s else 0
-
-    def get_proxima_reserva(self, obj):
-        """La reserva de hoy que tiene esta mesa y todavía no llega."""
-        from django.utils import timezone
-
-        from apps.reservas.models import Reserva
-
-        r = (Reserva.objects.filter(mesa=obj, fecha=timezone.localdate(),
-                                    estado__in=[Reserva.PENDING, Reserva.CONFIRMED, Reserva.ARRIVED])
-             .order_by("hora").first())
-        if r is None:
-            return None
-        return {"id": r.id, "hora": r.hora_texto(), "nombre": r.nombre, "personas": r.personas,
-                "estado": r.estado, "llego": r.estado == Reserva.ARRIVED}
 
     def get_pending_orders(self, obj):
         s = obj.open_session

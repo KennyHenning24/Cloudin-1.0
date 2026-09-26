@@ -253,7 +253,7 @@ class Product(PublicIdModel):
         help_text="Si está activo, el cliente o el mesero pueden escribir «sin cebolla», etc.",
     )
     # Eliminado de la carta por el restaurante. No se borra de verdad: las
-    # comandas y facturas viejas lo siguen nombrando.
+    # comandas viejas lo siguen nombrando.
     eliminado = models.BooleanField(default=False, db_index=True)
     tags = models.ManyToManyField(Tag, blank=True, related_name="products", verbose_name="Etiquetas")
     modifier_groups = models.ManyToManyField(ModifierGroup, through="ProductModifierGroup", blank=True,

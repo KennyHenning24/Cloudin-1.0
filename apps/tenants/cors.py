@@ -1,9 +1,12 @@
 """Permite CORS solo a los sitios web asignados a cada restaurante.
 
-Cada restaurante registra en su panel la dirección de su página. Solo esa
-dirección (su origen: esquema + host + puerto) puede llamar a la API desde el
-navegador. Así no hace falta tocar la configuración del servidor cada vez que
-entra un cliente nuevo.
+Cada restaurante tiene registrados sus sitios: el de pedidos (site_url), la página
+de su menú digital (menu_page, a la que lleva el QR) y otros orígenes autorizados
+(allowed_origins: el dominio propio y el de Cloudflare Pages, por ejemplo). Solo
+esos orígenes (esquema + host + puerto) pueden llamar a la API desde el navegador.
+Así no hace falta tocar la configuración del servidor cada vez que entra un cliente.
+
+La API pública del menú (/api/public/…) no pasa por aquí: responde con CORS abierto.
 """
 
 from corsheaders.signals import check_request_enabled
@@ -13,11 +16,10 @@ from .models import Tenant
 
 
 def origenes_permitidos() -> set[str]:
-    return {
-        t.site_origin
-        for t in Tenant.objects.filter(is_active=True).exclude(site_url="")
-        if t.site_origin
-    }
+    origenes = set()
+    for t in Tenant.objects.filter(is_active=True).only("site_url", "menu_page", "allowed_origins"):
+        origenes |= t.origenes_permitidos
+    return origenes
 
 
 @receiver(check_request_enabled)

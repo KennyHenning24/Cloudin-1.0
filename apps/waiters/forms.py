@@ -24,7 +24,7 @@ class MeseroForm(forms.ModelForm):
 
     class Meta:
         model = Mesero
-        fields = ["nombre", "usuario", "empleado"]
+        fields = ["nombre", "usuario"]
         widgets = {
             "nombre": forms.TextInput(attrs={"placeholder": "Ej. Laura Gómez"}),
             "usuario": forms.TextInput(attrs={
@@ -33,8 +33,6 @@ class MeseroForm(forms.ModelForm):
         }
         help_texts = {
             "usuario": "Con esto entra en la tablet. Minúsculas, números, punto o guion.",
-            "empleado": "Opcional. Si también marca horario en Cloudin Employees, se cruzan "
-                        "sus horas con lo que vendió.",
         }
 
     def __init__(self, *args, **kwargs):
@@ -45,13 +43,6 @@ class MeseroForm(forms.ModelForm):
             self.fields["clave2"].required = True
         else:
             self.fields["clave"].help_text = "Déjala vacía para no cambiarla."
-        from apps.staffing.models import Empleado
-
-        ocupados = Mesero.objects.exclude(pk=self.instance.pk).exclude(empleado__isnull=True)
-        self.fields["empleado"].queryset = Empleado.objects.filter(activo=True).exclude(
-            pk__in=ocupados.values_list("empleado_id", flat=True)
-        )
-        self.fields["empleado"].required = False
 
     def clean_usuario(self):
         usuario = (self.cleaned_data.get("usuario") or "").strip().lower()

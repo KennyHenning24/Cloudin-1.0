@@ -7,8 +7,8 @@ Cloudin no tiene un menú propio: el QR lleva a la página del menú del restaur
    enlace de siempre (`mesa.html?m=<token>`): así no hay que reimprimir.
 3. Si todavía no hay página publicada, no hay QR (enlace vacío).
 
-El token (no el número) va en el QR: cuando lleguen los pedidos, nadie podrá
-pedir para otra mesa cambiando un número en la dirección.
+El token (no el número) va en el QR: así nadie puede pedir para otra mesa
+cambiando un número en la dirección.
 """
 
 import io

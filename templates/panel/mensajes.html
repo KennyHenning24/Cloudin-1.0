@@ -185,16 +185,9 @@ async function refrescar() {
     conocidos = new Set(mensajes.map(m => m.id));
     primeraCarga = false;
 
-    // Con la caja cerrada la bandeja está vacía a propósito: conviene decirlo,
-    // para que nadie crea que se perdieron los pedidos del turno anterior.
-    const vacio = datos.turno_abierto === false
-      ? `<div class="card vacio">
-           La caja está cerrada, así que no entran pedidos.
-           <a href="/panel/turnos/" style="color:var(--brand)">Abre el turno</a>
-           para volver a recibirlos. Lo del turno anterior quedó en su informe.
-         </div>`
-      : `<div class="card vacio">Todavía no ha llegado ningún pedido.
-           Cuando el sitio web envíe uno, aparece aquí.</div>`;
+    // Solo las mesas abiertas: al cerrar la cuenta de una mesa, sus pedidos salen de aquí.
+    const vacio = `<div class="card vacio">No hay pedidos de mesas abiertas.
+         Cuando el menú digital, un mesero o el panel envíe uno, aparece aquí.</div>`;
     pintarSiCambia(lista, mensajes.length ? grupos(mensajes) : vacio);
     document.getElementById("reloj").textContent = new Date().toLocaleTimeString("es-CO");
   } catch (e) { console.error(e); }

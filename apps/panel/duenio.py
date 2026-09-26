@@ -1,13 +1,12 @@
 """Panel del dueño: el menú digital.
 
 Con el plan «Menú digital» es todo el panel (Inicio · Mi menú · Personalizar ·
-Mesas y QR · Cuenta); con el plan completo, «Mi menú» y «Personalizar»
-reemplazan a la carta de antes. Sigue los wireframes aprobados (docs/wireframes/).
+Mesas y QR · Cuenta); con el plan completo se suman las pantallas de pedidos,
+mesas y meseros. Sigue los wireframes aprobados (docs/wireframes/).
 
 Las pantallas pintan el estado inicial y el JavaScript del panel guarda los
 cambios con la API /api/v1/staff/ (apps/api/catalogo_views.py). El asistente de
 la primera vez (bienvenida) y la cuenta se guardan con formularios normales.
-Nada de esto exige turno abierto.
 """
 
 import json
@@ -47,7 +46,7 @@ from apps.dining import qr
 from apps.dining.models import Table
 from apps.tenants.models import TenantMembership
 
-from .views import panel_view
+from .views import panel_view, resumen_del_servicio
 
 PASOS = ["Logo y colores", "Datos del negocio", "Primera categoría", "Primer producto"]
 SUGERENCIAS_CATEGORIA = ["Entradas", "Platos fuertes", "Hamburguesas", "Bebidas", "Postres", "Para compartir"]
@@ -154,13 +153,15 @@ def _ultimo_cambio():
 
 
 def inicio_menu(request):
-    """Inicio del plan «Menú digital» (lo llama views.inicio)."""
+    """Inicio del panel (lo llama views.inicio). Con el plan completo suma el
+    resumen de pedidos y mesas."""
     tenant = request.tenant
     ajustes = RestaurantSettings.load()
     admin = es_admin(request)
-    # La primera vez, el dueño empieza por el asistente (se puede saltar).
-    if (admin and not request.user.is_superuser and ajustes.onboarding_done_at is None
-            and ajustes.onboarding_step == 0):
+    # La primera vez, el dueño del plan «Menú digital» empieza por el asistente (se
+    # puede saltar). El plan completo entra directo, como siempre.
+    if (tenant.es_plan_menu and admin and not request.user.is_superuser
+            and ajustes.onboarding_done_at is None and ajustes.onboarding_step == 0):
         return redirect("panel:bienvenida")
 
     resumen = selectors.resumen_de_la_carta()
@@ -190,6 +191,7 @@ def inicio_menu(request):
         "ultimo_cambio": _ultimo_cambio(),
         "enlace": qr.enlace_del_menu(tenant),
         "menus": Menu.objects.filter(deleted_at__isnull=True).count(),
+        "servicio": None if tenant.es_plan_menu else resumen_del_servicio(),
     })
 
 

@@ -26,12 +26,6 @@ class Mesero(models.Model):
     # administrador pueda volver a verla con su propia contraseña del panel.
     clave_cifrada = models.TextField(blank=True, editable=False)
     activo = models.BooleanField("Activo", default=True)
-    # Opcional: si también está en Cloudin Employees, así se cruzan sus horas con
-    # lo que vendió.
-    empleado = models.OneToOneField(
-        "staffing.Empleado", on_delete=models.SET_NULL, null=True, blank=True,
-        related_name="mesero", verbose_name="Empleado en Cloudin Employees",
-    )
     ultimo_ingreso = models.DateTimeField(null=True, blank=True)
     creado = models.DateTimeField(auto_now_add=True)
 

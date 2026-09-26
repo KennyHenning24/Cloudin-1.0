@@ -94,16 +94,6 @@ def app_mesero(api=False):
                         status=401)
                 return redirect("mesero:entrar", slug=tenant.slug)
 
-            # Sin turno abierto la app solo mira: no se manda nada a la cocina.
-            if api and request.method == "POST":
-                from apps.shifts.models import TurnoCaja
-
-                if TurnoCaja.abierto_actual() is None:
-                    return JsonResponse(
-                        {"detail": "Todavía no se ha abierto el turno. Pídele al "
-                                   "administrador que lo abra en el panel.",
-                         "codigo": "sin_turno"}, status=409)
-
             request.mesero = mesero
             return vista(request, tenant, mesero, *args, **kwargs)
 
@@ -145,7 +135,7 @@ def entrar(request, slug):
                 request.session[CLAVE_SESION] = {
                     "tenant": tenant.slug, "id": mesero.pk, "huella": _huella(mesero),
                 }
-                # Una tablet de mesero dura el turno completo y más.
+                # Una tablet de mesero dura la jornada completa y más.
                 request.session.set_expiry(60 * 60 * 16)
                 mesero.registrar_ingreso()
                 return redirect("mesero:app", slug=tenant.slug)
@@ -225,28 +215,22 @@ def _sesiones_abiertas():
 @app_mesero(api=True)
 def api_mesas(request, tenant, mesero):
     abiertas = _sesiones_abiertas()
-    from apps.shifts.models import TurnoCaja
-
-    turno = TurnoCaja.abierto_actual()
     mesas = [_mesa_json(t, abiertas.get(t.id), mesero) for t in Table.objects.filter(is_active=True)]
     return JsonResponse({
         "mesas": mesas,
-        "turno": turno.numero if turno else None,
         "hora": timezone.localtime().strftime("%H:%M"),
-        "yo": _mis_numeros(mesero, turno, mesas),
+        "yo": _mis_numeros(mesero, mesas),
     })
 
 
-def _mis_numeros(mesero, turno, mesas) -> dict:
-    """Lo que lleva el mesero en el turno: vendido, mesas atendidas y comandas."""
-    vacio = {"vendido": 0, "mesas_atendidas": 0, "pedidos": 0, "mesas_activas": 0}
-    if turno is None:
-        return vacio
-    mios = (Order.objects.filter(mesero=mesero, session__turno=turno)
+def _mis_numeros(mesero, mesas) -> dict:
+    """Lo que lleva el mesero hoy: vendido, mesas atendidas y comandas."""
+    hoy = timezone.localdate()
+    mios = (Order.objects.filter(mesero=mesero, created_at__date=hoy)
             .exclude(status=Order.STATUS_CANCELLED))
     vendido = sum((o.total() for o in mios.prefetch_related("items")), Decimal("0"))
     # Atendida = la mesa quedó a su nombre o él le mandó al menos una comanda.
-    atendidas = (TableSession.objects.filter(turno=turno)
+    atendidas = (TableSession.objects.filter(opened_at__date=hoy)
                  .filter(models.Q(mesero=mesero) | models.Q(orders__mesero=mesero))
                  .distinct().count())
     return {
@@ -282,12 +266,8 @@ def api_mesa(request, tenant, mesero, numero):
     table = Table.objects.filter(number=numero, is_active=True).first()
     if table is None:
         return JsonResponse({"detail": f"No existe la mesa {numero}."}, status=404)
-    from apps.shifts.models import TurnoCaja
-
     session = _sesiones_abiertas().get(table.id)
     datos = _mesa_json(table, session, mesero)
-    turno = TurnoCaja.abierto_actual()
-    datos["turno"] = turno.numero if turno else None
     datos["lista_pedidos"] = (
         [_pedido_json(o) for o in session.orders.all().order_by("-created_at")
          if o.status != Order.STATUS_CANCELLED]

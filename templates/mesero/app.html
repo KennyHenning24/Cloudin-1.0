@@ -40,7 +40,7 @@ main{padding:16px 16px calc(120px + var(--abajo));max-width:1280px;margin:0 auto
 .chip b{font-weight:760;color:var(--text)}
 .chip.on{background:var(--brand-soft);border-color:var(--brand-line);color:var(--text)}
 
-/* bienvenida: saludo + lo que lleva el mesero en el turno */
+/* bienvenida: saludo + lo que lleva el mesero hoy */
 .bienvenida{position:relative;overflow:hidden;display:grid;gap:18px;margin:6px 0 26px;
   padding:22px 20px;border-radius:var(--r-xl);border:1px solid var(--line);
   background:radial-gradient(120% 140% at 0% 0%,rgba(247,122,39,.20),transparent 55%),
@@ -305,7 +305,6 @@ main{padding:16px 16px calc(120px + var(--abajo));max-width:1280px;margin:0 auto
     <small>Meseros</small>
   </div>
   <div class="fin">
-    <span class="pildora" id="turno" hidden></span>
     <button class="avatar tema-b" data-accion="tema" aria-label="Cambiar entre tema claro y oscuro">
       <svg class="ico" viewBox="0 0 24 24"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg></button>
     <button class="avatar" id="btn-usuario" aria-label="Mi sesión">{{ m.iniciales }}</button>
@@ -470,8 +469,6 @@ async function cargarMesas() {
     const datos = await pedir("/api/mesas/");
     estado.mesas = datos.mesas;
     estado.yo = datos.yo;
-    estado.numeroTurno = datos.turno;
-    pintarTurno(datos.turno);
     if (estado.mesa === null) pintarMesas(datos.hora);
   } catch (e) {
     if (estado.mesa === null && !estado.mesas.length) {
@@ -496,15 +493,12 @@ function bienvenida() {
   const nombre = MESERO.nombre.split(" ")[0];
   const fecha = new Date().toLocaleDateString("es-CO", {weekday: "long", day: "numeric", month: "long"});
   const hoy = fecha.charAt(0).toUpperCase() + fecha.slice(1);
-  const turno = estado.numeroTurno;
-  const frase = !turno
-    ? "La caja está cerrada. Cuando el administrador abra el turno ya puedes enviar pedidos."
-    : yo.mesas_activas
-      ? `Tienes ${yo.mesas_activas} ${yo.mesas_activas === 1 ? "mesa activa" : "mesas activas"}. ¡A darle con todo!`
-      : "Toca una mesa libre para empezar a tomar el pedido.";
+  const frase = yo.mesas_activas
+    ? `Tienes ${yo.mesas_activas} ${yo.mesas_activas === 1 ? "mesa activa" : "mesas activas"}. ¡A darle con todo!`
+    : "Toca una mesa libre para empezar a tomar el pedido.";
   return `<section class="bienvenida">
     <div class="saludo">
-      <span class="fecha"><span class="punto ${turno ? "" : "apagado"}"></span>${esc(hoy)}${turno ? ` · Turno ${turno}` : ""}</span>
+      <span class="fecha"><span class="punto"></span>${esc(hoy)}</span>
       <h1>${saludo()},<br><span class="nombre">${esc(nombre)}</span></h1>
       <p>${frase}</p>
     </div>
@@ -617,16 +611,6 @@ async function abrirMesa(numero) {
 }
 async function cargarMesa() {
   estado.datosMesa = await pedir(`/api/mesa/${estado.mesa}/`);
-  // El turno pudo abrirse o cerrarse en el panel: la píldora se entera aquí también.
-  pintarTurno(estado.datosMesa.turno);
-}
-function pintarTurno(numero) {
-  const turno = $("turno");
-  turno.hidden = false;
-  turno.className = "pildora " + (numero ? "ok" : "aviso");
-  turno.innerHTML = numero
-    ? `<span class="punto"></span>Turno ${numero}`
-    : `<span class="punto"></span>Sin turno · no se pueden enviar pedidos`;
 }
 function subtituloMesa() {
   // Texto plano: quien lo pinte decide si escapar (innerHTML) o no (textContent).

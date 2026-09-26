@@ -5,7 +5,8 @@
 > hace cada archivo, dónde se empieza a modificar según lo que se pida, y las
 > reglas que el dueño ya decidió y que no se deben cambiar por cuenta propia.
 >
-> Escrito el 15 de septiembre de 2026. Autor del código: Juan.
+> Escrito el 15 de septiembre de 2026 y actualizado el 26 de septiembre (se quitaron
+> facturación, turno, inventario, reservas y Control). Autor del código: Juan.
 > Todo el código, los comentarios y la interfaz están **en español**. Sigue así.
 
 ---
@@ -16,22 +17,32 @@
 |---|---|
 | **Este archivo** | Montaje, mapa del código, reglas y recetas de cambio |
 | `README.md` | Documentación técnica del producto, pantalla por pantalla |
+| `GUIA-MENU-DIGITAL.md` | Cómo construir el menú digital de un cliente en Cloudflare Pages y cómo lee la carta y manda pedidos |
 | `CONECTAR-MENU-A-CLOUDIN.md` | Cómo el sitio web de un restaurante le entrega su carta al panel |
-| `INTEGRACION-SITIO-WEB.md` | API para quien construya el sitio web del restaurante |
+| `INTEGRACION-SITIO-WEB.md` | API para la tablet o el sitio del restaurante (pedidos por número de mesa) |
 | `DESPLIEGUE-CLOUDFLARE.md` | Cómo corre en Cloudflare (Containers, Postgres, R2), por qué no en Pages y el día a día del despliegue |
-| `..\Cloudin-para-restaurantes.md` | Qué problema resuelve el producto (material de venta) |
+| `..\Cloudin-para-restaurantes.md` | Qué problema resuelve el producto (material de venta; describe módulos que ya se quitaron) |
 | `..\cloudin-arquitectura.md` | Plan original por fases |
-| `..\especificacion-inventario-cloudin.md` | Especificación del módulo de inventario |
 
 ---
 
 ## 1. Qué es Cloudin
 
-Software de gestión para restaurantes en Colombia. Un solo backend Django sirve a
-todos los restaurantes (multi-tenant) y cubre: carta digital, pedidos por QR, app
-de meseros en tablet, pantalla de cocina, mesas y cuentas, **facturación
-electrónica DIAN** (vía Factus), turno de caja con informe de cierre, propinas,
-inventario con recetas y costeo, reloj de empleados y analítica de ventas.
+Software para restaurantes en Colombia. Un solo backend Django sirve a todos los
+restaurantes (multi-tenant) y cubre dos cosas:
+
+1. **El menú digital**: la carta (productos, precios, fotos, presentaciones,
+   adiciones), la personalización y los QR de las mesas. El menú que ve el cliente
+   es un sitio aparte por restaurante (Cloudflare Pages) que lee la carta de
+   Cloudin: `GUIA-MENU-DIGITAL.md`.
+2. **Los pedidos de ese menú**: carrito compartido por mesa, mesas que se ocupan
+   solas con el primer pedido, Mensajes, Cocina, la app de meseros en tablet, las
+   novedades (anulación, cortesía, devolución, descuento) y la precuenta impresa.
+
+El 26 de septiembre de 2026 el dueño decidió quitar la facturación electrónica
+(Factus), el turno de caja, el inventario, Cloudin Reservas, el reloj de
+empleados, las propinas, Cloudin Control y la analítica de ventas (ver 4.8 «Apps
+retiradas»).
 
 **No es un SPA.** Es Django renderizando HTML en el servidor, con JavaScript
 plano cuando hace falta. **No metas React, Next.js ni un bundler.** Si piden un
@@ -52,11 +63,10 @@ Supón un computador limpio. Esto es todo lo que hace falta.
 | **Git** | cualquiera reciente | Control de versiones (ver aviso) | git-scm.com |
 | **Un navegador** | Chrome, Edge o Firefox | Probar el panel y la app del mesero | — |
 
-> **Aviso importante: hoy la carpeta NO es un repositorio Git.** Antes del primer
-> cambio corre `git init`, haz un commit inicial con todo el estado actual y
-> trabaja en ramas. Sin eso no hay cómo deshacer un error. El `.gitignore` ya
-> existe y excluye `.env`, `*.sqlite3`, `tenant_dbs/`, `media/`, `staticfiles/`,
-> `qrcodes/` y `__pycache__/`.
+> El proyecto vive en GitHub (`KennyHenning24/Cloudin-1.0`): trabaja en ramas y
+> sube cambios pequeños. El `.gitignore` excluye `.env`, `*.sqlite3`, `tenant_dbs/`,
+> `media/`, `staticfiles/`, `qrcodes/`, `node_modules/` y `__pycache__/`: nunca subas
+> datos de restaurantes ni llaves.
 
 ### 2.2 Opcional, según lo que vayas a hacer
 
@@ -65,7 +75,7 @@ Supón un computador limpio. Esto es todo lo que hace falta.
 | **Node.js 18+** | Solo para servir o tocar el sitio web de un restaurante (`npx http-server`) y correr `generar-cloudin-menu.js` de Cultura Brisket |
 | **PostgreSQL + `psycopg[binary]`** | Solo para producción (`DATABASE_URL`, ver `DESPLIEGUE-CLOUDFLARE.md`). En local se usa SQLite y no hay nada que instalar. `requirements-produccion.txt` trae lo del servidor |
 | **Docker / `npx wrangler`** | Solo para probar la imagen del servidor o el Worker de Cloudflare en local. El despliegue normal lo hace Cloudflare en cada push a `main` |
-| **Playwright** | Solo para capturas automáticas o generar guías en PDF (`pip install playwright`) |
+| **Playwright** | Para las pruebas de navegador (§7), capturas automáticas o guías en PDF (viene en `requirements-dev.txt`) |
 | **Impresora térmica de 80 mm** | Solo para probar impresión real; sin ella el diálogo de impresión igual abre |
 | **`gunicorn`** | Solo al desplegar en un servidor Linux |
 
@@ -108,11 +118,9 @@ Variables que importan (todas documentadas en `.env.example`):
 | `TENANT_BASE_DOMAIN` | `localhost` | En producción `cloudin.app` con DNS comodín |
 | `TENANT_DB_ENGINE` | `sqlite` | `postgres` en producción |
 | `CORS_ALLOWED_ORIGINS` | vacío | Casi nunca hace falta: el permiso se da por restaurante en `apps/tenants/cors.py` |
-| `FACTUS_*` | credenciales de sandbox | Sin ellas la facturación usa el proveedor simulado |
 
 > **Después de tocar el `.env` hay que reiniciar el servidor.** Django lo lee solo
-> al arrancar. Ya pasó una vez: una factura quedó en contingencia porque el
-> proceso tenía credenciales viejas en memoria.
+> al arrancar. Ya pasó una vez: el proceso siguió con credenciales viejas en memoria.
 
 ### 2.5 Crear las bases y arrancar
 
@@ -145,10 +153,11 @@ Si la máquina ya tiene el proyecto con datos (la del dueño), los pasos de
 | Dirección | Qué es | Quién entra |
 |---|---|---|
 | `http://localhost:8000/master/` | Panel maestro: alta de restaurantes y credenciales | Solo el superusuario |
-| `http://localhost:8000/panel/login/?tenant=<slug>` | Panel del restaurante | Admin o cajero del restaurante |
+| `http://localhost:8000/panel/login/?tenant=<slug>` | Panel del restaurante | Dueño, administrador o personal del restaurante |
 | `http://localhost:8000/mesero/<slug>/` | App del mesero (PWA para tablet) | Meseros, con su propia clave |
 | `http://localhost:8000/admin/` | Django Admin (edición cruda) | Superusuario |
-| `http://localhost:8000/api/v1/...` | API REST | Sitio web (X-API-Key) y panel (sesión) |
+| `http://localhost:8000/api/v1/...` | API REST | Menú digital y sitio web (X-API-Key) y panel (sesión) |
+| `http://localhost:8000/api/public/<slug>/menu/` | Carta pública `cloudin.menu/v1` | Cualquiera, sin llave (la leen los menús digitales) |
 
 En local el restaurante se elige con `?tenant=<slug>`; en producción sale del
 subdominio. `.claude/launch.json` ya trae la configuración para levantar el
@@ -162,8 +171,8 @@ servidor en el puerto 8000.
 
 ```
 control.sqlite3                     -> restaurantes, usuarios de Django, sesiones, admin
-tenant_dbs/cloudin_<slug>.sqlite3   -> menú, mesas, pedidos, facturas, inventario,
-                                       empleados, turnos y meseros de ESE restaurante
+tenant_dbs/cloudin_<slug>.sqlite3   -> menú, ajustes del negocio, mesas, cuentas,
+                                       pedidos y meseros de ESE restaurante
 ```
 
 Las piezas que lo sostienen, en `apps/tenants/`:
@@ -176,8 +185,8 @@ Las piezas que lo sostienen, en `apps/tenants/`:
 3. `db.py` — registra en caliente la conexión de esa base. Django normalmente
    exige declararlas en `settings.DATABASES`; aquí se añaden en tiempo de ejecución.
 4. `routers.py` — manda cada modelo a su base. `SHARED_APPS` van a `default`;
-   `TENANT_APPS` (`catalog`, `dining`, `orders`, `billing`, `staffing`, `shifts`,
-   `inventory`, `waiters`) van a la base del restaurante.
+   `TENANT_APPS` (`catalog`, `dining`, `orders`, `waiters`, `business`, y las
+   retiradas mientras corren sus últimas migraciones) van a la base del restaurante.
 
 **Reglas que se derivan de esto y que se olvidan siempre:**
 
@@ -198,7 +207,7 @@ Las piezas que lo sostienen, en `apps/tenants/`:
 | Archivo o carpeta | Qué es |
 |---|---|
 | `manage.py` | Entrada de Django |
-| `config/settings.py` | Bases de datos, apps, sesiones de 60 días, correo, CORS, media, Factus |
+| `config/settings.py` | Bases de datos, apps, sesiones de 60 días, correo, CORS, media, R2 |
 | `config/urls.py` | Rutas raíz: `/admin/`, `/master/`, `/api/v1/`, `/panel/`, `/mesero/` |
 | `config/wsgi.py`, `config/asgi.py` | Despliegue |
 | `templates/` | Todas las plantillas (no viven dentro de cada app) |
@@ -211,12 +220,15 @@ Las piezas que lo sostienen, en `apps/tenants/`:
 | `config/entorno.py` | Lee `DATABASE_URL` (Postgres) para la base de control y las de restaurante |
 | `Dockerfile`, `.dockerignore` | La imagen del servidor (Django + gunicorn) |
 | `wrangler.jsonc`, `cloudflare/worker.js`, `package.json` | Cloudflare: el Worker que pasa las visitas al contenedor. Guía: `DESPLIEGUE-CLOUDFLARE.md` |
+| `static/cloudin-menu.v1.js` | Runtime de los menús digitales (se genera desde `static/src/` con `build_runtime`) |
+| `client/example/` | Menú digital de ejemplo: `index.html` (plantillas del runtime) y `carrito.js` (pedido a la mesa) |
+| `tests/`, `conftest.py` | La suite de pytest (§7) |
 
 ### 4.2 `apps/tenants` — multi-tenancy y alta de clientes (base de control)
 
 | Archivo | Qué hace |
 |---|---|
-| `models.py` | `Tenant` (slug, api_key, `site_url`, `modo_servicio`, `menu_fuente`, activo) y `TenantMembership` (usuario ↔ restaurante, con rol y `password_cifrada`) |
+| `models.py` | `Tenant` (slug, api_key, `plan`, `modo_servicio`, `site_url`, `menu_page`, `allowed_origins`, `menu_fuente`, activo; `origenes_permitidos`, `recibe_pedidos_del_menu`) y `TenantMembership` (usuario ↔ restaurante, con rol y `password_cifrada`) |
 | `middleware.py` | Resuelve el restaurante de cada petición |
 | `context.py` | Restaurante activo por hilo; `tenant_context` |
 | `db.py` | Alta en caliente de la conexión de un restaurante |
@@ -224,74 +236,56 @@ Las piezas que lo sostienen, en `apps/tenants/`:
 | `provisioning.py` | Crea la base del restaurante y le corre las migraciones |
 | `services.py` | Alta de restaurantes y usuarios (lo usan el panel maestro y el comando) |
 | `crypto.py` | Cifrado Fernet reversible de las contraseñas que el maestro muestra |
-| `cors.py` | Permite CORS **solo** al `site_url` del restaurante de la petición |
+| `cors.py` | Permite CORS **solo** a los orígenes de los restaurantes: `site_url`, `menu_page` y `allowed_origins` |
 | `admin.py` | Django Admin de tenants |
 | `management/commands/create_tenant.py` | Alta desde consola |
 | `management/commands/migrate_tenants.py` | Migra todas las bases de restaurante |
-| `management/commands/tenant_qr.py` | Genera los PNG de los QR de mesa |
+| `management/commands/tenant_qr.py` | Genera los PNG de los QR de mesa (página del menú + `?mesa=<token>`, igual que el panel) |
+| `management/commands/preparar_servidor.py` | Al arrancar el servidor: `migrate`, `migrate_tenants` y el superusuario inicial |
 
 ### 4.3 Modelos y lógica del restaurante
 
 | App | Archivo | Responsabilidad |
 |---|---|---|
-| `catalog` | `models.py` | `Category`, `Product` (precio, `imagen`, `opciones` JSON, `permite_observacion`, `clave_externa`, `eliminado`) |
-| `catalog` | `opciones.py` | Toppings y variantes: valida grupos y **calcula nombre y precio en el servidor** (`aplicar`) |
+| `catalog` | `models.py` | `Menu`, `Category`, `Product` (precio, foto, `permite_observacion`, `clave_externa`, `eliminado`), `ProductVariant` (presentaciones), `ModifierGroup`/`ModifierOption` (adiciones) y `Tag`; cada uno con su `uuid` público |
+| `catalog` | `opciones.py` | Adiciones y presentaciones: valida lo elegido y **calcula nombre y precio en el servidor** (`aplicar`) |
+| `catalog` | `legacy.py` | La carta en la forma vieja por posiciones (`opciones`) y `linea_desde_v1`: traduce una línea con los id de la carta (`product`, `variant`, `options`) a esa forma |
 | `catalog` | `formato.py` | Formato Cloudin de la carta: `extraer`, `leer_fuente`, `normalizar`, `importar` (aditivo), `exportar` |
-| `catalog` | `forms.py` | `ProductoForm`: el cliente edita foto, descripción, toppings y observación; nombre, precio y categoría solo el superusuario |
+| `catalog` | `forms.py` | `ProductoForm`: el dueño o el administrador cambian todo (nombre, precio, categoría, foto, descripción, adiciones, observación); cada cambio queda en el historial |
 | `catalog` | `management/commands/importar_menu.py` | Importar la carta desde consola |
-| `dining` | `models.py` | `Table` (número y token del QR) |
-| `orders` | `models.py` | `TableSession` (cuenta de la mesa, `propina`, `propina_medio`), `Order` (comanda: estado, mesero, `impresiones`), `OrderItem` (`opciones`), `TableDraft` (carrito compartido del QR) |
-| `billing` | `models.py` | `EmpresaFiscal`, `ResolucionNumeracion`, `ClienteFiscal`, `Impuesto`, `DocumentoFiscal`, `LogAuditoria` |
-| `billing` | `taxes.py` | Motor tributario: los precios de carta **incluyen** impuesto, se extrae la base |
-| `billing` | `services.py` | Flujo de facturar una cuenta cerrada; contingencia si el proveedor no responde |
-| `billing` | `providers/base.py` | Interfaz que debe cumplir cualquier proveedor tecnológico |
-| `billing` | `providers/factus.py` | Factus API v2: OAuth, armado de la factura, traducción de errores |
-| `billing` | `providers/simulado.py` | Proveedor falso para desarrollo (marca las facturas como simuladas) |
-| `billing` | `tests/test_factus.py` | Pruebas del adaptador, sin red |
-| `shifts` | `models.py` | `TurnoCaja`: apertura, cierre, `resumen` congelado, efectivo esperado, propinas pagadas |
-| `shifts` | `services.py` | `abrir_turno`, `cerrar_turno`, `turno_actual`, `exigir_turno`, `SinTurno`, `resumen_turno` |
-| `shifts` | `propinas.py` | Registrar la propina y repartirla por horas marcadas |
-| `shifts` | `context_processors.py` | El turno abierto disponible en todas las plantillas |
-| `staffing` | `models.py` | `Empleado` y `Turno` (jornada de una persona, marcación por código) |
-| `inventory` | `models.py` | Insumos, existencias, movimientos (kardex), recetas y subrecetas, proveedores, compras, conteos |
-| `inventory` | `services.py` | **Única puerta** para mover stock: entradas, salidas, costo promedio ponderado, `descontar_inventario` al facturar, reportes |
+| `business` | `models.py` | `RestaurantSettings` (marca, contacto, redes, servicios, `menu_version`) y `OpeningHours` (horario) |
+| `public_menu` | `views.py`, `serializers.py` | La carta pública `cloudin.menu/v1` (`/api/public/<slug>/menu/`): sin llave, CORS abierto, `ETag` |
+| `importer` | `services.py`, `semilla.py` | Importa la semilla `menu.seed.json` de un menú digital (`import_menu`) |
+| `dining` | `models.py` | `Table` (número, puestos, zona y token del QR) |
+| `dining` | `qr.py` | El enlace del QR de cada mesa (`enlace_de_mesa`: `menu_page?mesa=<token>`) y sus PNG, SVG y PDF |
+| `orders` | `models.py` | `TableSession` (la cuenta: abierta = mesa ocupada; `descuento`), `Order` (comanda: estado, origen, mesero, `impresiones`), `OrderItem` (`opciones`), `TableDraft` (carrito compartido del QR) y `NovedadCuenta` |
+| `orders` | `novedades.py` | **Única puerta** para anular, dar cortesía, registrar devoluciones y descuentos (motivo + autorización de admin). Deja `NovedadCuenta` |
 | `waiters` | `models.py` | `Mesero` (clave en hash + copia Fernet `clave_cifrada`) |
 | `waiters` | `views.py` | La app de la tablet: login propio, `api_mesas`, `api_menu`, `api_pedido` |
-| `orders` | `novedades.py` | **Única puerta** para anular, dar cortesía, registrar devoluciones y descuentos (motivo + autorización de admin). Deja `NovedadCuenta` |
-| `reservas` | `models.py` | `Cliente` (por teléfono), `AjustesReservas`, `ServicioReserva` (horarios «mesa» o «día»), `BloqueoFecha`, `Reserva` (estados `pending`→`confirmed`→`arrived`→`seated`→`completed`, o `cancelled`/`no_show`) |
-| `reservas` | `services.py` | El motor: calendario, horas libres, asignación de mesa, sugerencias, crear/confirmar/llegó/sentar/completar, WhatsApp e historial del cliente |
-| `reservas` | `forms.py` | Formularios del panel (ajustes, horarios, bloqueos, reserva por teléfono) |
-| `control` | `models.py` | `AlertaControl` (tabla `control_alert`), `AjustesControl` (sensibilidad), `Analisis` |
-| `control` | `detectores.py` | Un detector por tema; devuelven alertas como diccionarios con su **huella** |
-| `control` | `services.py` | `analizar` (guarda sin repetir), `fugas` (el Detector de fugas), `resumen_alertas` |
-| `control` | `recomendaciones.py` | Ranking de platos, ingeniería de menú, combos y las tarjetas de recomendación |
 | `tenants` | `models.py` → `AceptacionLegal` | Constancia de que un usuario aceptó términos y privacidad (por versión) |
 
 ### 4.4 `apps/api` — la API REST (`/api/v1/`)
 
 | Archivo | Qué hace |
 |---|---|
-| `views.py` | Casi todo: endpoints del QR (`menu/`, `tables/<token>/…`), del sitio web (`site/…`, con `X-API-Key`) y del panel (`staff/…`, con sesión) |
-| `mesa_views.py` | Mesa con QR: carta, **carrito compartido en el servidor**, estado del pedido, enviar |
-| `serializers.py` | Menú, mesas, pedidos y cuentas; valida `opciones` con `catalog.opciones.aplicar` |
-| `permissions.py` | `IsTenantStaff`: usuario del restaurante y, para métodos que escriben, **turno abierto** |
-| `analitica.py` | Datos del tablero de ventas |
-| `reservas_views.py` | API pública de reservas (X-API-Key, **sin** turno): configuración, días, horas, crear, detalle, cancelar |
-| `avisos.py` | `staff/avisos/` (contadores de la campana), anular/cortesía/devolución por línea y descuento de cuenta |
+| `views.py` | Endpoints del QR (`menu/`, `tables/<token>/…`), del sitio web (`site/…`, con `X-API-Key`) y del panel (`staff/…`, con sesión). `pedidos_del_menu_apagados` decide si el QR puede pedir |
+| `mesa_views.py` | Mesa con QR: **carrito compartido en el servidor**, estado de la mesa (con `recibe_pedidos`), aviso y enviar. Acepta líneas con los id de la carta |
+| `catalogo_views.py` | La carta v1 del panel por UUID (`staff/catalog/…`), ajustes del negocio, mesas y QR |
+| `serializers.py` | Menú, mesas, pedidos y cuentas; valida las líneas (`linea_desde_v1` y `catalog.opciones.aplicar`) |
+| `permissions.py` | `IsTenantStaff` (usuario del restaurante), `IsTenantAdminParaEscribir` y los permisos de la carta |
+| `limites.py` | Topes por IP de la API pública y `precio_seguro` para las líneas armadas en el sitio |
+| `avisos.py` | `staff/avisos/` (pedidos nuevos para la campana), anular/cortesía/devolución por línea y descuento de cuenta |
 | `urls.py` | Índice de todas las rutas de la API |
 
 ### 4.5 `apps/panel` — las pantallas del restaurante (`/panel/`)
 
 | Archivo | Pantallas |
 |---|---|
-| `views.py` | Decorador `panel_view`, inicio, mesas, detalle de mesa, cocina, mensajes, configuración, QR de mesas, ventas, facturación, cerrar y facturar, y las impresiones |
-| `turnos.py` | Abrir, cerrar, detalle e impresión del turno |
-| `propinas.py` | Sección de propinas y marcar un turno como entregado |
+| `views.py` | Decorador `panel_view` (plan, legal, soporte), Inicio, mesas, detalle de mesa, cocina, mensajes, configuración, QR de mesas e impresiones (comanda y precuenta) |
+| `duenio.py` | Las pantallas del dueño: Inicio del menú, bienvenida, Mi menú, producto, Personalizar, Códigos QR («Mesas y QR») y Cuenta |
 | `menu.py` | Producto nuevo, editar, eliminar e importar la carta del sitio |
 | `meseros.py` | Modo de servicio, cuentas de mesero y ver la clave de un mesero |
-| `inventario.py` | Todo el inventario: insumos, compras, proveedores, recetas, conteos y reportes |
-| `reservas.py` | Agenda, reserva nueva/detalle/acciones, clientes e historial, horarios y mesas (sin turno) |
-| `control.py` | Cloudin Control: detector de fugas, situaciones a revisar, analizar ahora, sensibilidad (sin turno) |
+| `seguridad.py` | Login con topes, recuperar contraseña y modo soporte del superusuario |
 | `legal.py` | Términos, privacidad, política de datos por restaurante y la pantalla de aceptar |
 | `templatetags/cloudin.py` | Filtro `pesos` (miles con punto) |
 | `urls.py` | El índice de todas las rutas del panel — **empieza a leer aquí** |
@@ -299,7 +293,7 @@ Las piezas que lo sostienen, en `apps/tenants/`:
 ### 4.6 `apps/master` — panel maestro (`/master/`)
 
 `views.py` y `forms.py`: alta de restaurantes (crea la base, la migra, genera la
-API key y el usuario admin con su contraseña), alta de empleados, ver y cambiar
+API key y el usuario admin con su contraseña), alta de usuarios del panel, ver y cambiar
 contraseñas, activar o desactivar un restaurante y rotar su API key. Solo
 superusuario.
 
@@ -308,36 +302,60 @@ superusuario.
 | Archivo | Qué es |
 |---|---|
 | `templates/base.html` | **El sistema de diseño**: tokens de color, `.card`, `.btn`, `.pill`, `.tabla-wrap`, `.subnav`, `.barra`, y los ayudantes de impresión (`botonImprimir`, `marcarImpreso`) |
-| `templates/panel/_base.html` | Cáscara del panel: barra lateral, estado del turno, contador de mensajes |
+| `templates/panel/_base.html` | Cáscara del panel: barra lateral, contador de mensajes y campana de pedidos nuevos |
 | `templates/panel/_form_page.html` | Tarjeta centrada para pantallas de alta y edición |
 | `templates/panel/_auth_base.html` | Login y recuperación de contraseña |
-| `templates/panel/print_order.html`, `print_bill.html`, `print_factura.html`, `print_turno.html` | Tirillas de 80 mm: comanda, precuenta, **factura legal con QR y CUFE**, informe Z |
+| `templates/panel/print_order.html`, `print_bill.html` | Tirillas de 80 mm: comanda y precuenta («Documento no válido como factura») |
+| `templates/panel/duenio/*.html` | Pantallas del dueño: inicio, mi menú, producto, personalizar, mesas y QR, cuenta |
 | `templates/mesero/app.html` | La app del mesero completa (HTML, CSS y JS en un archivo) |
 | `templates/master/*.html` | Panel maestro |
 | `templates/legal/*.html` | Términos, privacidad, datos del restaurante y aceptación |
-| `templates/panel/reservas*.html`, `reserva_*.html`, `cliente*.html`, `_reservas_nav.html` | Cloudin Reservas |
-| `templates/panel/control*.html` | Cloudin Control |
-| `templates/panel/_icono_reco.html` | Íconos de las tarjetas de recomendación |
 | `templates/admin/base_site.html` | Django Admin reestilizado con la paleta |
+
+### 4.8 Apps retiradas
+
+`billing` (facturación con Factus), `shifts` (turno de caja), `inventory`,
+`reservas`, `staffing` (reloj de empleados) y `control` (Cloudin Control) se
+quitaron el 26 de septiembre de 2026, junto con las propinas y la analítica de
+ventas. De cada una quedan:
+
+- `apps.py` (su nombre dice «(retirada)»), un `models.py` mínimo (en `reservas`,
+  `nuevo_codigo()`, porque su migración 0001 lo usa como valor por defecto) y sus
+  **migraciones**. La última, `…_retirar_modulos`, borra sus tablas; también hay
+  `…_retirar_modulos` en `orders`, `dining` y `waiters` para los campos que
+  apuntaban a ellas (turno, reserva, propina, empleado, `reservable`).
+- Siguen al final de `INSTALLED_APPS` y en `TENANT_APPS`: así `migrate` y
+  `migrate_tenants` pueden correr esas migraciones en las bases que ya existen.
+
+Reglas:
+
+- **No les agregues código** ni las importes desde otras apps.
+- Cuando todas las bases (tu PC y el servidor) hayan migrado, se pueden borrar del
+  todo: la carpeta, su entrada en `INSTALLED_APPS` y `TENANT_APPS`, y las
+  dependencias que otras migraciones (`orders`, `waiters`, `dining`…) tienen hacia
+  ellas. Es un cambio delicado: hazlo aparte y pruébalo con una base recién creada y
+  con una copia de una base vieja.
+- Los textos legales (`templates/legal/`) todavía las mencionan: los actualiza el
+  dueño con su abogado (y se sube `LEGAL_VERSION`).
 
 ---
 
 ## 5. Reglas del proyecto (no las cambies sin permiso)
 
-1. **Sin turno abierto no funciona nada.** Es un pedido explícito del dueño.
-   `panel_view(requiere_turno=True)` redirige a `/panel/turnos/`; la API del panel
-   responde 403 y el QR, el sitio y la app del mesero responden **409 con
-   `codigo: "sin_turno"`**. Exentas: las pantallas de turnos y `documento`. El
-   turno solo lo abre el administrador a mano.
+1. **No hay turno de caja: los pedidos entran a cualquier hora.** (Antes era «sin
+   turno abierto no funciona nada»; el dueño lo cambió el 26-09-2026.) La mesa se
+   **ocupa sola** con el primer pedido (se abre su `TableSession`) y queda **libre**
+   cuando el restaurante cierra la cuenta; Mensajes, Cocina y Mesas muestran los
+   pedidos de las cuentas abiertas. No hay reservas.
 2. **El precio lo calcula siempre el servidor**, nunca el cliente ni la tablet.
-   Los pedidos viajan con `product_id` + `opciones` (por posición) y
+   Los pedidos viajan con los id de la carta (`product` + `variant` + `options`, la
+   forma del menú digital) o con `product_id` + `opciones` (por posición), y
    `catalog/opciones.py` arma el nombre y el precio.
-3. **La carta: el panel manda.** El sitio publica `cloudin-menu.json`, el panel lo
-   importa de forma **aditiva** (nunca pisa, nunca borra, nunca revive eliminados)
-   y el sitio lee `GET /api/v1/menu/?formato=cloudin`.
-4. **El stock nunca se edita a mano.** Todo entra como `Movimiento` por
-   `inventory/services.py`, con autor, costo del momento y motivo. Costeo por
-   promedio ponderado.
+3. **La carta: el panel manda.** Los menús digitales leen
+   `GET /api/public/<slug>/menu/`; un sitio que ya tiene su carta la publica en
+   `cloudin-menu.json`, el panel la importa de forma **aditiva** (nunca pisa, nunca
+   borra, nunca revive eliminados) y el sitio lee `GET /api/v1/menu/?formato=cloudin`.
+4. *(Retirada con el inventario.)*
 5. **Borrado suave.** Un producto vendido no se borra: `eliminado=True`. Una mesa
    con historial se desactiva. Nunca pierdas historial.
 6. **Dinero en plantillas con el filtro `pesos`** (`{% load cloudin %}`). Números
@@ -354,16 +372,15 @@ superusuario.
 10. **Las contraseñas de los clientes se pueden ver.** Hash de Django para entrar,
     más una copia cifrada con Fernet para mostrarla (`CREDENTIAL_KEY` en el
     `.env`). Es un requisito del dueño: **no propongas volver a solo-hash.**
-11. **Propina fuera de la factura** (Ley 1935 de 2018), en bolsa común repartida
-    por horas marcadas en el reloj.
+11. *(Retirada con las propinas.)*
 12. **Nada de datos de restaurantes de ejemplo** salvo que el dueño lo pida.
-13. **Nunca la palabra «robo»** (ni «hurto», ni acusaciones) en Cloudin Control: se
-    dice «diferencia», «posible fuga», «situación a revisar», «variación detectada».
+13. **Nunca la palabra «robo»** (ni «hurto», ni acusaciones) en lo que ve el
+    restaurante: se dice «diferencia», «situación a revisar». (Nació con Cloudin
+    Control, que se retiró; sigue valiendo para las novedades.)
 14. **Anular, cortesía, devolución y descuento solo por `apps/orders/novedades.py`**:
     motivo obligatorio y autorización (admin directo; cajero con la clave de un
-    admin). Lo no cobrado vale 0, no se factura y queda en `NovedadCuenta`.
-15. **Las reservas no piden turno** (ni la API pública ni la agenda del panel);
-    sentar a alguien sí, porque abre la cuenta.
+    admin). Lo no cobrado vale 0 y queda en `NovedadCuenta`.
+15. *(Retirada con Cloudin Reservas.)*
 16. **Términos y privacidad se aceptan una vez por versión** (`LEGAL_VERSION`); sin
     eso `panel_view` manda a `/legal/aceptar/`. Si cambias los textos de fondo,
     sube la versión.
@@ -380,16 +397,26 @@ superusuario.
       contraseña, se ve la franja amarilla y vence (1 h sin uso, 8 h máximo).
     - La API pública tiene topes por IP (`apps/api/limites.py`), y una línea sin
       `product_id` nunca se cobra por debajo del precio del panel (`precio_seguro`).
+    - La llave `ck_…` va dentro del JavaScript del menú digital: es pública. Lo que
+      protege una mesa es el **token** de su QR. Las rutas `/api/v1/site/…` piden
+      por número de mesa: nunca las uses en una página pública.
     - Escribir en carta, mesas y categorías por la API es solo del admin
       (`IsTenantAdminParaEscribir`); el precio solo se cambia en el panel.
     - Redirecciones con `volver_seguro`. Cabeceras CSP y no-store en
       `config/seguridad.py`. En producción, `settings.py` exige `SECRET_KEY`,
       `ALLOWED_HOSTS` y `CREDENTIAL_KEY`.
-19. **La caja arranca con mínimo $10.000** (`BASE_MINIMA` en `apps/shifts/services.py`).
-20. **Plano de mesas público** (`GET /api/v1/reservas/mesas/`, `rs.plano_de_mesas`):
-    solo número, zona, puestos y estado. Nunca nombres ni datos de la reserva. Tope
-    de 180 consultas cada 10 min por IP. La mesa que pide el cliente es una
-    preferencia (`rs.mesa_pedida`): si ya no está libre, Cloudin asigna otra.
+19. *(Retirada con el turno de caja.)*
+20. *(Retirada con Cloudin Reservas.)*
+21. **Cloudin no sirve un menú propio.** El menú de cada restaurante es un sitio
+    aparte (Cloudflare Pages). Su dirección va en `Tenant.menu_page`: con ella se
+    arman los QR (`menu_page?mesa=<token>`) y se autoriza por CORS, junto con
+    `site_url` y `allowed_origins`. Guía: `GUIA-MENU-DIGITAL.md`.
+22. **Solo el plan «Cloudin completo» recibe pedidos del menú digital.** Con el plan
+    «Menú digital» el QR responde `403 sin_pedidos` y el estado de la mesa trae
+    `recibe_pedidos: false` (lo mismo en modo «solo meseros», `403 solo_meseros`).
+    La regla vive en `Tenant.recibe_pedidos_del_menu`.
+23. **Las apps retiradas no se tocan** (4.8): no les agregues código ni las borres
+    sin migrar antes todas las bases.
 
 ---
 
@@ -397,14 +424,14 @@ superusuario.
 
 ### Cambiar algo de una pantalla del panel
 1. Busca la ruta en `apps/panel/urls.py`.
-2. Esa ruta apunta a una función en `views.py`, `turnos.py`, `menu.py`,
-   `meseros.py`, `propinas.py` o `inventario.py`.
+2. Esa ruta apunta a una función en `views.py`, `duenio.py`, `menu.py`,
+   `meseros.py`, `seguridad.py` o `legal.py`.
 3. La función renderiza una plantilla de `templates/panel/`.
 4. Si el dato no existe, míralo en el modelo y pásalo por el contexto. No calcules
    cosas dentro de la plantilla.
 
 ### Agregar un campo a un modelo del restaurante
-1. Edita el `models.py` de la app (`catalog`, `orders`, `inventory`…).
+1. Edita el `models.py` de la app (`catalog`, `orders`, `dining`…).
 2. `makemigrations <app>` → `migrate` → **`migrate_tenants`**.
 3. Si debe salir en la API, agrégalo a `apps/api/serializers.py`.
 4. Si debe verse en el panel, al formulario de esa app y a la plantilla.
@@ -412,11 +439,13 @@ superusuario.
 ### Agregar un endpoint a la API
 1. Escribe la vista en `apps/api/views.py`, o en `mesa_views.py` si cuelga del
    token de la mesa.
-2. Regístrala en `apps/api/urls.py` respetando el prefijo: `menu/` y `tables/` son
-   del QR, `site/` del sitio web, `staff/` del panel.
-3. Si escribe datos, **exige turno abierto**: `IsTenantStaff` para el panel, o
-   devuelve 409 `sin_turno` con el ayudante que ya existe para público y sitio.
-4. Documenta el endpoint en `INTEGRACION-SITIO-WEB.md` si lo va a usar un sitio.
+2. Regístrala en `apps/api/urls.py` respetando el prefijo: `menu/`, `tables/` y
+   `mesa/` son del QR, `site/` del sitio web, `staff/` del panel.
+3. Si es pública, ponle tope por IP con `permitido` (`apps/api/limites.py`); si crea
+   pedidos desde el QR, respeta `pedidos_del_menu_apagados`. Si es del panel,
+   `IsTenantStaff` (o `IsTenantAdminParaEscribir` si escribe la carta o las mesas).
+4. Documenta el endpoint en `GUIA-MENU-DIGITAL.md` si lo usa el menú digital, o en
+   `INTEGRACION-SITIO-WEB.md` si lo usa un sitio o una tablet.
 
 ### Tocar la app del mesero
 Todo vive en `apps/waiters/views.py` (los endpoints `api_*`) y
@@ -424,16 +453,21 @@ Todo vive en `apps/waiters/views.py` (los endpoints `api_*`) y
 atados al slug del restaurante y a una huella de la contraseña, para que cambiar
 la clave saque al mesero de inmediato.
 
-### Tocar facturación
-Nunca escribas HTTP suelto contra la DIAN. El flujo es
-`panel/views.py` → `billing/services.py` → `billing/providers/<proveedor>.py`.
-Con un proveedor real **Cloudin no reserva número**: lo asigna el proveedor al
-validar. Un rechazo de la DIAN hay que borrarlo en Factus o bloquea las
-siguientes.
+### Tocar el menú digital o el pedido desde la mesa
+- La carta pública: `apps/public_menu/serializers.py`. Es un contrato
+  (`cloudin.menu/v1`): puedes **agregar** campos, nunca quitar ni cambiar los que hay,
+  porque hay menús publicados que los leen.
+- El carrito y el envío: `apps/api/mesa_views.py`; la traducción de las líneas:
+  `apps/catalog/legacy.py`; el precio: `apps/catalog/opciones.py`.
+- La implementación de referencia: `client/example/carrito.js`. Si cambias la API,
+  actualiza `carrito.js`, `GUIA-MENU-DIGITAL.md` y
+  `tests/test_pedidos_menu_digital.py` en el mismo cambio.
+- El runtime (`static/cloudin-menu.v1.js`) se edita en `static/src/` y se regenera
+  con `python manage.py build_runtime` (tope de 8 KB).
 
-### Tocar inventario
-Toda entrada o salida pasa por `inventory/services.py`. Ninguna vista escribe
-`Existencia.cantidad` ni `Insumo.costo_promedio` directamente.
+### Si te piden volver a facturar, llevar inventario o tomar reservas
+Esas apps se retiraron (4.8). No las revivas en su lugar: es una decisión del dueño
+y va como módulo nuevo, con su propio diseño, sus migraciones y sus pruebas.
 
 ### Crear un módulo nuevo
 1. `apps/<nombre>/` con `apps.py`, `models.py` y lo que necesite.
@@ -448,36 +482,32 @@ Toda entrada o salida pasa por `inventory/services.py`. Ninguna vista escribe
 
 ## 7. Cómo probar
 
-No hay suite de pruebas general; hoy solo existe `apps/billing/tests/test_factus.py`.
+Hay una suite de **pytest** en `tests/` (con `conftest.py` en la raíz). Crea bases
+temporales: no toca las bases reales.
 
 ```bash
-C:\Users\<usuario>\.venvs\cloudin\Scripts\python manage.py test apps.billing.tests.test_factus
+C:\Users\<usuario>\.venvs\cloudin\Scripts\python -m pytest
 ```
 
 ```bash
-C:\Users\<usuario>\.venvs\cloudin\Scripts\python manage.py factus_diagnostico
+C:\Users\<usuario>\.venvs\cloudin\Scripts\ruff check .
 ```
 
-```bash
-C:\Users\<usuario>\.venvs\cloudin\Scripts\python manage.py importar_menu --tenant <slug> --revisar
-```
+- Instala antes `requirements-dev.txt` (pytest, pytest-django, ruff, Playwright).
+- Necesita una `CREDENTIAL_KEY` válida en el `.env` (la prueba de invitaciones la usa).
+- Las pruebas de navegador (`tests/test_panel_navegador.py`) usan Playwright con
+  Edge; si no está, usan el Chromium de la variable `CLOUDIN_CHROMIUM`; si no hay
+  ninguno, se saltan.
+- `tests/test_pedidos_menu_digital.py` cubre el menú digital: carta pública,
+  carrito compartido, pedido directo, CORS, plan y modo de servicio, y el comando
+  de QR.
+- Antes de subir: `python manage.py makemigrations --check --dry-run` (no debe
+  quedar ninguna migración sin crear).
 
-```bash
-C:\Users\<usuario>\.venvs\cloudin\Scripts\python manage.py control_analizar --todos
-```
-
-Además de las pruebas de Factus (incluye el descuento por línea), los cambios grandes
-se verificaron con scripts de punta a punta que corren dentro de una transacción y
-la deshacen al final (no dejan rastro en los datos reales): motor de reservas (21
-comprobaciones), anulaciones/cortesías/descuentos con autorización + factura +
-detector de fugas (18) y recorrido de todas las pantallas con la aceptación legal.
-Si escribes uno, sigue ese patrón: `transaction.atomic(using=...)` en la base de
-control y en la del restaurante, y `set_rollback(True)` al final.
-
-Para verificar un cambio a mano, la ruta corta es: abrir turno → crear una mesa →
-tomar un pedido (panel, QR o app del mesero) → cerrar y facturar → cerrar turno y
-revisar el informe. **Si algo "no deja hacer nada", casi siempre es que no hay
-turno abierto.** Es el comportamiento correcto, no un error.
+Para verificar un cambio a mano, la ruta corta es: crear las mesas (Códigos QR) →
+abrir el menú de ejemplo (`client/example/`) con `?mesa=<token>` → pedir → verlo en
+Mensajes y Cocina con la mesa ocupada → cerrar la cuenta → la mesa queda libre.
+Los pasos exactos están en `GUIA-MENU-DIGITAL.md` §11.
 
 Cuando escribas un script de prueba, ponlo fuera del proyecto, úsalo con
 `tenant_context` y prefiere transacciones con rollback para no ensuciar los datos
@@ -508,35 +538,44 @@ reales del restaurante del dueño.
   propósito para correr un comando en el servidor, y cierra la terminal después.
 - **El disco del servidor se borra** cada vez que el contenedor se duerme: nada
   que deba durar se guarda en archivos locales (fotos → R2, datos → Postgres).
-- **La caché de Django vive en la memoria del único contenedor** (topes de login,
-  llaves anti-duplicado del mesero, token de Factus). No subas `max_instances` ni
-  los `--workers` de gunicorn sin mover antes esa caché a algo compartido.
+- **La caché de Django vive en la memoria del único contenedor** (topes de login y
+  de pedidos, llaves anti-duplicado del mesero, carta pública armada). No subas
+  `max_instances` ni los `--workers` de gunicorn sin mover antes esa caché a algo
+  compartido.
+- **Apps retiradas en `INSTALLED_APPS`.** Parecen código muerto, pero sin ellas
+  Django no puede migrar las bases viejas (4.8).
+- **Probar un menú digital contra el Cloudin local:** sirve la página también desde
+  `localhost` o `127.0.0.1`. Chrome no deja que una página publicada en internet le
+  hable a `localhost`, y los pedidos solo salen de orígenes registrados (`menu_page`
+  o `allowed_origins`, con el puerto exacto).
 
 ---
 
 ## 9. Estado actual y qué sigue
 
 **Funcionando y verificado:** multi-tenancy, panel maestro, panel del restaurante
-completo (inicio, mesas, cocina, mensajes, ventas, configuración) con tema claro y
-oscuro, Cloudin Reservas (sitio web + panel + historial del cliente), Cloudin
-Control con detector de fugas, recomendaciones de ventas, anulaciones/cortesías/
-descuentos con autorización, aceptación de términos y privacidad, QR por mesa con
-carrito compartido, app de meseros, carta conectada al sitio web, facturación
-electrónica con Factus (primera factura real aceptada por la DIAN en sandbox el 14
-de septiembre de 2026), turno de caja con informe Z, propinas, inventario
-completo, reloj de empleados y recuperación de contraseña por correo.
+(Inicio, Mesas, Mensajes, Cocina, Mi menú, Personalizar, Códigos QR, Meseros,
+Configuración) con tema claro y oscuro, carta pública `cloudin.menu/v1` con el
+runtime de los menús, pedidos desde el menú digital con carrito compartido por mesa
+(probado de punta a punta en el navegador con la carta real de Cultura Brisket),
+mesas que se ocupan solas y se liberan al cerrar la cuenta, app de meseros,
+anulaciones/cortesías/devoluciones/descuentos con autorización, precuenta impresa,
+aceptación de términos y privacidad, recuperación de contraseña por correo, y el
+montaje para Cloudflare Containers.
 
 **Lo que falta, en orden de importancia:**
 
-1. **Desplegar el panel en un servidor público.** Es lo único que impide operar de
-   verdad. Cloudflare Pages no sirve para Django; el código ya quedó listo para
-   **Cloudflare Containers** (Worker + contenedor, Postgres por restaurante con
-   `DATABASE_URL`, fotos en R2, WhiteNoise, `preparar_servidor` al arrancar). Falta
-   crear las cuentas y cargar los secretos: `DESPLIEGUE-CLOUDFLARE.md`.
-2. Habilitación de Factus en producción (hoy sandbox).
-3. Nómina electrónica con las horas de `staffing`.
-4. Notas crédito y débito, y exportes contables.
-5. Traslados entre bodegas y órdenes de compra sugeridas por stock mínimo.
+1. **Desplegar el panel en un servidor público.** Cloudflare Pages no sirve para
+   Django; el código ya quedó listo para **Cloudflare Containers** (Worker +
+   contenedor, Postgres por restaurante con `DATABASE_URL`, fotos en R2, WhiteNoise,
+   `preparar_servidor` al arrancar). Falta crear las cuentas y cargar los secretos:
+   `DESPLIEGUE-CLOUDFLARE.md`.
+2. **El primer menú digital en Cloudflare Pages** con pedidos por QR:
+   `GUIA-MENU-DIGITAL.md`.
+3. **Actualizar los textos legales** (todavía describen los módulos retirados) con
+   el abogado, y subir `LEGAL_VERSION`.
+4. Un interruptor para **pausar los pedidos** fuera de horario (hoy entran siempre).
+5. Rotar el token de una mesa desde el panel (hoy solo por consola).
 6. Impresión automática por red (necesita un agente en la red local del
    restaurante).
 

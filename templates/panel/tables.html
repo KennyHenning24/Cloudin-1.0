@@ -3,7 +3,6 @@
 {% block titulo %}Mesas{% endblock %}
 {% block subtitulo %}<p class="sub" id="reloj">Actualizando…</p>{% endblock %}
 {% block acciones %}
-  <a class="btn ghost" href="{% url 'panel:reservas' %}">Reservas de hoy</a>
   <a class="btn ghost" href="{% url 'panel:mensajes' %}">Mensajes</a>
 {% endblock %}
 
@@ -19,12 +18,10 @@
     transition:transform .35s var(--ease),box-shadow .35s var(--ease),border-color .25s}
   .mesa-c:hover{transform:translateY(-4px);box-shadow:var(--shadow-lg)}
   .mesa-c.ocupada{border-color:color-mix(in srgb,var(--durazno) 55%,var(--line));background:linear-gradient(160deg,var(--durazno-bg),transparent 60%),var(--surface)}
-  .mesa-c.reservada{border-color:color-mix(in srgb,var(--lavanda) 55%,var(--line));background:linear-gradient(160deg,var(--lavanda-bg),transparent 60%),var(--surface)}
   .mesa-c .cab-m{display:flex;align-items:center;gap:10px}
   .mesa-c .num{font-size:24px;font-weight:800;letter-spacing:-.03em}
   .mesa-c .plano{color:var(--menta)}
   .mesa-c.ocupada .plano{color:var(--durazno)}
-  .mesa-c.reservada .plano{color:var(--lavanda)}
   .mesa-c .total{font-size:20px;font-weight:800;margin-top:auto}
   .mesa-c .quien{font-size:13.5px;color:var(--text-2);font-weight:600}
   .mesa-c .aviso-m{font-size:12.5px;font-weight:700;padding:5px 10px;border-radius:10px;align-self:flex-start}
@@ -44,8 +41,6 @@
     <div class="valor" id="k-ventas">—</div><div class="pie">suma de las cuentas abiertas</div></div>
   <div class="kpi"><div class="cab"><span class="chip-ico amarillo"><svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span>Por atender</div>
     <div class="valor" id="k-pendientes">—</div><div class="pie">pedidos sin servir</div></div>
-  <div class="kpi"><div class="cab"><span class="chip-ico lavanda"><svg class="ico" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M8 3v4M16 3v4M3 10h18"/></svg></span>Reservadas hoy</div>
-    <div class="valor" id="k-reservadas">—</div><div class="pie">mesas con reserva pendiente</div></div>
 </div>
 
 <div class="bloque">
@@ -54,7 +49,6 @@
     <div class="leyenda-m fin">
       <span><i style="background:var(--menta)"></i>Libre</span>
       <span><i style="background:var(--durazno)"></i>Ocupada</span>
-      <span><i style="background:var(--lavanda)"></i>Reservada</span>
     </div>
   </div>
   <div id="mesas"><div class="salon">{% for i in "123456" %}<div class="mesa-c cargando"></div>{% endfor %}</div></div>
@@ -81,16 +75,16 @@ function planoMesa(puestos) {
 }
 const esc = (t) => String(t ?? "").replace(/[&<>"']/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 
+/* Una mesa se ocupa sola con el primer pedido (menú digital, mesero o panel) y
+   queda libre cuando se cierra su cuenta. */
 function tarjeta(m) {
-  const r = m.proxima_reserva;
-  const clase = m.is_occupied ? "ocupada" : r ? "reservada" : "";
+  const clase = m.is_occupied ? "ocupada" : "";
   return `<a class="mesa-c ${clase} ${m.pending_orders ? "urgente" : ""}" href="/panel/mesa/${m.id}/">
     <div class="cab-m">${planoMesa(m.seats)}<div><div class="num">Mesa ${m.number}</div>
       <div class="dim small">${m.seats} puestos</div></div></div>
     ${m.is_occupied ? `<div class="quien">${esc(m.session_customer) || "Cuenta abierta"}</div>
         <div class="total">${money(m.session_total)}</div>` : ""}
-    ${!m.is_occupied && r ? `<div class="aviso-m pill lavanda">${r.llego ? "Llegó" : "Reservada " + r.hora} · ${esc(r.nombre)} (${r.personas})</div>` : ""}
-    ${!m.is_occupied && !r ? `<div class="aviso-m pill menta" style="margin-top:auto">Libre</div>` : ""}
+    ${!m.is_occupied ? `<div class="aviso-m pill menta" style="margin-top:auto">Libre</div>` : ""}
     ${m.pending_orders ? `<div class="aviso-m pill amarillo">${m.pending_orders} pedido${m.pending_orders > 1 ? "s" : ""} sin atender</div>` : ""}
   </a>`;
 }
@@ -106,7 +100,6 @@ async function refrescar() {
     texto("k-ocupadas-pie", `de ${activas.length} en el local`);
     texto("k-ventas", money(activas.reduce((s, m) => s + Number(m.session_total || 0), 0)));
     texto("k-pendientes", activas.reduce((s, m) => s + (m.pending_orders || 0), 0));
-    texto("k-reservadas", activas.filter(m => m.proxima_reserva && !m.is_occupied).length);
 
     const zonas = {};
     activas.forEach(m => { (zonas[m.zona || "Salón"] = zonas[m.zona || "Salón"] || []).push(m); });

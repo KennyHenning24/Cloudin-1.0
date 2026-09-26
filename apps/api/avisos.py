@@ -1,6 +1,6 @@
 """Endpoints del panel para los avisos de la barra lateral y las novedades de cuenta.
 
-    GET  /api/v1/staff/avisos/                      contadores: mensajes, reservas, alertas
+    GET  /api/v1/staff/avisos/                      pedidos nuevos (el contador de Mensajes)
     POST /api/v1/staff/items/<id>/novedad/          anular, cortesía o devolución de una línea
     POST /api/v1/staff/sessions/<id>/descuento/     descuento sobre la cuenta
 """
@@ -14,7 +14,6 @@ from rest_framework.response import Response
 
 from apps.orders import novedades as nv
 from apps.orders.models import Order, OrderItem, TableSession
-from apps.shifts.services import turno_actual
 
 from .permissions import IsTenantStaff
 from .serializers import TableSessionSerializer
@@ -27,39 +26,17 @@ def _nombre(user):
 @api_view(["GET"])
 @permission_classes([IsTenantStaff])
 def staff_avisos(request):
-    """Todo lo que la barra lateral cuenta, en una sola consulta cada pocos segundos."""
-    from apps.control.models import AlertaControl
-    from apps.reservas.models import Reserva
-    from apps.reservas.services import atrasadas, pendientes_de_recordar
-
-    # Mensajes: los pedidos que llegaron desde la última vez que se abrió la bandeja.
+    """El contador de la barra lateral, en una consulta liviana cada pocos segundos:
+    los pedidos de las mesas abiertas que llegaron desde la última vez que esta
+    persona abrió Mensajes (`?leer=1` lo deja en cero)."""
     clave = f"mensajes_leidos:{request.tenant.slug}"
     if request.GET.get("leer") == "1":
         request.session[clave] = timezone.now().isoformat()
     leido_hasta = request.session.get(clave)
-    turno = turno_actual()
-    mensajes = 0
-    if turno is not None:
-        base = Order.objects.filter(session__turno=turno)
-        mensajes = (base.filter(created_at__gt=leido_hasta) if leido_hasta
-                    else base.filter(seen_at__isnull=True)).count()
-
-    if request.GET.get("reservas_vistas") == "1":
-        Reserva.objects.filter(vista_en__isnull=True).update(vista_en=timezone.now())
-    nuevas = Reserva.objects.filter(vista_en__isnull=True).exclude(estado=Reserva.CANCELLED)
-    ultima = nuevas.order_by("-creada_en").first()
-
-    return Response({
-        "mensajes": mensajes,
-        "reservas_nuevas": nuevas.count(),
-        "ultima_reserva": ({"codigo": ultima.codigo, "nombre": ultima.nombre, "cuando": ultima.cuando_texto(),
-                            "personas": ultima.personas} if ultima else None),
-        "recordatorios": len(pendientes_de_recordar()),
-        "atrasadas": len(atrasadas()),
-        "alertas": AlertaControl.objects.filter(
-            estado=AlertaControl.NEW, severidad__in=[AlertaControl.WARNING, AlertaControl.CRITICAL]).count(),
-        "turno_abierto": turno is not None,
-    })
+    base = Order.objects.filter(session__status=TableSession.STATUS_OPEN)
+    mensajes = (base.filter(created_at__gt=leido_hasta) if leido_hasta
+                else base.filter(seen_at__isnull=True)).count()
+    return Response({"mensajes": mensajes})
 
 
 def _autorizado(request):

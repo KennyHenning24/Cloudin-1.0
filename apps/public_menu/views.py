@@ -2,7 +2,7 @@
 
 Cloudin no crea ni sirve menús: cada restaurante tiene el suyo, diseñado aparte (su
 sitio en Cloudflare Pages), y dentro va el runtime `cloudin-menu.v1.js`, que lee esta
-API. Guía para conectar un menú: docs/CONECTAR-TU-MENU.md.
+API. Guía para conectar un menú y recibir pedidos: GUIA-MENU-DIGITAL.md.
 
 Rutas (el restaurante va en la ruta; el subdominio funciona igual si hay dominio):
     GET /api/public/<slug>/menu/[?table=<token|número>]

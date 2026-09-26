@@ -5,7 +5,6 @@ from decimal import Decimal
 
 import pytest
 from django.core.management import call_command
-from django.utils.html import escapejs
 
 from apps.business.models import OpeningHours, RestaurantSettings
 from apps.catalog.models import Category, Menu, ModifierGroup, ModifierOption, Product, ProductModifierGroup, Tag
@@ -191,32 +190,19 @@ def test_horario_de_hoy_y_abierto():
 
 
 @pytest.mark.django_db
-def test_menu_de_respaldo(client, restaurante):
-    r = client.get(f"/m/{restaurante.slug}/", {"mesa": "5"})
-    assert r.status_code == 200
-    html = r.content.decode()
-    # Pre-renderizado con la misma estructura que las plantillas del runtime.
-    assert 'data-cloudin-key="hamburguesa-clasica"' in html and 'id="cat-hamburguesas"' in html
-    assert "Desde $ 24.000" in html and "$ 32.000" in html
-    assert 'data-available="false"' in html and "Agotado" in html
-    for molde in ("category-link", "category", "product", "variant", "tag"):
-        assert f'data-cloudin-template="{molde}"' in html
-    # La configuración va escapada para JavaScript (escapejs). Esta página la sirve el
-    # mismo Cloudin: la API y el runtime van con rutas relativas (la CSP connect-src 'self'
-    # funciona en cualquier dominio).
-    assert escapejs("/api/public/la-esquina/menu/") in html
-    assert '<script src="/static/cloudin-menu.v1.js" defer>' in html
-    # Fuera del panel no hay vista previa.
-    assert "cloudin-vista-base" not in html
-    assert "https://wa.me/573001234567" in html
-    assert "Mesa" in html
-    assert "#B3261E" in html  # colores del restaurante, no los de Cloudin
+def test_cloudin_no_sirve_un_menu_propio(client, restaurante):
+    """El menú digital lo construye cada restaurante aparte (su sitio, p. ej. en
+    Cloudflare Pages) y lee la API; Cloudin no tiene una página de menú."""
+    assert client.get(f"/m/{restaurante.slug}/", {"mesa": "5"}).status_code == 404
 
 
 @pytest.mark.django_db
-def test_raiz_por_subdominio_muestra_el_menu(client, restaurante):
-    assert client.get("/", HTTP_HOST="la-esquina.localhost").status_code == 200
-    assert client.get("/").status_code == 302
+def test_raiz_por_subdominio_lleva_a_la_pagina_del_menu(client, restaurante):
+    restaurante.menu_page = "https://la-esquina.pages.dev/"
+    restaurante.save()
+    r = client.get("/", HTTP_HOST="la-esquina.localhost")
+    assert r.status_code == 302 and r.url == "https://la-esquina.pages.dev/"
+    assert client.get("/").status_code == 302  # sin restaurante: al panel
 
 
 def test_runtime_minificado_al_dia_y_bajo_8kb():

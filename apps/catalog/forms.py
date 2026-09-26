@@ -14,8 +14,8 @@ class ProductoForm(forms.ModelForm):
     """Alta y edición de un producto desde el panel.
 
     El dueño o el administrador del restaurante cambian todo: nombre, precio,
-    categoría, foto, descripción, toppings y observación. Las comandas y facturas
-    ya emitidas guardan su propio precio, y cada cambio queda en el historial.
+    categoría, foto, descripción, toppings y observación. Las comandas ya
+    enviadas guardan su propio precio, y cada cambio queda en el historial.
     """
 
     opciones_json = forms.CharField(widget=forms.HiddenInput, required=False)
@@ -44,7 +44,6 @@ class ProductoForm(forms.ModelForm):
         # Los tamaños no van aquí: este formulario solo edita las adiciones.
         iniciales = opciones_legacy(self.instance, incluir_variantes=False) if self.instance.pk else []
         self.fields["opciones_json"].initial = json.dumps(iniciales, ensure_ascii=False)
-        self.bloqueados = []
 
     def clean_imagen(self):
         foto = self.cleaned_data.get("imagen")

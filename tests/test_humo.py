@@ -13,21 +13,13 @@ from apps.catalog.models import Category, Product
 from apps.dining.models import Table
 
 # Rutas del panel que solo aceptan POST o que no son pantallas.
-SOLO_POST = {
-    "logout", "soporte-salir", "entrar-como", "turno-abrir", "turno-cerrar", "control-analizar",
-    "empleado-marcar",
-}
+SOLO_POST = {"logout", "soporte-salir", "entrar-como"}
 # Solo existen con DEBUG=True (tienen su propia prueba en test_diseno.py).
 SOLO_DEBUG = {"design-system"}
-# Pantallas principales: deben responder 200, no una redirección. («Nueva compra»
-# redirige a crear el proveedor mientras no haya uno: es lo esperado.)
+# Pantallas principales: deben responder 200, no una redirección.
 PRINCIPALES = {
     "inicio", "tables", "kitchen", "mensajes", "configuracion", "mesas-qr", "mi-menu", "carta-producto-nuevo",
-    "menu-importar", "ventas", "turnos", "reservas", "reserva-nueva", "clientes", "reservas-config",
-    "control", "control-ajustes", "propinas", "empleados", "empleado-nuevo", "meseros", "mesero-nuevo",
-    "inventario", "insumos", "insumo-nuevo", "compras", "proveedores",
-    "proveedor-nuevo", "recetas", "subreceta-nueva", "conteos", "inventario-reportes",
-    "inventario-maestros", "facturacion", "personalizar", "qr", "cuenta", "bienvenida", "manifest", "sw",
+    "menu-importar", "meseros", "mesero-nuevo", "personalizar", "qr", "cuenta", "bienvenida", "manifest", "sw",
     "sin-conexion",
 }
 
@@ -44,10 +36,9 @@ def _rutas_sin_parametros(espacio):
 
 
 @pytest.fixture
-def restaurante_listo(crear_restaurante, crear_usuario, abrir_turno, en_restaurante):
+def restaurante_listo(crear_restaurante, crear_usuario, en_restaurante):
     tenant = crear_restaurante("humo", modo_servicio="mixto", plan="completo")
     user = crear_usuario(tenant)
-    abrir_turno(tenant)
     with en_restaurante(tenant):
         mesa = Table.objects.create(number=1)
         cat = Category.objects.create(name="Platos")
@@ -72,7 +63,6 @@ def test_todas_las_pantallas_del_panel_abren(client, restaurante_listo):
         reverse("panel:table-detail", args=[mesa.id]),
         reverse("panel:carta-producto", args=[producto.uuid]),
         reverse("panel:carta-producto", args=[producto.uuid]) + "?fragmento=1",
-        reverse("panel:receta-producto", args=[producto.id]),
     ):
         respuesta = client.get(url)
         if respuesta.status_code != 200:
@@ -137,7 +127,7 @@ def test_api_del_sitio_y_app_de_meseros(client, restaurante_listo):
     tenant, *_ = restaurante_listo
     llave = {"HTTP_X_API_KEY": tenant.api_key}
     for url in ("/api/v1/ping/", "/api/v1/menu/", "/api/v1/menu/?formato=cloudin", "/api/v1/site/info/",
-                "/api/v1/site/tables/", "/api/v1/reservas/"):
+                "/api/v1/site/tables/"):
         assert client.get(url, **llave).status_code == 200, url
     assert client.get(f"/mesero/{tenant.slug}/entrar/").status_code == 200
 

@@ -14,9 +14,6 @@ class Table(models.Model):
     # Dónde queda (Salón, Patio, Terraza...). Es un dato de la mesa, no su nombre:
     # la mesa se sigue llamando por su número.
     zona = models.CharField("Zona", max_length=40, blank=True)
-    # Si se ofrece en las reservas por internet. Las que no, quedan para quien
-    # llega sin reservar.
-    reservable = models.BooleanField("Se puede reservar", default=True)
     token = models.CharField(
         "Token QR", max_length=32, unique=True, default=generate_table_token, editable=False
     )

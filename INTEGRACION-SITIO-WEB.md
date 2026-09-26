@@ -1,7 +1,13 @@
 # Cómo conectar un sitio web con el panel de Cloudin
 
-Esta guía es para quien construye la página desde la que se envían los pedidos.
+Esta guía es para quien construye la página desde la que el **personal** del
+restaurante envía pedidos (la tablet del mostrador): elige la mesa por su número.
 Todo lo que necesita son dos llamadas HTTP.
+
+> **¿Construyes el menú digital que abre el cliente con el QR de su mesa?** Sigue
+> **`GUIA-MENU-DIGITAL.md`**: carta pública con los id de cada plato, carrito
+> compartido de la mesa y Cloudflare Pages paso a paso. Las rutas `/site/…` de esta
+> guía piden por número de mesa, sin token: no las uses en una página pública.
 
 > **¿Conectar la carta (fotos, toppings, observación) y que el panel mande?**
 > Sigue `CONECTAR-MENU-A-CLOUDIN.md`: formato `cloudin-menu.json`, importación
@@ -80,18 +86,16 @@ pintar el plano de mesas:
 const { mesas } = await (await fetch(`${PANEL}/api/v1/site/tables/`, {
   headers: { "X-API-Key": LLAVE }
 })).json();
-// [{ "numero": 3, "puestos": 4, "zona": "Salón", "ocupada": true, "desde": "2026-09-12T01:57:00Z",
-//    "reservada": false, "reserva_hora": null }]
+// [{ "numero": 3, "puestos": 4, "zona": "Salón", "ocupada": true, "desde": "2026-09-12T01:57:00Z" }]
 ```
 
-Una mesa está `ocupada` cuando tiene una cuenta abierta, y vuelve a estar libre
-cuando el restaurante la cierra desde su panel. `reservada` indica que tiene una
-reserva de hoy que llega en la próxima hora y media (o que va hasta 30 min
-atrasada), y `reserva_hora` da la hora («8:00 p. m.»), nunca el nombre. Las mesas
-vienen ordenadas por número; `zona` sirve para agruparlas.
+Una mesa está `ocupada` cuando tiene una cuenta abierta (se abre sola con su primer
+pedido), y vuelve a estar libre cuando el restaurante la cierra desde su panel.
+`desde` es la hora en que se abrió la cuenta. Las mesas vienen ordenadas por número;
+`zona` sirve para agruparlas.
 
 En El Bembé, el carrito usa esto en vez del campo «Número de mesa»: una ventanita
-con el plano (libre / ocupada / reservada / tu mesa) que se refresca cada 8 s
+con el plano (libre / ocupada / tu mesa) que se refresca cada 8 s
 mientras el carrito está abierto. Las ocupadas también se pueden elegir, porque los
 amigos de una misma mesa suman pedidos a la misma cuenta.
 
@@ -160,9 +164,9 @@ Respuesta `201`:
   "pedido_id": 7,
   "mesa": 3,
   "cliente": "María",
-  "total": "70000.00",
+  "total": 70000.0,
   "cuenta_id": 4,
-  "cuenta_total": "118000.00"
+  "cuenta_total": 118000.0
 }
 ```
 
@@ -183,10 +187,10 @@ const estado = await (await fetch(`${PANEL}/api/v1/site/tables/3/orders/`, {
 
 ```json
 {
-  "mesa": 3, "ocupada": true, "cuenta_id": 5, "total": "70000.00",
+  "mesa": 3, "ocupada": true, "cuenta_id": 5, "total": 70000.0,
   "pedidos": [
     { "id": 9, "estado": "preparing", "estado_texto": "En preparación",
-      "creado": "2026-09-12T02:57:11Z", "total": "35000.00",
+      "creado": "2026-09-12T02:57:11Z", "total": 35000.0,
       "items": [{ "nombre": "Sandwich 2 Quesos · Brisket", "cantidad": 1, "nota": "" }] }
   ]
 }
@@ -201,10 +205,14 @@ restaurante cierra la mesa.
 
 ## 5. Página de mesa con QR (cuenta compartida)
 
-Cada mesa tiene su propio código QR con un enlace único:
-`https://tusitio.com/mesa.html?m=<token>`. El panel arma esos enlaces y los
-imprime en **Configuración → Mesas → Ver e imprimir los QR**; la ruta de la
-página se configura ahí mismo.
+> Para un menú digital nuevo, la guía completa (con ejemplos reales, errores y
+> `carrito.js`) es **`GUIA-MENU-DIGITAL.md`**. Aquí va el resumen.
+
+Cada mesa tiene su propio código QR con un enlace único. Si el restaurante tiene
+registrada la **Página del menú**, el QR es esa página + `?mesa=<token>`; si no, en
+el plan completo, el sitio + la ruta de mesas + `?m=<token>`
+(`https://tusitio.com/mesa.html?m=<token>`). El panel los muestra e imprime en
+**Códigos QR**.
 
 Quien escanea abre la carta ya identificado con esa mesa: no la elige ni la
 puede cambiar. Y como varias personas escanean el mismo código, el carrito vive
@@ -225,99 +233,29 @@ El estado que devuelven todos:
 
 ```json
 {
-  "mesa": 3, "ocupada": true,
-  "cuenta": { "id": 5, "total": "118000.00", "pedidos": [ /* con su estado */ ] },
-  "borrador": { "items": [...], "version": 7, "total": "70000.00" },
+  "mesa": 3, "recibe_pedidos": true, "ocupada": true,
+  "cuenta": { "id": 5, "total": 118000.0, "pedidos": [ /* con su estado */ ] },
+  "borrador": { "items": [...], "version": 7, "total": 70000.0 },
   "aviso": "Ana"
 }
 ```
 
+`recibe_pedidos` es `false` si el restaurante no recibe pedidos por el QR (plan
+«Menú digital» o solo meseros): en ese caso no muestres el carrito.
+
 El `borrador` se guarda entero en cada cambio, mandando la `version` que se
 tenía. Si otra persona escribió primero, la respuesta es `409` con el estado al
-día: se muestra lo nuevo en vez de pisarlo. Sondear `/estado/` cada 4 segundos
+día: se muestra lo nuevo en vez de pisarlo. Sondear `/estado/` cada 4 o 5 segundos
 alcanza para que todos vean lo mismo.
 
 
-## 6. Reservas (Cloudin Reservas)
+## Cookies
 
-El sitio muestra **solo los días y horas con cupo**: los calcula Cloudin con los
-horarios que el restaurante configuró en *Reservas → Horarios y mesas* (almuerzo,
-noche, pasadía…), sus mesas y los días bloqueados. No pide turno abierto: se puede
-reservar a medianoche aunque el local esté cerrado. Todas las rutas usan la misma
-cabecera `X-API-Key`.
-
-| Método | Ruta | Para qué |
-|---|---|---|
-| GET | `/api/v1/reservas/` | Servicios (id, nombre, `tipo` mesa/dia, días, horario), zonas, límites, WhatsApp y `politica_datos` |
-| GET | `/api/v1/reservas/dias/?servicio=&personas=&desde=AAAA-MM-DD&dias=14` | El calendario: `[{fecha, disponible, motivo, texto, pocos, cupo_restante}]` |
-| GET | `/api/v1/reservas/horas/?servicio=&personas=&fecha=` | Las horas de ese día: `[{hora:"19:00", texto:"7:00 p. m.", libre, mesas}]` |
-| GET | `/api/v1/reservas/mesas/?servicio=&personas=&fecha=&hora=` | **El plano de mesas en vivo** a esa hora (ver abajo) |
-| POST | `/api/v1/reservas/crear/` | Crea la reserva (confirmada al instante si hay cupo) |
-| GET | `/api/v1/reservas/<codigo>/` | En qué va una reserva |
-| POST | `/api/v1/reservas/<codigo>/cancelar/` | El cliente cancela (manda `telefono`) |
-
-```jsonc
-POST /api/v1/reservas/crear/
-{
-  "clave": "r-lx9k2-ab12",          // llave única por intento: un reintento no duplica
-  "servicio": 2, "fecha": "2026-09-27", "hora": "19:00",   // hora = null en servicios por día
-  "personas": 4, "nombre": "Ana Pérez", "telefono": "300 123 4567",
-  "observaciones": "Cumpleaños", "zona": "Patio",
-  "origen": "sitio",                // o "mesa_qr" si viene del menú de la mesa
-  "mesa": 12,                       // opcional: la mesa que el cliente tocó en el plano
-  "detalle": {"planes": [{"nombre": "Pasadía adultos", "cantidad": 4, "precio": 35000}]},
-  "total_estimado": 140000,
-  "acepta_datos": true              // obligatorio (Ley 1581): casilla de autorización
-}
-```
-
-Respuesta `201`: `codigo`, `estado`, `confirmada`, `cuando` («el sábado 27 de
-septiembre a las 7:00 p. m.»), `inicio`/`fin` (ISO, para armar un .ics o Google
-Calendar), `mensaje` y **`whatsapp_url`**: el enlace wa.me al restaurante con la
-reserva escrita. El sitio lo muestra como botón «Avisar al restaurante por
-WhatsApp»; el panel ya recibió la reserva de todas formas (suena un aviso).
-
-**Plano de mesas en vivo.** `GET /api/v1/reservas/mesas/` devuelve las mesas del
-local agrupadas por zona, cada una con su estado a esa hora, para que el cliente
-vea qué puede reservar y qué no (sin nombres de nadie: solo número, zona y puestos):
-
-```jsonc
-{
-  "hora": "19:00", "hora_texto": "7:00 p. m.",
-  "vista_previa": false,          // true si no se mandó hora: muestra la primera hora libre
-  "hora_disponible": true, "libres": 11, "total": 15, "en_vivo": true,
-  "mensaje": "A las 7:00 p. m. hay 11 mesas libres para 2 personas. Toca una si quieres pedirla.",
-  "zonas": [
-    {"nombre": "Salón", "libres": 7, "mesas": [
-      {"numero": 1, "puestos": 4, "estado": "libre", "texto": "Libre"},
-      {"numero": 2, "puestos": 4, "estado": "reservada", "texto": "Reservada"}
-    ]}
-  ]
-}
-```
-
-Estados: `libre`, `reservada`, `ocupada` (tiene cuenta abierta y la reserva es para
-dentro de 90 min), `no_alcanza` (pocos puestos para el grupo), `sin_reserva` (el
-restaurante no la ofrece por internet) y `cerrada` (el horario llegó a su cupo).
-El sitio lo vuelve a pedir cada ~15 s mientras está a la vista (tope: 180 consultas
-cada 10 min por IP). Si el cliente toca una mesa libre, se manda `"mesa": número`
-al crear: si sigue libre se la dan; si alguien la tomó antes, Cloudin le asigna la
-mejor libre y responde `"mesa_cambiada": true` para avisarle. La respuesta de crear
-trae `mesa` y `mesa_zona`. El restaurante siempre puede cambiar la mesa en el panel.
-
-**Autorización de datos.** Antes de enviar, el sitio muestra una casilla «Autorizo…
-según su política de datos», con enlace a `politica_datos` (una página que Cloudin
-publica por cada restaurante). Sin `acepta_datos: true` la API responde 400
-`sin_autorizacion`.
-
-**Cookies.** Si el sitio solo guarda en el teléfono el carrito y la carta (como los
+Si el sitio solo guarda en el teléfono el carrito y la carta (como los
 de Cultura Brisket y El Bembé), **no necesita aviso de cookies**: es almacenamiento
 necesario y no hay rastreadores. Si algún día se agrega analítica o publicidad
 (Google Analytics, píxel de Meta), ahí sí hay que pedir consentimiento antes de
 cargarlos.
-
-Referencia completa hecha: `La Bembe Gastro Bar/sitio/assets/app.js` (bloque
-«reservas») y `assets/cloudin-carta.js`.
 
 ## Errores
 
@@ -328,8 +266,11 @@ Referencia completa hecha: `La Bembe Gastro Bar/sitio/assets/app.js` (bloque
 | `400` | Falta `table_number` | Enviar el número de mesa |
 | `404` | Esa mesa no existe o está inactiva | Recargar las mesas |
 | `400` | Falta elegir un topping obligatorio | Mostrar el mensaje y dejar elegir |
-| `409` | `codigo: "sin_turno"` · el restaurante no ha abierto turno | Avisar que aún no se reciben pedidos; no borrar el carrito |
-| `403` | `codigo: "solo_meseros"` · el restaurante solo trabaja con meseros | Pedir que llamen al mesero |
+| `403` | `codigo: "solo_meseros"` · (pedidos por QR) el restaurante solo trabaja con meseros | Pedir que llamen al mesero |
+| `403` | `codigo: "sin_pedidos"` · (pedidos por QR) el plan del restaurante no recibe pedidos | Pedir que llamen al mesero |
+| `429` | `codigo: "demasiados"` · muchos pedidos seguidos desde la misma IP | Esperar unos minutos; no borrar el pedido |
+
+Los pedidos entran a cualquier hora: no hay turno de caja que abrir.
 
 El cuerpo del error siempre es JSON, así que conviene mostrarle al mesero el
 mensaje tal cual en vez de un "error desconocido".
@@ -349,12 +290,3 @@ En **Configuración → Sitio web**, el panel muestra el estado en vivo: en cuan
 el sitio hace su primera llamada, el indicador pasa a verde y empieza a contar
 los pedidos recibidos. Los pedidos aparecen en **Mensajes** con su número de
 mesa y el nombre del cliente.
-
-### Errores de reservas
-
-| Código | HTTP | Qué hacer en el sitio |
-|---|---|---|
-| `sin_cupo` | 409 | Mostrar `detail` y las `sugerencias` (`horas` libres cercanas y próximos `dias` con cupo) como botones |
-| `sin_autorizacion` | 400 | Pedir que marque la casilla de autorización de datos |
-| `invalida` | 400 | Mostrar `detail` (fecha, hora o teléfono inválidos) |
-| `demasiadas` | 429 | Más de 6 reservas en una hora desde el mismo lugar: ofrecer WhatsApp |

@@ -187,8 +187,7 @@ def test_ajustes_del_negocio(client, local):
 
 
 @pytest.mark.django_db
-def test_mesas_y_codigos_qr(client, local, en_restaurante, settings):
-    settings.CLOUDIN_PUBLIC_URL = "https://cloudin.example"
+def test_mesas_y_codigos_qr(client, local, en_restaurante):
     client.force_login(local["dueno"])
     r = client.post(B + "mesas/", {"count": 4}, content_type="application/json")
     assert r.status_code == 201 and r.json()["created"] == 4
@@ -196,16 +195,18 @@ def test_mesas_y_codigos_qr(client, local, en_restaurante, settings):
     mesas = client.get(B + "mesas/").json()
     with en_restaurante(local["t"]):
         token = Table.objects.get(number=1).token
-    assert mesas[0]["link"] == f"https://cloudin.example/m/el-local/?mesa={token}"
+    # Cloudin no tiene un menú propio: sin la página del menú digital no hay QR.
+    assert mesas[0]["link"] == ""
+    assert client.get(B + f"qr/mesa/{mesas[0]['id']}.png").status_code == 404
+    # Con la página del menú digital (p. ej. en Cloudflare Pages), el QR lleva allá con el token.
+    local["t"].menu_page = "https://el-local.pages.dev/menu.html"
+    local["t"].save()
+    assert client.get(B + "mesas/").json()[0]["link"] == f"https://el-local.pages.dev/menu.html?mesa={token}"
     png = client.get(B + f"qr/mesa/{mesas[0]['id']}.png")
     assert png["Content-Type"] == "image/png" and png.content[:4] == b"\x89PNG"
     assert client.get(B + "qr/menu.svg")["Content-Type"] == "image/svg+xml"
     pdf = client.get(B + "qr/mesas.pdf")
     assert pdf["Content-Type"] == "application/pdf" and pdf.content[:4] == b"%PDF"
-    # Con la página del menú del sitio, el QR lleva allá.
-    local["t"].menu_page = "https://el-local.pages.dev/menu.html"
-    local["t"].save()
-    assert client.get(B + "mesas/").json()[0]["link"] == f"https://el-local.pages.dev/menu.html?mesa={token}"
 
 
 @pytest.mark.django_db

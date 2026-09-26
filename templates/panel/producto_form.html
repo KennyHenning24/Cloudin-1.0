@@ -17,8 +17,6 @@
   .grupo .valor{display:grid;grid-template-columns:minmax(0,1fr) 130px auto;gap:8px;margin-top:8px}
   .grupo .chico{font-size:12px;color:var(--text-3)}
   .grupo select,.grupo input{min-width:0}
-  .bloqueado{display:flex;gap:8px;align-items:center;padding:10px 12px;border-radius:var(--r);background:var(--surface-2);
-    border:1px solid var(--line);font-size:13px;color:var(--text-2);margin-bottom:var(--sp-3)}
 </style>
 {% endblock %}
 
@@ -33,12 +31,6 @@
 {% block form_attrs %}enctype="multipart/form-data" id="form-producto"{% endblock %}
 
 {% block campos %}
-  {% if form.bloqueados %}
-    <div class="bloqueado">
-      <svg class="ico" viewBox="0 0 24 24" style="width:16px;height:16px"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
-      Nombre, precio y categoría quedan fijos para no alterar la facturación. Si hay que cambiarlos, pídeselo al administrador de Cloudin.
-    </div>
-  {% endif %}
   <div class="form-row">
     {% include "master/_campo.html" with campo=form.name %}
     {% include "master/_campo.html" with campo=form.price %}

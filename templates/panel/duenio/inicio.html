@@ -4,7 +4,7 @@
 {% block titulo %}Inicio{% endblock %}
 {% block subtitulo %}<div class="sub">{{ hoy|date:"l j \d\e F"|capfirst }}</div>{% endblock %}
 {% block acciones %}
-  <a class="btn secundario" href="{{ enlace }}" target="_blank" rel="noopener">{% icono "enlace-externo" %}Ver mi menú</a>
+  {% if enlace %}<a class="btn secundario" href="{{ enlace }}" target="_blank" rel="noopener">{% icono "enlace-externo" %}Ver mi menú</a>{% endif %}
   {% if es_admin %}<a class="btn" href="{% url 'panel:carta-producto-nuevo' %}" data-atajo="n">{% icono "mas" %}Agregar producto <kbd class="atajo">N</kbd></a>{% endif %}
 {% endblock %}
 
@@ -31,6 +31,17 @@
   <span><strong>Termina de configurar tu menú</strong><span class="dim small">Vas en el paso {{ asistente }} de {{ pasos }}. Te toma un par de minutos.</span></span>
   <span class="btn sm fin">Continuar {% icono "derecha" %}</span>
 </a>
+{% endif %}
+
+{% if servicio %}
+<section aria-labelledby="t-servicio">
+  <h2 class="h-seccion" id="t-servicio">Pedidos y mesas</h2>
+  <div class="kpis-menu">
+    <a class="kpi-menu" href="{% url 'panel:tables' %}"><b>{{ servicio.ocupadas }} de {{ servicio.mesas }}</b><span>mesas ocupadas</span></a>
+    <a class="kpi-menu" href="{% url 'panel:kitchen' %}"><b>{{ servicio.por_atender }}</b><span>por atender en cocina</span></a>
+    <a class="kpi-menu" href="{% url 'panel:mensajes' %}"><b>{{ servicio.pedidos_hoy }}</b><span>pedidos hoy</span></a>
+  </div>
+</section>
 {% endif %}
 
 <div class="kpis-menu">
@@ -98,8 +109,10 @@
       <h2 class="h-seccion" id="t-qr">Tu enlace y QR</h2>
       {% url 'api:qr-menu' 'png' as png %}{% url 'api:qr-menu' 'svg' as svg %}
       {% include "components/qr.html" with titulo="Tu menú" enlace=enlace png=png svg=svg %}
+      {% if enlace %}
       <a class="btn block" href="{{ enlace }}" target="_blank" rel="noopener" style="margin-top:12px">{% icono "enlace-externo" %}Ver mi menú</a>
       <p class="dim small" style="margin-top:8px">Descárgalo en PNG o SVG, o imprime el de cada mesa en <a class="enlace" href="{% url 'panel:qr' %}">Mesas y QR</a>.</p>
+      {% endif %}
     </section>
 
     {% if actividad %}

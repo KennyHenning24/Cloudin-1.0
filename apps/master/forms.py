@@ -42,12 +42,12 @@ class RestauranteForm(forms.ModelForm):
             "phone": "Teléfono",
         }
         help_texts = {
-            "plan": "Menú digital: carta, personalización y QR. Completo: además pedidos, turnos, "
-            "facturación e inventario.",
+            "plan": "Menú digital: carta, fotos, personalización y QR. Completo: además recibe los "
+            "pedidos del menú digital, ve sus mesas y usa la app de meseros.",
             "slug": "Solo minúsculas, números y guiones. Es su subdominio y el nombre de su base de datos.",
             "site_url": "La página desde la que el restaurante enviará los pedidos. "
             "Si todavía no existe, se puede registrar después desde su panel.",
-            "nit": "Se usará en la fase de facturación electrónica. Puede quedar vacío.",
+            "nit": "Dato del negocio. Puede quedar vacío.",
         }
         widgets = {
             "name": forms.TextInput(attrs={"placeholder": "Ej. Cultura Brisket", "autofocus": True}),

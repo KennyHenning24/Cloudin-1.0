@@ -1,7 +1,8 @@
 {% load cloudin %}{% comment %}
 Tarjeta de QR con descargar (PNG y SVG) e imprimir.
 {% include "components/qr.html" with titulo="Tu menú" enlace=enlace png=url_png svg=url_svg %}
-{% endcomment %}<div class="card qr-card">
+Sin `enlace` (el menú digital todavía no está publicado) no hay QR: se explica en su lugar.
+{% endcomment %}{% if not enlace %}<div class="card">{% include "components/vacio.html" with titulo="Tu menú digital todavía no está publicado" texto="Cuando su página esté en línea, aquí aparece su código QR y el de cada mesa." icono="qr" %}</div>{% else %}<div class="card qr-card">
   <div class="qr"><img src="{{ png }}" alt="Código QR de {{ titulo|lower }}" width="120" height="120" loading="lazy"></div>
   <div class="stack-sm" style="min-width:0;flex:1">
     <strong>{{ titulo }}</strong>
@@ -13,4 +14,4 @@ Tarjeta de QR con descargar (PNG y SVG) e imprimir.
       <a class="btn fantasma sm" href="{{ png }}" target="_blank" rel="noopener">{% icono "imprimir" %}Imprimir</a>
     </div>
   </div>
-</div>
+</div>{% endif %}

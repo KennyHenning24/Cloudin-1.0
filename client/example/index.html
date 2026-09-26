@@ -11,6 +11,9 @@
       1) python manage.py import_menu client/example/menu.seed.json --assets client/example --create-tenant
       2) python manage.py runserver
       3) sirve esta carpeta en http://localhost:4431 (p. ej. npx http-server client/example -p 4431)
+      4) para pedir desde una mesa: pon la `apiKey` del restaurante abajo, registra
+         http://localhost:4431 como sitio autorizado y abre ?mesa=<token de la mesa>
+         (carrito.js; ver GUIA-MENU-DIGITAL.md).
   - En producción, `api` y el script apuntan a CLOUDIN_PUBLIC_URL (el servidor de Cloudin).
 -->
 <html lang="es">
@@ -191,9 +194,13 @@
     locale: "es-CO",
     currency: "COP",
     hideSoldOut: false,
-    cacheTtl: 60
+    cacheTtl: 60,
+    // La X-API-Key del restaurante (panel maestro → ficha del restaurante). Con ella y
+    // el QR de una mesa (?mesa=<token>), carrito.js deja pedir; sin ella, solo se mira.
+    apiKey: ""
   };
 </script>
 <script src="http://localhost:8000/static/cloudin-menu.v1.js" defer></script>
+<script src="carrito.js" defer></script>
 </body>
 </html>

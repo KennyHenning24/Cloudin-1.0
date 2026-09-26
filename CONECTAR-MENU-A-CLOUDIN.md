@@ -4,6 +4,11 @@
 > «conecta el sitio/menú de este restaurante con mi panel Cloudin».
 > Léelo completo antes de tocar código. Todo lo que está aquí existe y está
 > probado en el código de Cloudin (rutas al final).
+>
+> **¿Es un menú digital nuevo, hecho por ti para el cliente?** Usa
+> **`GUIA-MENU-DIGITAL.md`**: la carta pública `cloudin.menu/v1` (con un id por plato y
+> por opción), el carrito compartido de la mesa y Cloudflare Pages paso a paso. Esta
+> guía es para sitios que **ya tienen su carta** y la importan al panel.
 
 ---
 
@@ -30,7 +35,7 @@
 | La importación nunca borra ni pisa | Solo crea lo nuevo y llena campos vacíos. |
 | Lo eliminado en el panel no revive | Aunque siga en el sitio, reimportar no lo vuelve a crear. |
 | La llave `ck_…` no va a un repositorio público | Si se filtra, se regenera en el panel maestro. |
-| Sin turno abierto no entra ningún pedido | Respuesta `409` con `codigo: "sin_turno"`: muéstralo amable. |
+| Los pedidos entran a cualquier hora | No hay turno de caja. La mesa se ocupa con el primer pedido y se libera al cerrar la cuenta. |
 | Mesas solo por número | Nada de «Terraza 1»: lo pidió el usuario. |
 | Pregunta antes de modificar el sitio de un cliente | El usuario quiere ir paso a paso. |
 
@@ -63,7 +68,7 @@ navegador (CORS dinámico por restaurante, `apps/tenants/cors.py`).
  │  Página del menú  ◀──── (3) GET /api/v1/menu/?formato=cloudin ─────────┤                               │
  │                                                     │        │                                       │
  │  Carrito / QR mesa ──── (4) POST pedido con product_id + opciones ────▶│  Mensajes · Cocina · Meseros   │
- │                                                     │        │  Factura DIAN · Inventario · Turno    │
+ │                                                     │        │  Mesas ocupadas · cuenta · precuenta  │
  └─────────────────────────────────────────────────────┘        └───────────────────────────────────────┘
 ```
 
@@ -262,20 +267,18 @@ Implementación real y probada: `Portafolio/Cultura Brisket/revision/generar-clo
 
 ## 4. Conectar en el panel (lo que hace el restaurante)
 
-1. **Abrir turno** (Turnos → Abrir turno). Sin turno abierto el panel no deja
-   hacer nada.
-2. **Configuración → Sitio web:** guardar la dirección del sitio. Copiar la llave.
-3. **Configuración → Menú → Importar desde mi sitio:** pegar
+1. **Configuración → Sitio web:** guardar la dirección del sitio. Copiar la llave.
+2. **Configuración → Menú → Importar desde mi sitio:** pegar
    `https://<sitio>/cloudin-menu.json` → **Revisar sin cambiar nada** → leer el
    resumen (nuevos, completados, errores) → **Importar ahora**.
-4. Revisar la carta: cada producto tiene **Editar** (foto, descripción, toppings,
-   observación). Nombre, precio y categoría quedan fijos para el restaurante
-   (solo el superusuario de Cloudin los cambia) para no alterar la facturación.
+3. Revisar la carta: cada producto tiene **Editar** (nombre, precio, categoría,
+   foto, descripción, toppings, observación); cada cambio queda en el historial y
+   las comandas ya enviadas guardan su propio precio.
    **Eliminar** saca el producto de la carta en todas partes (sitio, meseros, QR,
-   panel); por debajo se conserva para no romper ventas ni facturas viejas, y se
+   panel); por debajo se conserva para no romper los pedidos viejos, y se
    puede **Restaurar** desde «Eliminados de la carta» en cada categoría.
    **Agotado** solo lo oculta por hoy.
-5. Opcional: cron diario `python manage.py importar_menu --todos` para traer
+4. Opcional: cron diario `python manage.py importar_menu --todos` para traer
    platos nuevos del sitio.
 
 Qué hace la importación con cada producto:
@@ -353,7 +356,7 @@ La respuesta tiene **el mismo formato de la sección 3**, con dos detalles:
 - **No mandes `unit_price` ni `name`** en líneas del menú: el servidor calcula
   `precio del producto + suma de opciones` y arma el nombre
   («Sandwich 2 Quesos · Pastrami, Papas fritas y Coca-Cola (+$10.000)»), que es
-  lo que ven cocina, meseros, factura e inventario.
+  lo que ven cocina, meseros y la precuenta.
 
 ```js
 // Convierte la selección de la pantalla a lo que espera Cloudin.
@@ -396,7 +399,8 @@ o `GET /api/v1/mesa/<token>/estado/` (cada 4 s). Detalle en
 
 | Código | `codigo` / cuerpo | Qué pasó | Qué mostrar |
 |---|---|---|---|
-| `409` | `sin_turno` | El restaurante no ha abierto turno | «El restaurante todavía no está recibiendo pedidos. Intenta en un momento.» (no borres el carrito) |
+| `403` | `sin_pedidos` | (Pedidos por QR) el plan del restaurante es solo el menú digital | «Pídele tu pedido al mesero.» |
+| `429` | `demasiados` | Muchos pedidos seguidos desde la misma IP | El mensaje tal cual (no borres el carrito) |
 | `403` | `solo_meseros` | El restaurante trabaja solo con meseros | «Llama al mesero, él toma tu pedido.» |
 | `400` | `{"items": ["Falta elegir «Elige la carne» para …"]}` | Topping obligatorio sin elegir, máximo superado u opción que ya no existe | El mensaje tal cual y recargar la carta |
 | `400` | `Productos no disponibles o inexistentes: [9]` | Se agotó o se borró | Recargar la carta |
@@ -414,8 +418,8 @@ o `GET /api/v1/mesa/<token>/estado/` (cada 4 s). Detalle en
 - [ ] Un producto con toppings obligatorios **no** se puede enviar sin elegir (400 con mensaje).
 - [ ] Pedido de prueba con toppings → en **Mensajes** y **Cocina** aparece el nombre con las opciones y el precio correcto.
 - [ ] Cambiar una descripción en el panel → el sitio la muestra al recargar (`?formato=cloudin`).
-- [ ] Con el turno cerrado el sitio muestra el aviso amable (409 `sin_turno`), no «error».
-- [ ] Borra el pedido de prueba o ciérralo (y no factures pruebas contra la DIAN real).
+- [ ] La mesa del pedido de prueba aparece ocupada en **Mesas**.
+- [ ] Cierra la cuenta de prueba en el panel (la mesa queda libre).
 
 Prueba rápida desde la terminal (PowerShell):
 
@@ -451,3 +455,4 @@ python manage.py importar_menu --tenant culturabrisket --revisar --url https://c
 | Carrito compartido del QR | `apps/api/mesa_views.py` |
 | App de meseros (fotos y hoja de toppings) | `apps/waiters/views.py`, `templates/mesero/app.html` |
 | Guía general de la API (mesas, QR, seguimiento) | `INTEGRACION-SITIO-WEB.md` |
+| Menú digital nuevo (carta pública v1, carrito de la mesa, Cloudflare Pages) | `GUIA-MENU-DIGITAL.md` |

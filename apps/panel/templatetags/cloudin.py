@@ -30,14 +30,6 @@ def pesos(valor, decimales=0):
     return ("-" if numero < 0 else "") + texto
 
 
-@register.filter
-def cantidad(valor, decimales=2):
-    """Cantidades de inventario: quita los ceros que sobran (2,50 -> 2,5)."""
-    texto = pesos(valor, decimales)
-    if "," in texto:
-        texto = texto.rstrip("0").rstrip(",")
-    return texto or "0"
-
 
 @register.simple_tag
 def icono(nombre, clase="ico", etiqueta=""):

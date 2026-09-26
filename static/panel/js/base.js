@@ -73,22 +73,6 @@ function contar(el, valor, formato = money, ms = 900) {
   requestAnimationFrame(paso);
 }
 document.addEventListener("DOMContentLoaded", () => {
-  // Montos: se escriben con puntos de miles mientras se teclea (10.000, 150.000).
-  document.querySelectorAll("[data-plata]").forEach(inp => {
-    inp.addEventListener("input", () => {
-      const n = inp.value.replace(/\D/g, "");
-      inp.value = n ? Number(n).toLocaleString("es-CO") : "";
-    });
-    const form = inp.form;
-    if (form) form.addEventListener("submit", (e) => {
-      const n = Number(inp.value.replace(/\D/g, "")) || 0;
-      if (n < 10000) {
-        e.preventDefault();
-        avisar("La base de caja debe ser de mínimo $10.000.");
-        inp.focus();
-      }
-    });
-  });
   document.querySelectorAll("[data-contar]").forEach(el => {
     const f = el.dataset.formato === "numero" ? (n => Number(n).toLocaleString("es-CO")) : money;
     contar(el, el.dataset.contar, f);

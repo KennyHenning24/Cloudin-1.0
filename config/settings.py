@@ -39,15 +39,6 @@ LEGAL_CORREO = os.getenv("LEGAL_CORREO", "")
 LEGAL_DIRECCION = os.getenv("LEGAL_DIRECCION", "")
 LEGAL_CIUDAD = os.getenv("LEGAL_CIUDAD", "Colombia")
 
-# Factus, proveedor tecnológico ante la DIAN. Estas son las credenciales
-# globales de Cloudin como Aliado; un restaurante puede tener las suyas propias
-# (se guardan cifradas en EmpresaFiscal.credenciales_pt y ganan sobre estas).
-FACTUS_URL = os.getenv("FACTUS_URL", "https://api-sandbox.factus.com.co")
-FACTUS_CLIENT_ID = os.getenv("FACTUS_CLIENT_ID", "")
-FACTUS_CLIENT_SECRET = os.getenv("FACTUS_CLIENT_SECRET", "")
-FACTUS_USERNAME = os.getenv("FACTUS_USERNAME", "")
-FACTUS_PASSWORD = os.getenv("FACTUS_PASSWORD", "")
-
 ALLOWED_HOSTS = [h.strip() for h in os.getenv("ALLOWED_HOSTS", "*").split(",") if h.strip()]
 
 # Dominio base sobre el que se resuelven los subdominios de cada restaurante:
@@ -78,15 +69,17 @@ INSTALLED_APPS = [
     "apps.importer",
     "apps.dining",
     "apps.orders",
+    "apps.waiters",
+    "apps.panel",
+    "apps.master",
+    # Apps retiradas: solo conservan sus migraciones (la última borra sus tablas).
+    # Siguen aquí para que las bases que ya existían se actualicen sin romperse.
     "apps.billing",
     "apps.staffing",
     "apps.shifts",
     "apps.inventory",
-    "apps.waiters",
     "apps.reservas",
     "apps.control",
-    "apps.panel",
-    "apps.master",
 ]
 
 MIDDLEWARE = [
@@ -124,7 +117,6 @@ TEMPLATES = [
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
                 "apps.tenants.context_processors.tenant",
-                "apps.shifts.context_processors.turno",
             ],
         },
     },
@@ -321,7 +313,6 @@ LOGGING = {
     "handlers": {"consola": {"class": "logging.StreamHandler"}},
     "loggers": {
         "django": {"handlers": ["consola"], "level": os.getenv("DJANGO_LOG_LEVEL", "INFO")},
-        # cloudin.factus: cada llamada a Factus y su respuesta.
         "cloudin": {"handlers": ["consola"], "level": os.getenv("DJANGO_LOG_LEVEL", "INFO")},
     },
 }
@@ -354,8 +345,8 @@ REST_FRAMEWORK = {
 
 SPECTACULAR_SETTINGS = {
     "TITLE": "API de Cloudin",
-    "DESCRIPTION": "Menú público (cloudin.menu/v1), panel del dueño, pedidos y facturación. "
-                   "Ver docs/API.md para ejemplos.",
+    "DESCRIPTION": "Menú público (cloudin.menu/v1), panel del dueño, mesas y pedidos. "
+                   "Ver GUIA-MENU-DIGITAL.md para ejemplos.",
     "VERSION": "1.0.0",
     "SERVE_INCLUDE_SCHEMA": False,
 }

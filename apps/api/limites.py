@@ -4,7 +4,7 @@ La llave del sitio vive dentro del JavaScript de la página, así que cualquiera
 puede leerla. Por eso lo público se protege por su cuenta:
 
 - **Topes de envío** por dirección IP: nadie puede inundar la cocina de pedidos
-  falsos ni el calendario de reservas.
+  falsos.
 - **Precios que no se pueden rebajar**: una línea sin `product_id` («armada en el
   sitio») tiene que corresponder a un plato de la carta, y nunca se cobra por
   debajo de su precio en el panel. Quien edite el JavaScript para mandar

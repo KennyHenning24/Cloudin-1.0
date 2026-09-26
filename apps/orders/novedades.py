@@ -3,10 +3,9 @@
 Todo pasa por aquí para que siempre quede el rastro completo: qué, cuánto,
 por qué, quién lo registró y quién lo autorizó. Un cajero o mesero necesita
 la contraseña de un administrador en ese momento; el administrador lo hace
-directo. Cloudin Control lee lo que se guarda aquí.
+directo.
 
-Solo se hace sobre cuentas abiertas: lo ya facturado se corrige con una nota
-crédito, no borrando líneas.
+Solo se hace sobre cuentas abiertas: una cuenta cerrada ya no se toca.
 """
 
 from decimal import ROUND_HALF_UP, Decimal
@@ -77,7 +76,7 @@ def _motivo(motivo: str) -> str:
 
 def _cuenta_abierta(session):
     if session.status != TableSession.STATUS_OPEN:
-        raise ValidationError("La cuenta ya está cerrada. Lo facturado se corrige con una nota crédito.")
+        raise ValidationError("La cuenta ya está cerrada: ya no se le pueden hacer cambios.")
 
 
 @transaction.atomic
@@ -116,7 +115,7 @@ def novedad_en_linea(item, tipo, cantidad, motivo, *, registrado_por="", autoriz
         )
 
     novedad = NovedadCuenta.objects.create(
-        tipo=tipo, sesion=session, pedido=order, item=afectada, turno=session.turno,
+        tipo=tipo, sesion=session, pedido=order, item=afectada,
         producto_nombre=item.product_name[:120], cantidad=cantidad,
         valor=(precio * cantidad).quantize(CENTAVO), motivo=motivo,
         registrado_por=registrado_por[:120], autorizado_por=autorizado_por[:120],
@@ -165,7 +164,7 @@ def aplicar_descuento(session, *, valor=None, porcentaje=None, motivo="", regist
     session.save(update_fields=["descuento", "descuento_motivo"])
 
     datos = dict(
-        tipo=NovedadCuenta.DESCUENTO, sesion=session, turno=session.turno, producto_nombre="",
+        tipo=NovedadCuenta.DESCUENTO, sesion=session, producto_nombre="",
         cantidad=1, valor=valor, porcentaje=(valor * 100 / subtotal).quantize(CENTAVO) if subtotal else 0,
         motivo=motivo, registrado_por=registrado_por[:120], autorizado_por=autorizado_por[:120],
         mesero_nombre=session.mesero.nombre if session.mesero_id else "",
@@ -177,12 +176,3 @@ def aplicar_descuento(session, *, valor=None, porcentaje=None, motivo="", regist
         return anterior
     return NovedadCuenta.objects.create(**datos)
 
-
-def porcentaje_descuento(session) -> Decimal:
-    """El descuento de la cuenta como porcentaje del consumo, para la factura."""
-    if not session.descuento:
-        return Decimal("0")
-    subtotal = session.subtotal()
-    if not subtotal:
-        return Decimal("0")
-    return min(Decimal("100"), (session.descuento * 100 / subtotal).quantize(CENTAVO, rounding=ROUND_HALF_UP))

@@ -14,8 +14,9 @@ SHARED_APPS = {
 }
 
 # Apps cuyos datos son privados de cada restaurante.
-TENANT_APPS = {"catalog", "dining", "orders", "billing", "staffing", "shifts", "inventory", "waiters",
-               "reservas", "control", "business"}
+TENANT_APPS = {"catalog", "dining", "orders", "waiters", "business",
+               # Retiradas: solo quedan sus migraciones, que borran sus tablas en cada base.
+               "billing", "staffing", "shifts", "inventory", "reservas", "control"}
 
 TENANT_ALIAS_PREFIX = "tenant_"
 

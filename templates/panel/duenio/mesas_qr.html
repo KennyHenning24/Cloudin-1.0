@@ -4,7 +4,7 @@
 {% block titulo %}Mesas y QR{% endblock %}
 {% block subtitulo %}<div class="sub">Imprime el código de tu menú o uno por cada mesa</div>{% endblock %}
 {% block acciones %}
-  {% if mesas %}<a class="btn" href="{% url 'api:qr-mesas-pdf' %}" target="_blank" rel="noopener">{% icono "descargar" %}<span>PDF con todas las mesas</span></a>{% endif %}
+  {% if con_qr %}<a class="btn" href="{% url 'api:qr-mesas-pdf' %}" target="_blank" rel="noopener">{% icono "descargar" %}<span>PDF con todas las mesas</span></a>{% endif %}
 {% endblock %}
 
 {% block content %}
@@ -32,16 +32,22 @@
     <ul class="grid-mesas">
       {% for m in mesas %}
       <li class="card mesa-qr">
+        {% if m.enlace %}
         <img src="{% url 'api:qr-mesa' m.mesa.id 'png' %}" alt="QR de la mesa {{ m.mesa.number }}" width="132" height="132" loading="lazy">
+        {% endif %}
         <strong>Mesa {{ m.mesa.number }}</strong>
+        {% if m.enlace %}
         <div class="row">
           <a class="btn secundario sm" href="{% url 'api:qr-mesa' m.mesa.id 'png' %}" download>{% icono "descargar" %}PNG</a>
           <a class="btn secundario sm" href="{% url 'api:qr-mesa' m.mesa.id 'svg' %}" download>SVG</a>
         </div>
+        {% else %}
+        <span class="dim small">Su QR aparece cuando tu menú digital esté publicado.</span>
+        {% endif %}
       </li>
       {% endfor %}
     </ul>
-    <a class="btn secundario block" href="{% url 'api:qr-mesas-pdf' %}" target="_blank" rel="noopener" style="margin-top:12px">{% icono "imprimir" %}Imprimir todas (PDF, 4 por hoja)</a>
+    {% if con_qr %}<a class="btn secundario block" href="{% url 'api:qr-mesas-pdf' %}" target="_blank" rel="noopener" style="margin-top:12px">{% icono "imprimir" %}Imprimir todas (PDF, 4 por hoja)</a>{% endif %}
     {% else %}
     <div class="card">{% include "components/vacio.html" with titulo="Aún no tienes mesas" texto="Cada mesa tiene su propio QR: tus clientes ven el menú y sabes desde qué mesa lo miran." icono="qr" %}</div>
     {% endif %}

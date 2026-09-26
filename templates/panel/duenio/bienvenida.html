@@ -122,14 +122,18 @@
         <h1 class="titulo-final">¡Tu menú está listo!</h1>
         <p class="dim">Imprime este código y ponlo en tus mesas. Tus clientes verán el menú al escanearlo, y los cambios que hagas aquí aparecen en menos de un minuto.</p>
         <div class="card final-qr">
-          <img src="{% url 'api:qr-menu' 'png' %}" alt="Código QR de tu menú" width="170" height="170">
+          {% if enlace %}<img src="{% url 'api:qr-menu' 'png' %}" alt="Código QR de tu menú" width="170" height="170">{% endif %}
           <div class="stack-sm">
+            {% if enlace %}
             <a class="enlace enlace-menu" href="{{ enlace }}" target="_blank" rel="noopener">{{ enlace }}</a>
             <a class="btn grad block" href="{{ enlace }}" target="_blank" rel="noopener">{% icono "enlace-externo" %}Ver mi menú</a>
             <div class="row">
               <a class="btn secundario" href="{% url 'api:qr-menu' 'png' %}" download>{% icono "descargar" %}Descargar QR</a>
               <a class="btn secundario" href="{% url 'panel:qr' %}">{% icono "imprimir" %}Imprimir</a>
             </div>
+            {% else %}
+            <p class="dim small">Cuando la página de tu menú digital esté publicada, aquí aparece su código QR.</p>
+            {% endif %}
             <a class="btn fantasma block" href="{% url 'panel:inicio' %}">Ir a mi panel {% icono "derecha" %}</a>
           </div>
         </div>

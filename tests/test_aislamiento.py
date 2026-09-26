@@ -12,11 +12,10 @@ from apps.catalog.models import Category, Product
 
 
 @pytest.fixture
-def dos_restaurantes(crear_restaurante, crear_usuario, abrir_turno, en_restaurante):
+def dos_restaurantes(crear_restaurante, crear_usuario, en_restaurante):
     a = crear_restaurante("casa-a")
     b = crear_restaurante("casa-b")
     for tenant, plato in ((a, "Solo de A"), (b, "Solo de B")):
-        abrir_turno(tenant)
         with en_restaurante(tenant):
             cat = Category.objects.create(name="Carta")
             Product.objects.create(category=cat, name=plato, price=Decimal("10000"))

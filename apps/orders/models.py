@@ -7,8 +7,9 @@ from django.utils import timezone
 class TableSession(models.Model):
     """La cuenta de una mesa: se abre con el primer pedido y se cierra al pagar.
 
-    A una misma sesión se le van agregando pedidos (comandas). El cierre de la
-    sesión es lo que en la fase 2 dispara la factura electrónica.
+    A una misma sesión se le van agregando pedidos (comandas). Mientras está
+    abierta, la mesa está ocupada: el primer pedido del menú digital (QR), del
+    mesero o del panel la abre solo, y cerrarla deja la mesa libre otra vez.
     """
 
     STATUS_OPEN = "open"
@@ -22,13 +23,6 @@ class TableSession(models.Model):
 
     table = models.ForeignKey(
         "dining.Table", on_delete=models.PROTECT, related_name="sessions", verbose_name="Mesa"
-    )
-    # El turno de caja en el que se abrió. Es lo que hace que al cerrar el turno
-    # el panel quede en blanco: las pantallas de operación miran solo el turno
-    # abierto, y lo del turno anterior vive en su informe.
-    turno = models.ForeignKey(
-        "shifts.TurnoCaja", on_delete=models.PROTECT, related_name="sesiones",
-        null=True, blank=True, verbose_name="Turno de caja",
     )
     status = models.CharField(max_length=12, choices=STATUS, default=STATUS_OPEN)
     # El mesero que atiende la mesa: el que la abrió. Vacío si llegó por QR.
@@ -46,22 +40,9 @@ class TableSession(models.Model):
     total = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal("0"))
 
     # Descuento sobre toda la cuenta, con su motivo. Quién lo dio y quién lo
-    # autorizó queda en NovedadCuenta; Cloudin Control lo vigila.
+    # autorizó queda en NovedadCuenta.
     descuento = models.DecimalField("Descuento", max_digits=12, decimal_places=2, default=Decimal("0"))
     descuento_motivo = models.CharField("Motivo del descuento", max_length=200, blank=True)
-
-    # La reserva con la que llegó el cliente, si reservó: así la visita queda en
-    # su historial y la reserva se completa sola al cerrar la cuenta.
-    reserva = models.ForeignKey(
-        "reservas.Reserva", on_delete=models.SET_NULL, related_name="cuentas",
-        null=True, blank=True, verbose_name="Reserva",
-    )
-
-    # Propina voluntaria (Ley 1935 de 2018): no es ingreso del restaurante ni
-    # hace parte de la factura. Se anota aparte y se reparte entre el equipo.
-    propina = models.DecimalField("Propina", max_digits=12, decimal_places=2, default=Decimal("0"))
-    # Cómo la pagó (códigos DIAN, igual que la factura): la de efectivo entra a la caja.
-    propina_medio = models.CharField("Medio de pago de la propina", max_length=4, blank=True)
 
     class Meta:
         verbose_name = "Cuenta de mesa"
@@ -84,15 +65,11 @@ class TableSession(models.Model):
         return max(Decimal("0"), self.subtotal() - (self.descuento or Decimal("0")))
 
     def close(self, total=None):
+        """Cierra la cuenta: la mesa queda libre y sus pedidos salen de Cocina y Mensajes."""
         self.total = total if total is not None else self.current_total()
         self.status = self.STATUS_CLOSED
         self.closed_at = timezone.now()
         self.save(update_fields=["total", "status", "closed_at"])
-        if self.reserva_id:
-            # La visita terminó: la reserva pasa al historial del cliente.
-            from apps.reservas.services import completar_reserva
-
-            completar_reserva(self.reserva, self)
         return self
 
 
@@ -186,8 +163,7 @@ class Order(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     printed_at = models.DateTimeField(null=True, blank=True)
-    # Cuándo empezó a prepararse, cuándo salió a la mesa y cuándo se anuló:
-    # de aquí salen los tiempos de cocina que mide Cloudin Control.
+    # Cuándo empezó a prepararse, cuándo salió a la mesa y cuándo se anuló.
     preparando_en = models.DateTimeField(null=True, blank=True)
     servido_en = models.DateTimeField(null=True, blank=True)
     anulado_en = models.DateTimeField(null=True, blank=True)
@@ -299,7 +275,7 @@ class NovedadCuenta(models.Model):
     Anular un producto, darlo en cortesía, aceptar una devolución o hacer un
     descuento es parte normal del servicio, pero también es por donde se escapa
     la plata sin que nadie lo note. Por eso cada caso queda aquí con motivo,
-    quién lo registró y quién lo autorizó. Cloudin Control lee esta tabla.
+    quién lo registró y quién lo autorizó.
     """
 
     ANULACION = "anulacion"
@@ -319,8 +295,6 @@ class NovedadCuenta(models.Model):
                                related_name="novedades")
     item = models.ForeignKey(OrderItem, on_delete=models.SET_NULL, null=True, blank=True,
                              related_name="novedades")
-    turno = models.ForeignKey("shifts.TurnoCaja", on_delete=models.SET_NULL, null=True, blank=True,
-                              related_name="novedades")
     producto_nombre = models.CharField(max_length=120, blank=True)
     cantidad = models.PositiveIntegerField(default=1)
     # Lo que se dejó de cobrar, a precio de carta.
@@ -331,8 +305,7 @@ class NovedadCuenta(models.Model):
     registrado_por = models.CharField(max_length=120, blank=True)
     autorizado_por = models.CharField(max_length=120, blank=True)
     mesero_nombre = models.CharField(max_length=80, blank=True)
-    # Si la comanda ya estaba en preparación o servida: anular algo que la cocina
-    # ya hizo sí cuesta insumos.
+    # Si la comanda ya estaba en preparación o servida (la cocina ya lo hizo).
     ya_preparado = models.BooleanField(default=False)
     creado = models.DateTimeField(default=timezone.now, db_index=True)
 

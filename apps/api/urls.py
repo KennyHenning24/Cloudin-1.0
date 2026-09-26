@@ -1,7 +1,7 @@
 from django.urls import path
 from rest_framework.routers import SimpleRouter
 
-from . import analitica, avisos, catalogo_views, mesa_views, reservas_views, views
+from . import avisos, catalogo_views, mesa_views, views
 
 app_name = "api"
 
@@ -25,14 +25,6 @@ urlpatterns = [
     path("mesa/<str:token>/borrador/", mesa_views.mesa_borrador, name="mesa-borrador"),
     path("mesa/<str:token>/aviso/", mesa_views.mesa_aviso, name="mesa-aviso"),
     path("mesa/<str:token>/enviar/", mesa_views.mesa_enviar, name="mesa-enviar"),
-    # Reservas: el sitio web y el menú de la mesa (X-API-Key, sin turno)
-    path("reservas/", reservas_views.configuracion, name="reservas"),
-    path("reservas/dias/", reservas_views.dias, name="reservas-dias"),
-    path("reservas/horas/", reservas_views.horas, name="reservas-horas"),
-    path("reservas/mesas/", reservas_views.mesas, name="reservas-mesas"),
-    path("reservas/crear/", reservas_views.crear, name="reservas-crear"),
-    path("reservas/<str:codigo>/", reservas_views.detalle, name="reservas-detalle"),
-    path("reservas/<str:codigo>/cancelar/", reservas_views.cancelar, name="reservas-cancelar"),
     # Sitio web del restaurante (la tablet del mesero)
     path("site/info/", views.site_info, name="site-info"),
     path("site/tables/", views.site_tables, name="site-tables"),
@@ -45,7 +37,6 @@ urlpatterns = [
     path("staff/tables/", views.staff_tables, name="staff-tables"),
     path("staff/tables/<int:table_id>/", views.staff_table_detail, name="staff-table-detail"),
     path("staff/site/status/", views.staff_site_status, name="staff-site-status"),
-    path("staff/analitica/", analitica.staff_analitica, name="staff-analitica"),
     path("staff/menu/", views.staff_menu, name="staff-menu"),
     path("staff/menu/categories/", views.staff_categories, name="staff-categories"),
     path("staff/menu/categories/<int:category_id>/", views.staff_category_detail, name="staff-category"),
@@ -60,7 +51,7 @@ urlpatterns = [
     path("staff/kitchen/", views.staff_kitchen, name="staff-kitchen"),
     path("staff/sessions/<int:session_id>/", views.staff_session, name="staff-session"),
     path("staff/sessions/<int:session_id>/close/", views.staff_close_session, name="staff-close"),
-    # Carta v1: orden, acciones masivas, historial, ajustes del negocio, mesas y QR (sin turno)
+    # Carta v1: orden, acciones masivas, historial, ajustes del negocio, mesas y QR
     path("staff/catalog/reorder/", catalogo_views.ReordenarView.as_view(), name="catalogo-reordenar"),
     path("staff/catalog/bulk/", catalogo_views.AccionesMasivasView.as_view(), name="catalogo-masivo"),
     path("staff/catalog/history/", catalogo_views.HistorialView.as_view(), name="catalogo-historial"),

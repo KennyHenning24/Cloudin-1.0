@@ -20,7 +20,7 @@ class Tenant(models.Model):
     )
     api_key = models.CharField(max_length=64, unique=True, default=generate_api_key, editable=False)
 
-    # Datos fiscales — se usan en la fase 2 (facturación electrónica).
+    # Datos del negocio (encabezado de la precuenta y datos legales). Opcionales.
     nit = models.CharField("NIT", max_length=30, blank=True)
     legal_name = models.CharField("Razón social", max_length=160, blank=True)
     address = models.CharField("Dirección", max_length=200, blank=True)
@@ -54,8 +54,9 @@ class Tenant(models.Model):
         "Cómo se toman los pedidos", max_length=14, choices=MODOS_SERVICIO, default=AUTOSERVICIO
     )
 
-    # Qué contrató: solo el menú digital, o Cloudin completo (pedidos, turnos,
-    # facturación, inventario…). Define qué secciones ve en su panel.
+    # Qué contrató: solo el menú digital, o Cloudin completo (además recibe los
+    # pedidos del menú digital, ve sus mesas ocupadas y usa la app de meseros).
+    # Define qué secciones ve en su panel.
     PLAN_MENU = "menu"
     PLAN_COMPLETO = "completo"
     PLANES = [
@@ -65,7 +66,9 @@ class Tenant(models.Model):
     plan = models.CharField("Plan", max_length=12, choices=PLANES, default=PLAN_MENU)
 
     # Página del menú para las mesas (la del QR), p. ej. https://x.pages.dev/menu.html.
-    # Si está vacía, el QR lleva al menú de respaldo de Cloudin.
+    # El QR de cada mesa es esta dirección + ?mesa=<token>. Cloudin no sirve un menú
+    # propio: si está vacía, el QR usa site_url (plan completo) o todavía no hay QR
+    # (dining/qr.py). Ver GUIA-MENU-DIGITAL.md.
     menu_page = models.URLField("Página del menú (QR)", max_length=500, blank=True)
     # Otros orígenes autorizados además de site_url (dominio propio, pages.dev…).
     allowed_origins = models.JSONField("Otros sitios autorizados", default=list, blank=True)
@@ -91,11 +94,13 @@ class Tenant(models.Model):
 
     @property
     def origenes_permitidos(self) -> set[str]:
-        """site_url + allowed_origins, reducidos a su origen (esquema://host:puerto)."""
+        """Los sitios que pueden llamar a la API desde el navegador: site_url, la página
+        del menú digital (menu_page, la del QR) y allowed_origins (p. ej. el dominio
+        propio además de *.pages.dev), reducidos a su origen (esquema://host:puerto)."""
         from urllib.parse import urlsplit
 
         origenes = set()
-        for url in [self.site_url, *(self.allowed_origins or [])]:
+        for url in [self.site_url, self.menu_page, *(self.allowed_origins or [])]:
             partes = urlsplit(str(url or "").strip())
             if partes.scheme in ("http", "https") and partes.netloc:
                 origenes.add(f"{partes.scheme}://{partes.netloc}")
@@ -108,6 +113,12 @@ class Tenant(models.Model):
     @property
     def usa_autoservicio(self) -> bool:
         return self.modo_servicio in (self.AUTOSERVICIO, self.MIXTO)
+
+    @property
+    def recibe_pedidos_del_menu(self) -> bool:
+        """Si el menú digital (el QR de la mesa) puede mandar pedidos. Con el plan «Menú
+        digital» el panel no tiene dónde verlos, y en modo «solo meseros» los toma el mesero."""
+        return not self.es_plan_menu and self.usa_autoservicio
 
     def save(self, *args, **kwargs):
         if not self.db_name:

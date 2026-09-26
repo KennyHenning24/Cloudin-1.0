@@ -55,7 +55,7 @@ def meseros(request):
         .annotate(total=Sum(LINEA), pedidos=Count("order", distinct=True))
     }
     equipo = []
-    for m in Mesero.objects.select_related("empleado"):
+    for m in Mesero.objects.all():
         datos = ventas_hoy.get(m.id, {})
         equipo.append({
             "m": m,

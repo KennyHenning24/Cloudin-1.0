@@ -8,8 +8,8 @@
 **Cloudflare Pages no puede ejecutar Cloudin.** Pages publica archivos estáticos
 (HTML, CSS, JS, imágenes) y, como mucho, pequeñas funciones en JavaScript. Cloudin
 es un backend **Django (Python)** que renderiza el panel en el servidor, guarda en
-bases de datos, crea una base nueva por cada restaurante, recibe fotos y habla con
-Factus. Nada de eso corre en Pages.
+bases de datos, crea una base nueva por cada restaurante y recibe fotos y pedidos.
+Nada de eso corre en Pages.
 
 Lo que sí sirve dentro de Cloudflare es **Cloudflare Containers**: el mismo Django,
 sin reescribirlo, dentro de un contenedor Docker que Cloudflare enciende cuando
@@ -27,10 +27,10 @@ disco del contenedor se borra, los datos van afuera:
      cloudin_control + cloudin_<slug>
 ```
 
-¿Y Pages? Pages es para **los sitios web de cada restaurante** (como
-`client/example/`): son estáticos, cargan `cloudin-menu.v1.js` y leen la API de
-Cloudin. Así fue diseñado el producto desde el principio (ver
-`CONECTAR-MENU-A-CLOUDIN.md`).
+¿Y Pages? Pages es para **el menú digital de cada restaurante** (como
+`client/example/`): son sitios estáticos que cargan `cloudin-menu.v1.js`, leen la
+carta de Cloudin y le mandan los pedidos de las mesas. Así fue diseñado el producto
+desde el principio. Cómo publicar y conectar cada menú: **`GUIA-MENU-DIGITAL.md`**.
 
 ## 2. Las complicaciones, una por una
 
@@ -61,7 +61,7 @@ Containers exige el plan **Workers Paid (5 USD/mes)**; en el plan gratis no exis
   factura de Cloudflare: PlanetScale Postgres. Supabase encaja peor: está pensado
   para una sola base por proyecto.
 - **Latencia.** Django hace decenas de consultas por página, y el alta de un
-  restaurante son **626 sentencias SQL** (medido). Por eso el contenedor está
+  restaurante son **cientos de sentencias SQL** (se midieron 626). Por eso el contenedor está
   restringido a la región **ENAM** (este de Norteamérica) y la base debe crearse
   en **AWS us-east-1 (Virginia)**: quedan a pocos milisegundos entre sí. Si la base
   quedara en otra región, cada página tardaría segundos.
@@ -90,9 +90,9 @@ en el dashboard (tiene capa gratuita; Cloudflare pide un medio de pago).
 
 ### 2.5 La caché vive en memoria
 
-Los topes de intentos de login, las llaves que evitan pedidos duplicados de la
-tablet del mesero y el token de Factus se guardan en la caché de Django, que es la
-memoria del proceso. Por eso hay **un solo contenedor** (`max_instances: 1`) con un
+Los topes de intentos de login y de pedidos por IP, las llaves que evitan pedidos
+duplicados de la tablet del mesero y la carta pública ya armada se guardan en la
+caché de Django, que es la memoria del proceso. Por eso hay **un solo contenedor** (`max_instances: 1`) con un
 solo proceso de gunicorn con hilos. Si algún día hace falta más de un contenedor,
 primero hay que mover esa caché a algo compartido (la base de datos o Redis).
 
@@ -119,20 +119,17 @@ horas cobradas.
 No existe un `ssh` cómodo al contenedor para correr `python manage.py …`. Lo que
 necesita correr al arrancar ya lo hace solo (`preparar_servidor`: migraciones de
 control y de todos los restaurantes, y el superusuario inicial). Para los demás
-comandos (`seed_demo_menu`, `importar_menu`, `factus_diagnostico`,
-`control_analizar --todos`…) se corren **desde tu PC apuntando a la base de
-producción** (§5).
+comandos (`seed_demo_menu`, `importar_menu`, `import_menu`, `tenant_qr`…) se corren
+**desde tu PC apuntando a la base de producción** (§5).
 
-Tampoco hay tareas programadas: `control_analizar --todos` no corre solo, pero el
-análisis ya se dispara al abrir Control o el Inicio y al cerrar cada turno. Si hace
-falta, se agrega luego un *Cron Trigger* al Worker.
+Tampoco hay tareas programadas, y hoy ninguna hace falta. Si algún día se quiere el
+`importar_menu --todos` diario, se agrega un *Cron Trigger* al Worker.
 
 ### 2.9 Correo, impresión y lo demás
 
 - **Correo** (recuperar contraseña, invitaciones): hace falta un proveedor SMTP
   (`EMAIL_HOST`…). Sin él, los correos se escriben en el registro del contenedor.
 - **Impresión** de tirillas: no cambia, la hace el navegador.
-- **Factus**: sale a internet sin problema desde el contenedor.
 - **Costo aproximado** con los precios publicados hoy: 5 USD/mes del plan, que
   incluye un cupo de uso; el contenedor `basic` (1 GiB) encendido las 24 horas
   suma unos 7–8 USD más; con el apagado automático y poco tráfico, casi nada. Neon
@@ -157,8 +154,13 @@ Qué hacer (ya se quitó el `.rar` de la rama, pero **sigue en el historial**):
    o reescribir el historial para borrar ese commit (lo decides tú: es irreversible).
 2. En producción usar **llaves nuevas**: `SECRET_KEY` y `CREDENTIAL_KEY` nuevas, y
    una contraseña de superusuario nueva. No reutilizar nada del `.env`.
-3. Pedir a Factus credenciales nuevas antes de pasar a producción.
+3. Cloudin ya no usa Factus, pero esas credenciales sandbox quedaron publicadas:
+   cámbialas o da de baja la cuenta en Factus.
 4. En tu PC, cambiar las contraseñas de los usuarios y la de `juan`.
+5. Las **API keys** (`ck_…`) de Cultura Brisket y El Bembé están en esas bases. Si
+   pasas esos restaurantes a producción con sus datos, regenera sus llaves en el
+   panel maestro (**Regenerar API key**) y actualízalas en sus sitios cuando el dueño
+   lo apruebe (el sitio deja de pedir hasta que se cambie).
 
 ## 3. Qué se agregó al proyecto
 
@@ -226,7 +228,6 @@ completo Worker → contenedor → Django funciona (redirecciones, login con CSR
 | `DJANGO_SUPERUSER_PASSWORD` | Primer arranque | Una nueva y larga (no `cloudin2026`) |
 | `DJANGO_SUPERUSER_EMAIL` | No | Tu correo |
 | `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET`, `R2_PUBLIC_DOMAIN` | Para ver fotos | §4.3 (`R2_BUCKET=cloudin-fotos`) |
-| `FACTUS_URL`, `FACTUS_CLIENT_ID`, `FACTUS_CLIENT_SECRET`, `FACTUS_USERNAME`, `FACTUS_PASSWORD` | No | Sin ellas se usa el proveedor simulado |
 | `EMAIL_HOST`, `EMAIL_PORT`, `EMAIL_HOST_USER`, `EMAIL_HOST_PASSWORD`, `DEFAULT_FROM_EMAIL` | No | Sin ellas los correos van al registro |
 | `LEGAL_RESPONSABLE`, `LEGAL_NIT`, `LEGAL_CORREO`, `LEGAL_DIRECCION`, `LEGAL_CIUDAD` | No | Datos de los términos |
 
@@ -236,6 +237,9 @@ completo Worker → contenedor → Django funciona (redirecciones, login con CSR
    `https://cloudin.<tu-cuenta>.workers.dev/master/` y entrar con el superusuario.
    La primera visita tarda (crea todas las tablas).
 6. Dar de alta un restaurante en `/master/nuevo/`.
+7. Publicar su menú digital en Cloudflare Pages y conectarlo (registrar la «Página del
+   menú» en `/admin/`, que es lo que autoriza sus pedidos y arma los QR):
+   **`GUIA-MENU-DIGITAL.md`**, secciones 4 y 12.
 
 ## 5. El día a día
 
@@ -259,7 +263,7 @@ completo Worker → contenedor → Django funciona (redirecciones, login con CSR
   $env:DATABASE_URL = "postgresql://…neon.tech/neondb?sslmode=require"
   $env:CREDENTIAL_KEY = "<la misma del servidor>"
   # y las R2_* si el comando sube fotos (seed_demo_menu, importar_menu)
-  python manage.py control_analizar --todos
+  python manage.py tenant_qr --slug culturabrisket --no-png
   ```
 
   Las variables de la terminal ganan sobre tu `.env`. Cierra la terminal al
@@ -273,3 +277,5 @@ completo Worker → contenedor → Django funciona (redirecciones, login con CSR
    `*.cloudin.co/*` con un registro DNS comodín con proxy.
 3. En `wrangler.jsonc`: `CLOUDIN_PUBLIC_URL`, `ALLOWED_HOSTS`,
    `CSRF_TRUSTED_ORIGINS` y `TENANT_BASE_DOMAIN` con el dominio nuevo.
+4. En cada menú digital, cambiar la dirección del servidor (`CLOUDIN_CONFIG.api` y el
+   `<script>` del runtime). Mientras tanto la dirección `workers.dev` sigue funcionando.

@@ -4,7 +4,7 @@ Sesión de Django + CSRF (el panel vive en el mismo dominio). Permisos:
 - leer: todo el equipo del restaurante;
 - marcar agotado / disponible: todo el equipo;
 - crear, editar, reordenar, borrar, precios, ajustes y mesas: dueño o administrador.
-Nada de esto exige turno abierto.
+Lo usa el panel del dueño (Mi menú, Personalizar, Mesas y QR).
 
 Todo se identifica por el UUID público (`id`). Borrar es lógico y se puede deshacer.
 """

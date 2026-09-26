@@ -45,16 +45,9 @@ function tarjeta(o) {
 async function refrescar() {
   try {
     const pedidos = await api("/api/v1/staff/kitchen/");
-    // El estado del turno lo da la bandeja de mensajes; la cocina lo reutiliza
-    // para no confundir «no hay comandas» con «la caja está cerrada».
-    const {turno_abierto} = await api("/api/v1/staff/messages/?limite=1");
     pintarSiCambia(document.getElementById("comandas"), pedidos.length
       ? pedidos.map(tarjeta).join("")
-      : (turno_abierto === false
-          ? `<div class="card vacio">
-               La caja está cerrada. <a href="/panel/turnos/" style="color:var(--brand)">Abre el
-               turno</a> para que entren comandas.</div>`
-          : '<div class="card vacio">No hay comandas activas.</div>'));
+      : '<div class="card vacio">No hay comandas por hacer.</div>');
     document.getElementById("conteo").textContent = `${pedidos.length} activas`;
     document.getElementById("reloj").textContent = new Date().toLocaleTimeString("es-CO");
   } catch (e) { console.error(e); }

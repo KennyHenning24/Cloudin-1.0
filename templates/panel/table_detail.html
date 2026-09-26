@@ -64,13 +64,6 @@
 {% block head %}
 {{ block.super }}
 <style>
-  .prop-grupo{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
-  .prop-op{display:grid;gap:2px;text-align:center;padding:9px 6px;border-radius:var(--r);cursor:pointer;
-    background:var(--surface-2);border:1.5px solid var(--line);color:var(--text-2);font:inherit}
-  .prop-op strong{font-size:13px;font-weight:650;color:var(--text)}
-  .prop-op small{font-size:12px;color:var(--text-3)}
-  .prop-op.on{border-color:var(--brand);background:var(--brand-soft)}
-  .prop-op.on small{color:var(--brand)}
   .miniatura{width:40px;height:40px;border-radius:11px;flex:none;background:var(--surface-3) center/cover no-repeat}
   dialog.opciones{border:1px solid var(--line);border-radius:var(--r-xl);background:var(--surface);color:var(--text);
     padding:0;width:min(480px,calc(100% - 32px));max-height:86vh;box-shadow:0 30px 80px rgba(0,0,0,.55)}
@@ -90,8 +83,6 @@
   .mas{width:30px;height:30px;border-radius:9px;border:1px solid var(--line);background:var(--surface);color:var(--text-2);
     cursor:pointer;font-weight:800;line-height:1;transition:background .2s}
   .mas:hover{background:var(--surface-3);color:var(--text)}
-  .reserva-b{display:flex;gap:10px;align-items:center;padding:10px 12px;border-radius:var(--r);margin-bottom:12px;
-    background:var(--lavanda-bg);color:var(--text)}
   .tipos-n{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:12px 0}
   .tipo-n{display:grid;gap:4px;justify-items:center;text-align:center;padding:14px 8px;border-radius:16px;cursor:pointer;
     border:1.5px solid var(--line);background:var(--surface-2);font:inherit;color:var(--text);transition:all .2s var(--ease)}
@@ -269,9 +260,6 @@ async function refrescarCuenta() {
   const cuenta = await api(`/api/v1/staff/sessions/${sesionId}/`);
   CUENTA = cuenta;
   const esc = (t) => String(t ?? "").replace(/[&<>"']/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
-  const reserva = cuenta.reserva ? `<div class="reserva-b"><span class="chip-ico sm lavanda"><svg class="ico" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M8 3v4M16 3v4M3 10h18"/></svg></span>
-      <div><strong>Reserva ${esc(cuenta.reserva.codigo)} · ${esc(cuenta.reserva.nombre)}</strong>
-      <div class="small dim">${cuenta.reserva.personas} personas${cuenta.reserva.observaciones ? " · «" + esc(cuenta.reserva.observaciones) + "»" : ""}</div></div></div>` : "";
   const pedidos = cuenta.orders.map(o => `
     <div class="pedido-c">
       <div class="spread" style="margin-bottom:4px">
@@ -295,10 +283,9 @@ async function refrescarCuenta() {
       <div style="margin-top:6px">${botonImprimir(o)}</div>
     </div>`).join("");
 
-  totalCuenta = Number(cuenta.current_total) || 0;
   const descuento = Number(cuenta.descuento) || 0;
   const sinCobrar = (cuenta.novedades || []).filter(n => n.tipo !== "descuento");
-  const cambio = pintarSiCambia(cont, reserva + pedidos + `
+  pintarSiCambia(cont, pedidos + `
     <div class="totales" style="margin:var(--sp-3) 0">
       ${descuento ? `<div class="spread small"><span class="dim">Consumo</span><span class="fin">${money(cuenta.subtotal)}</span></div>
         <div class="spread small"><span class="dim">Descuento · ${esc(cuenta.descuento_motivo)}</span><span class="fin" style="color:var(--ok)">− ${money(descuento)}</span></div>` : ""}
@@ -308,65 +295,10 @@ async function refrescarCuenta() {
         <svg class="ico" viewBox="0 0 24 24"><path d="M19 5L5 19"/><circle cx="7" cy="7" r="2.5"/><circle cx="17" cy="17" r="2.5"/></svg>
         ${descuento ? "Cambiar o quitar el descuento" : "Hacer un descuento"}</button>
     </div>
-    <div class="campo" style="margin-bottom:var(--sp-3)">
-      <label for="medio-pago">Cómo paga el cliente</label>
-      <select id="medio-pago" onchange="medioPago = this.value">
-        ${MEDIOS.map(([v, t]) => `<option value="${v}" ${v === medioPago ? "selected" : ""}>${t}</option>`).join("")}
-      </select>
-    </div>
-    <div id="propina-caja"></div>
     <div class="row">
       <a class="btn ghost" href="/panel/cuenta/${sesionId}/imprimir/" target="_blank">Precuenta</a>
-      <button class="btn ghost" onclick="cerrarSinFacturar()">Cerrar sin facturar</button>
-      <button class="btn ok" onclick="cerrarYFacturar()">Cerrar y facturar</button>
+      <button class="btn ok" onclick="cerrarCuenta()">Cerrar cuenta</button>
     </div>`);
-  if (cambio || !document.getElementById("propina-opciones")) pintarPropina();
-}
-
-/* Propina voluntaria (Ley 1935 de 2018). Se le pregunta al cliente; la sugerida
-   es el 10 %. No va en la factura electrónica: se anota aparte y se reparte
-   entre el equipo del turno. Vive fuera del sondeo para no perder la elección. */
-let totalCuenta = 0;
-let propinaModo = "no";      // "no" | "sugerida" | "otra"
-let propinaOtra = "";
-function valorPropina() {
-  if (propinaModo === "sugerida") return Math.round(totalCuenta * 0.10);
-  if (propinaModo === "otra") return Number(String(propinaOtra).replace(/[^0-9]/g, "")) || 0;
-  return 0;
-}
-function pintarPropina() {
-  const caja = document.getElementById("propina-caja");
-  if (!caja) return;
-  const sugerida = Math.round(totalCuenta * 0.10);
-  const opcion = (modo, texto, sub) => `<button type="button" class="prop-op ${propinaModo === modo ? "on" : ""}"
-      onclick="elegirPropina('${modo}')"><strong>${texto}</strong>${sub ? `<small>${sub}</small>` : ""}</button>`;
-  caja.innerHTML = `
-    <div class="campo" style="margin-bottom:var(--sp-3)">
-      <label>Propina voluntaria <span class="dim small">· pregúntale al cliente</span></label>
-      <div class="prop-grupo" id="propina-opciones">
-        ${opcion("no", "Sin propina", "")}
-        ${opcion("sugerida", "10 % sugerida", money(sugerida))}
-        ${opcion("otra", "Otro valor", "")}
-      </div>
-      ${propinaModo === "otra" ? `<input id="propina-otra" inputmode="numeric" placeholder="Ej. 5000"
-          value="${propinaOtra}" oninput="propinaOtra = this.value; pintarTotalPropina()" style="margin-top:8px">` : ""}
-    </div>
-    <div class="spread" id="total-propina" style="margin-bottom:var(--sp-3)"></div>`;
-  pintarTotalPropina();
-}
-function pintarTotalPropina() {
-  const el = document.getElementById("total-propina");
-  if (!el) return;
-  const p = valorPropina();
-  el.innerHTML = p
-    ? `<span class="dim small">Cuenta ${money(totalCuenta)} + propina ${money(p)}</span>
-       <strong class="fin">A cobrar ${money(totalCuenta + p)}</strong>`
-    : "";
-}
-function elegirPropina(modo) {
-  propinaModo = modo;
-  pintarPropina();
-  if (modo === "otra") { const c = document.getElementById("propina-otra"); if (c) c.focus(); }
 }
 
 async function cambiarEstado(id, status) {
@@ -374,47 +306,19 @@ async function cambiarEstado(id, status) {
   refrescarCuenta();
 }
 
-// El medio de pago va en la factura electrónica (la DIAN lo exige). Vive fuera
-// del bloque que se repinta por sondeo, para que no se pierda la elección.
-const MEDIOS = [["10", "Efectivo"], ["49", "Tarjeta débito"], ["48", "Tarjeta crédito"],
-                ["47", "Transferencia"]];
-let medioPago = "10";
-
-function enviarA(ruta) {
-  const form = document.createElement("form");
-  form.method = "post";
-  form.action = ruta;
-  form.innerHTML = `<input type="hidden" name="csrfmiddlewaretoken" value="${CSRF}">
-                    <input type="hidden" name="medio_pago" value="${medioPago}">
-                    <input type="hidden" name="propina" value="${valorPropina()}">`;
-  document.body.appendChild(form);
-  form.submit();
-}
-
-// Cierra la mesa y emite la factura de una vez. Termina en el comprobante,
-// donde se ve el CUFE y qué respondió la DIAN.
-function cerrarYFacturar() {
-  const p = valorPropina();
-  const extra = p ? "\n\nPropina voluntaria: " + money(p) + " (va aparte de la factura)." : "";
-  if (!confirm("¿Cerrar la mesa y emitir su factura electrónica?" + extra)) return;
-  enviarA(`/panel/cuenta/${sesionId}/cerrar-y-facturar/`);
-}
-
-// Para cuando el cliente no pide factura o todavía no está habilitada.
-async function cerrarSinFacturar() {
-  if (!confirm("¿Cerrar la mesa sin facturar? La venta queda registrada igual.")) return;
+// Cierra la cuenta: la mesa queda libre y sus pedidos salen de Cocina y Mensajes.
+// Se abre el comprobante para imprimirlo o entregarlo al cliente.
+async function cerrarCuenta() {
+  if (!confirm("¿Cerrar la cuenta de esta mesa? La mesa queda libre para los siguientes clientes.")) return;
   const id = sesionId;
-  await api(`/api/v1/staff/sessions/${id}/close/`, {
-    method: "POST", body: JSON.stringify({propina: valorPropina(), propina_medio: medioPago}),
-  });
+  await api(`/api/v1/staff/sessions/${id}/close/`, {method: "POST"});
   window.open(`/panel/cuenta/${id}/imprimir/`, "_blank", "width=420,height=620");
-  propinaModo = "no"; propinaOtra = "";
   refrescarCuenta();
 }
 
 /* ---------- anular, cortesía, devolución y descuento ----------
-   Siempre con motivo. Un cajero necesita la clave de un administrador en ese
-   momento; todo queda registrado y Cloudin Control lo vigila. */
+   Siempre con motivo. Quien no es administrador necesita la clave de uno en ese
+   momento; todo queda registrado en la cuenta. */
 let CUENTA = null;
 const MOTIVOS = {
   anulacion: ["Error al tomar el pedido", "El cliente cambió de opinión", "Se demoró demasiado", "Producto agotado"],

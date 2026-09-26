@@ -15,12 +15,17 @@ uno, obligatorio) y el precio base pasa a ser el del tamaño más barato; cada
 opción lleva la diferencia. Así «precio base + lo que suman las opciones» da
 siempre el precio correcto.
 
+Un menú digital que lee la carta pública (cloudin.menu/v1) conoce los `id` (UUID)
+del producto, su tamaño y sus adiciones, no las posiciones: `linea_desde_v1`
+traduce una línea de pedido con esos `id` a la forma vieja antes de cobrarla.
+
 Para que las listas no hagan una consulta por producto, prefetch con
 `PREFETCH_LEGACY`.
 """
 
 from decimal import Decimal
 
+from django.core.exceptions import ValidationError
 from django.db import transaction
 
 from apps.common.keys import key_from, unique_key
@@ -108,3 +113,65 @@ def _guardar_opciones_legacy(producto, grupos: list) -> None:
             ModifierOption.objects.create(group=grupo, name=str(v["nombre"])[:60],
                                           price_delta=Decimal(str(v.get("precio") or 0)), position=j)
         ProductModifierGroup.objects.create(product=producto, group=grupo, position=posicion)
+
+
+def _id(valor) -> str:
+    return str(valor or "").strip().lower()
+
+
+def seleccion_desde_v1(producto, variante=None, adiciones=()) -> list:
+    """La elección hecha con los `id` de la carta pública, en posiciones:
+    [{"grupo": g, "valor": v}], que es lo que valida y cobra `opciones.aplicar`.
+
+    - `variante`: el `id` de uno de sus `variants`, o None para la presentación
+      base (la del `price` del producto).
+    - `adiciones`: los `id` de las `options` elegidas en sus `modifier_groups`.
+
+    Recorre las mismas tablas y en el mismo orden que `opciones_legacy`.
+    """
+    seleccion = []
+    grupo = 0
+    variantes = _variantes(producto)
+    if variantes and producto.price is not None:
+        if not _id(variante):
+            seleccion.append({"grupo": 0, "valor": 0})
+        else:
+            ids = [_id(v.uuid) for v in variantes]
+            if _id(variante) not in ids:
+                raise ValidationError(f"Esa presentación de «{producto.name}» ya no existe. Actualiza el menú.")
+            seleccion.append({"grupo": 0, "valor": ids.index(_id(variante)) + 1})
+        grupo = 1
+    elif _id(variante):
+        raise ValidationError(f"«{producto.name}» no tiene presentaciones para elegir.")
+
+    posiciones = {}
+    for enlace in producto.modifier_links.all():
+        opciones = list(enlace.group.options.all())
+        if not opciones:
+            continue  # opciones_legacy tampoco cuenta los grupos vacíos
+        for valor, opcion in enumerate(opciones):
+            posiciones[_id(opcion.uuid)] = {"grupo": grupo, "valor": valor}
+        grupo += 1
+    for adicion in adiciones or []:
+        if _id(adicion) not in posiciones:
+            raise ValidationError(f"Una opción de «{producto.name}» ya no existe. Actualiza el menú.")
+        seleccion.append(posiciones[_id(adicion)])
+    return seleccion
+
+
+def linea_desde_v1(linea: dict) -> dict:
+    """Una línea de pedido con los `id` de la carta pública
+
+        {"product": "<uuid>", "variant": "<uuid>" | null, "options": ["<uuid>", …], "quantity": 2}
+
+    en la forma que entienden los pedidos: `product_id` + `opciones` por posición.
+    Las demás claves (cantidad, nota…) pasan igual. Lanza ValidationError si el
+    producto o una de sus opciones ya no existe."""
+    from .models import Product
+
+    try:
+        producto = Product.objects.prefetch_related(*PREFETCH_LEGACY).get(uuid=_id(linea.get("product")))
+    except (Product.DoesNotExist, ValidationError, ValueError):
+        raise ValidationError("Un producto del pedido ya no está en el menú. Actualiza la página.")
+    return {**linea, "product_id": producto.pk,
+            "opciones": seleccion_desde_v1(producto, linea.get("variant"), linea.get("options") or [])}

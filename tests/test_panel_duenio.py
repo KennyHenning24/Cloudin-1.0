@@ -11,7 +11,6 @@ from django.contrib.staticfiles import finders
 from django.core import mail
 from django.core.cache import cache
 from django.urls import reverse
-from django.utils.html import escapejs
 from PIL import Image
 
 from apps.business.models import OpeningHours, RestaurantSettings
@@ -49,7 +48,7 @@ def _foto_jpg():
 
 
 @pytest.mark.django_db
-def test_las_pantallas_del_menu_abren_sin_turno(client, menu_digital):
+def test_las_pantallas_del_menu_abren(client, menu_digital):
     client.force_login(menu_digital.dueno)
     for nombre in PANTALLAS_DEL_MENU:
         r = client.get(reverse(f"panel:{nombre}"))
@@ -58,15 +57,15 @@ def test_las_pantallas_del_menu_abren_sin_turno(client, menu_digital):
 
 
 @pytest.mark.django_db
-def test_el_plan_menu_no_ve_caja_cocina_ni_facturacion(client, menu_digital):
+def test_el_plan_menu_no_ve_pedidos_mesas_ni_meseros(client, menu_digital):
     client.force_login(menu_digital.dueno)
-    for nombre in ("tables", "kitchen", "turnos", "facturacion", "inventario", "configuracion"):
+    for nombre in ("tables", "kitchen", "mensajes", "meseros", "configuracion"):
         r = client.get(reverse(f"panel:{nombre}"))
         assert r.status_code == 302 and r.url == reverse("panel:inicio"), nombre
     html = client.get(reverse("panel:inicio")).content.decode()
     for seccion in ("Mi menú", "Personalizar", "Mesas y QR", "Cuenta"):
         assert seccion in html
-    assert "Turnos y caja" not in html and 'id="campana"' not in html
+    assert "Pedidos y mesas" not in html and 'id="campana"' not in html
     assert 'class="barra-inferior"' in html and 'class="fab"' in html
 
 
@@ -74,10 +73,14 @@ def test_el_plan_menu_no_ve_caja_cocina_ni_facturacion(client, menu_digital):
 def test_inicio_con_estado_pendientes_y_qr(client, menu_digital):
     client.force_login(menu_digital.dueno)
     html = client.get(reverse("panel:inicio")).content.decode()
-    assert "En línea" in html  # hay un producto disponible con precio
+    assert "Sin publicar" in html  # todavía no tiene la página de su menú digital
+    menu_digital.tenant.menu_page = "https://birria-lucho.pages.dev/"
+    menu_digital.tenant.save()
+    html = client.get(reverse("panel:inicio")).content.decode()
+    assert "En línea" in html  # página publicada y un producto disponible con precio
     assert "Completa tu menú" in html and "Precio de 1 producto" in html
     assert reverse("api:qr-menu", args=["png"]) in html
-    assert f"/m/{menu_digital.tenant.slug}/" in html  # enlace del menú de respaldo
+    assert "https://birria-lucho.pages.dev/" in html  # «Ver mi menú» lleva a su página
 
 
 @pytest.mark.django_db
@@ -234,9 +237,15 @@ def test_crear_mesas_y_ver_sus_qr(client, menu_digital, en_restaurante):
     r = client.post("/api/v1/staff/mesas/", {"count": 3}, content_type="application/json")
     assert r.status_code == 201 and r.json() == {"created": 3}
     html = client.get(reverse("panel:qr")).content.decode()
-    assert "Mesa 3" in html and reverse("api:qr-mesas-pdf") in html
+    # Sin la página del menú digital no hay a dónde llevar el QR: las mesas se ven, sus QR no.
+    assert "Mesa 3" in html and reverse("api:qr-mesas-pdf") not in html
+    assert "tu menú digital esté publicado" in html
     with en_restaurante(menu_digital.tenant):
         mesa = Table.objects.get(number=2)
+    assert client.get(reverse("api:qr-mesa", args=[mesa.id, "png"])).status_code == 404
+    menu_digital.tenant.menu_page = "https://birria-lucho.pages.dev/"
+    menu_digital.tenant.save()
+    assert reverse("api:qr-mesas-pdf") in client.get(reverse("panel:qr")).content.decode()
     r = client.get(reverse("api:qr-mesa", args=[mesa.id, "png"]))
     assert r.status_code == 200 and r["Content-Type"] == "image/png"
 
@@ -250,9 +259,6 @@ def test_la_vista_previa_no_cuenta_como_visita(client, menu_digital):
     cache.delete(f"menu_visto:{slug}")
     client.get(f"/api/public/{slug}/menu/", {"vista": "panel"})
     assert cache.get(f"menu_visto:{slug}") is None
-    html = client.get(f"/m/{slug}/", {"vista": "panel"}).content.decode()
-    assert 'id="cloudin-vista-base"' in html and "cloudin:vista-lista" in html
-    assert escapejs(f"/api/public/{slug}/menu/?vista=panel") in html
     client.get(f"/api/public/{slug}/menu/")
     assert cache.get(f"menu_visto:{slug}") is not None
 
@@ -280,22 +286,20 @@ def test_el_panel_se_instala_como_app(client):
 
 @pytest.mark.django_db
 def test_el_plan_completo_tiene_mi_menu_y_los_enlaces_viejos_llevan_al_editor(
-        client, crear_restaurante, crear_usuario, abrir_turno, en_restaurante):
+        client, crear_restaurante, crear_usuario, en_restaurante):
     tenant = crear_restaurante("completo", plan="completo")
     admin = crear_usuario(tenant)
-    abrir_turno(tenant)
     with en_restaurante(tenant):
         p = Product.objects.create(category=Category.objects.create(name="Platos"), name="Bandeja", price=Decimal("25000"))
     client.force_login(admin)
     html = client.get(reverse("panel:inicio")).content.decode()
     assert f'href="{reverse("panel:mi-menu")}"' in html and f'href="{reverse("panel:personalizar")}"' in html
-    assert "Turnos y caja" in html  # lo de siempre sigue ahí
+    # El plan completo suma pedidos, mesas, cocina y meseros (y ya no hay turno de caja).
+    assert "Pedidos y mesas" in html and 'id="campana"' in html
+    for nombre in ("tables", "mensajes", "kitchen", "meseros"):
+        assert f'href="{reverse(f"panel:{nombre}")}"' in html, nombre
+        assert client.get(reverse(f"panel:{nombre}")).status_code == 200, nombre
+    for vieja in ("Turnos y caja", "Facturación", "Inventario", "Reservas", "Cloudin Control"):
+        assert vieja not in html, vieja
     r = client.get(reverse("panel:producto-editar", args=[p.id]))
     assert r.status_code == 302 and r.url == reverse("panel:carta-producto", args=[p.uuid])
-    # Las pantallas del menú no exigen turno ni en el plan completo.
-    from apps.shifts.services import cerrar_turno, turno_actual
-
-    with en_restaurante(tenant):
-        cerrar_turno(turno_actual(), por="Pruebas", efectivo_contado=Decimal("10000"))
-    assert client.get(reverse("panel:mi-menu")).status_code == 200
-    assert client.get(reverse("panel:inicio")).status_code == 302  # el Inicio del plan completo sí

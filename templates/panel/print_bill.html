@@ -32,12 +32,11 @@
     </div>
   {% endfor %}
   <div class="sep"></div>
-  <div class="fila total"><span>TOTAL</span><span>${{ total|floatformat:0 }}</span></div>
-  {% if propina %}
-    <div class="fila"><span>Propina voluntaria</span><span>${{ propina|floatformat:0 }}</span></div>
-    <div class="fila total"><span>TOTAL PAGADO</span><span>${{ total_con_propina|floatformat:0 }}</span></div>
+  {% if cuenta.descuento %}
+    <div class="fila"><span>Descuento</span><span>-${{ cuenta.descuento|floatformat:0 }}</span></div>
   {% endif %}
-  <div class="aviso">Documento no válido como factura electrónica.</div>
+  <div class="fila total"><span>TOTAL</span><span>${{ total|floatformat:0 }}</span></div>
+  <div class="aviso">Documento no válido como factura.</div>
   <p class="noprint" style="text-align:center;margin-top:16px">
     <button onclick="window.print()">Imprimir</button>
     <button onclick="window.close()">Cerrar</button>

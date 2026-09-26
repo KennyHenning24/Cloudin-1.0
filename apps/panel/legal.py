@@ -62,11 +62,11 @@ def datos_restaurante(request, slug):
         raise Http404("Restaurante no encontrado")
     whatsapp = ""
     try:
-        from apps.reservas.models import AjustesReservas
+        from apps.business.models import RestaurantSettings
         from apps.tenants.context import tenant_context
 
         with tenant_context(tenant):
-            whatsapp = AjustesReservas.actuales().whatsapp
+            whatsapp = RestaurantSettings.load().whatsapp
     except Exception:  # noqa: BLE001 — la página se muestra igual sin el WhatsApp
         whatsapp = ""
     return render(request, "legal/datos_restaurante.html",

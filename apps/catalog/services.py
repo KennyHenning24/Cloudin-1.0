@@ -66,7 +66,7 @@ def marcar_disponible(producto, disponible: bool, usuario=None):
 
 
 def eliminar_producto(producto, usuario=None):
-    """Sale de la carta en todas partes. No se borra: pedidos y facturas lo nombran."""
+    """Sale de la carta en todas partes. No se borra: los pedidos viejos lo nombran."""
     producto.eliminado = True
     producto.is_available = False
     producto._history_user = usuario

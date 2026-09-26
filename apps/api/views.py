@@ -17,7 +17,6 @@ from apps.catalog.models import Category, Product
 from apps.catalog.opciones import aplicar as aplicar_opciones
 from apps.dining.models import Table
 from apps.orders.models import Order, OrderItem, TableSession
-from apps.shifts.services import MENSAJE_SIN_TURNO_CLIENTE, exigir_turno, turno_actual
 
 from .permissions import IsTenantAdminParaEscribir, IsTenantStaff
 from .serializers import (
@@ -71,15 +70,13 @@ def _crear_pedido(session, items, note="", source=Order.SOURCE_QR, customer_name
 def _sesion_abierta(table, guests=None, customer_name="", mesero=None):
     """Devuelve la cuenta abierta de la mesa; la abre si la mesa estaba libre.
 
-    La cuenta queda colgada del turno de caja abierto. Sin turno abierto no se
-    abre ninguna cuenta ni se agrega nada: lanza `SinTurno`.
+    Abrir la cuenta es lo que ocupa la mesa: desde ese momento el panel, la app
+    del mesero y el menú digital la ven ocupada, hasta que alguien la cierra.
     """
-    turno = exigir_turno(table._state.db)
     session = table.open_session
     if session is None:
         return TableSession.objects.create(
-            table=table, guests=guests or 1, customer_name=customer_name or "",
-            turno=turno, mesero=mesero,
+            table=table, guests=guests or 1, customer_name=customer_name or "", mesero=mesero,
         )
 
     cambios = []
@@ -148,21 +145,22 @@ def table_detail(request, token):
     )
 
 
-def autoservicio_apagado():
-    """Respuesta para el QR cuando el restaurante solo trabaja con meseros."""
-    return Response(
-        {"detail": "En este restaurante los pedidos los toma el mesero. Llámalo y con gusto te atiende.",
-         "codigo": "solo_meseros"},
-        status=status.HTTP_403_FORBIDDEN,
-    )
-
-
-def sin_turno():
-    """Respuesta para quien intenta pedir cuando el restaurante no ha abierto turno."""
-    return Response(
-        {"detail": MENSAJE_SIN_TURNO_CLIENTE, "codigo": "sin_turno"},
-        status=status.HTTP_409_CONFLICT,
-    )
+def pedidos_del_menu_apagados(tenant):
+    """La respuesta para el menú digital cuando el restaurante no recibe pedidos por el
+    QR, o None si sí los recibe (ver Tenant.recibe_pedidos_del_menu)."""
+    if tenant.es_plan_menu:
+        return Response(
+            {"detail": "Este restaurante todavía no recibe pedidos desde el menú. Pídele al mesero.",
+             "codigo": "sin_pedidos"},
+            status=status.HTTP_403_FORBIDDEN,
+        )
+    if not tenant.usa_autoservicio:
+        return Response(
+            {"detail": "En este restaurante los pedidos los toma el mesero. Llámalo y con gusto te atiende.",
+             "codigo": "solo_meseros"},
+            status=status.HTTP_403_FORBIDDEN,
+        )
+    return None
 
 
 @api_view(["POST"])
@@ -173,10 +171,9 @@ def table_create_order(request, token):
 
     if not permitido(request, "pedido-qr", 20, 600):
         return demasiados()
-    if not request.tenant.usa_autoservicio:
-        return autoservicio_apagado()
-    if turno_actual() is None:
-        return sin_turno()
+    apagado = pedidos_del_menu_apagados(request.tenant)
+    if apagado is not None:
+        return apagado
     table = get_object_or_404(Table, token=token, is_active=True)
     serializer = OrderCreateSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
@@ -242,11 +239,10 @@ def site_tables(request):
     Más liviano que /site/info/, pensado para refrescarse cada pocos segundos.
     """
     _marcar_sitio_conectado(request.tenant)
-    reservas = _reservas_proximas()
+    abiertas = {s.table_id: s for s in TableSession.objects.filter(status=TableSession.STATUS_OPEN)}
     mesas = []
     for m in Table.objects.filter(is_active=True).order_by("number"):
-        sesion = m.open_session
-        reserva = reservas.get(m.id)
+        sesion = abiertas.get(m.id)
         mesas.append(
             {
                 "numero": m.number,
@@ -254,32 +250,9 @@ def site_tables(request):
                 "zona": m.zona,
                 "ocupada": sesion is not None,
                 "desde": sesion.opened_at if sesion else None,
-                # Una reserva que llega pronto a esa mesa (sin nombres: solo la hora).
-                "reservada": reserva is not None,
-                "reserva_hora": reserva,
             }
         )
     return Response({"mesas": mesas})
-
-
-def _reservas_proximas():
-    """Mesas con una reserva de hoy que llega en la próxima hora y media (o que se
-    retrasó hasta 30 min): {mesa_id: "7:00 p. m."}."""
-    from datetime import timedelta
-
-    from apps.reservas.models import Reserva
-    from apps.reservas.services import _hora_texto
-
-    ahora = timezone.now()
-    proximas = {}
-    qs = Reserva.objects.filter(
-        fecha=timezone.localdate(), mesa__isnull=False,
-        estado__in=[Reserva.PENDING, Reserva.CONFIRMED, Reserva.ARRIVED],
-    ).select_related("servicio")
-    for r in sorted(qs, key=lambda r: r.inicio):
-        if ahora - timedelta(minutes=30) <= r.inicio <= ahora + timedelta(minutes=90):
-            proximas.setdefault(r.mesa_id, _hora_texto(timezone.localtime(r.inicio)))
-    return proximas
 
 
 @api_view(["GET"])
@@ -334,8 +307,6 @@ def site_create_order(request):
 
     if not permitido(request, "pedido-sitio", 30, 600):
         return demasiados()
-    if turno_actual() is None:
-        return sin_turno()
     numero = request.data.get("table_number")
     if numero in (None, ""):
         return Response(
@@ -480,15 +451,11 @@ def staff_order_status(request, order_id):
 @api_view(["GET"])
 @permission_classes([IsTenantStaff])
 def staff_kitchen(request):
-    """Comandas activas, para la vista de cocina (se refresca por polling)."""
-    turno = turno_actual()
-    if turno is None:
-        return Response([])
+    """Comandas por hacer de las mesas abiertas, para la vista de cocina (polling)."""
     pedidos = (
         Order.objects.filter(
             status__in=[Order.STATUS_PENDING, Order.STATUS_PREPARING],
             session__status=TableSession.STATUS_OPEN,
-            session__turno=turno,
         )
         .select_related("session", "session__table")
         .prefetch_related("items")
@@ -576,7 +543,7 @@ def staff_product_detail(request, product_id):
 
     if request.method == "DELETE":
         # Sale de la carta en todas partes (panel, sitio, meseros, QR). Se
-        # conserva por debajo para no romper pedidos ni facturas viejas y para
+        # conserva por debajo para no romper pedidos viejos y para
         # que reimportar la carta del sitio no lo vuelva a crear.
         producto.eliminado = True
         producto.is_available = False
@@ -602,15 +569,11 @@ def staff_product_detail(request, product_id):
 def staff_messages(request):
     """Bandeja de pedidos: lo último que llegó, con su mesa y su cliente.
 
-    El panel la consulta cada pocos segundos. `sin_ver` le sirve para avisar
-    cuántos mensajes nuevos hay desde la última mirada.
+    Solo las mesas abiertas: al cerrar la cuenta de una mesa, sus pedidos salen
+    de la bandeja (siguen guardados en la cuenta cerrada). El panel la consulta
+    cada pocos segundos; `sin_ver` avisa cuántos llegaron desde la última mirada.
     """
     limite = min(int(request.GET.get("limite", 40)), 200)
-    # Solo el turno abierto: al cerrar el turno la bandeja queda vacía y lo
-    # anterior se consulta en el informe de ese turno, no aquí.
-    turno = turno_actual()
-    pedidos = Order.objects.none()
-    sin_ver = 0
 
     # El contador de la barra lateral: cuántos pedidos llegaron desde la última
     # vez que esta persona abrió Mensajes. Abrir la bandeja (`?leer=1`) lo deja
@@ -620,25 +583,17 @@ def staff_messages(request):
         request.session[clave] = timezone.now().isoformat()
     leido_hasta = request.session.get(clave)
 
-    if turno is not None:
-        base = Order.objects.filter(session__turno=turno)
-        pedidos = (
-            base.select_related("session", "session__table")
-            .prefetch_related("items")
-            .order_by("-created_at")[:limite]
-        )
-        if leido_hasta:
-            sin_ver = base.filter(created_at__gt=leido_hasta).count()
-        else:
-            sin_ver = base.filter(seen_at__isnull=True).count()
-    return Response(
-        {
-            "sin_ver": sin_ver,
-            "turno": turno.numero if turno else None,
-            "turno_abierto": turno is not None,
-            "mensajes": OrderSerializer(pedidos, many=True).data,
-        }
+    base = Order.objects.filter(session__status=TableSession.STATUS_OPEN)
+    pedidos = (
+        base.select_related("session", "session__table")
+        .prefetch_related("items")
+        .order_by("-created_at")[:limite]
     )
+    if leido_hasta:
+        sin_ver = base.filter(created_at__gt=leido_hasta).count()
+    else:
+        sin_ver = base.filter(seen_at__isnull=True).count()
+    return Response({"sin_ver": sin_ver, "mensajes": OrderSerializer(pedidos, many=True).data})
 
 
 @api_view(["POST"])
@@ -661,24 +616,11 @@ def staff_order_printed(request, order_id):
 @api_view(["POST"])
 @permission_classes([IsTenantStaff])
 def staff_close_session(request, session_id):
-    """Cierra la cuenta y libera la mesa.
-
-    Fase 2: aquí se llamará al proveedor de facturación electrónica antes de
-    devolver la respuesta, y se guardará el CUFE / PDF / XML.
-    """
-    from django.core.exceptions import ValidationError
-
-    from apps.shifts.propinas import registrar_propina
-
+    """Cierra la cuenta y libera la mesa: sus pedidos salen de Cocina y Mensajes."""
     session = get_object_or_404(TableSession, pk=session_id)
     if session.status != TableSession.STATUS_OPEN:
         return Response(
             {"detail": "La cuenta ya estaba cerrada."}, status=status.HTTP_400_BAD_REQUEST
         )
     session.close()
-    try:
-        registrar_propina(session, request.data.get("propina") or 0,
-                          str(request.data.get("propina_medio") or "10")[:4])
-    except ValidationError as e:
-        return Response({"detail": e.messages[0], "cerrada": True}, status=status.HTTP_400_BAD_REQUEST)
     return Response(TableSessionSerializer(session).data)

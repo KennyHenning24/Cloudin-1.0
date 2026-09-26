@@ -2,11 +2,7 @@ from rest_framework.permissions import SAFE_METHODS, BasePermission
 
 
 class IsTenantStaff(BasePermission):
-    """Solo usuarios logueados que pertenezcan al restaurante de la petición.
-
-    Además, mientras no haya turno abierto el panel es de solo lectura: ninguna
-    petición que cambie algo (pedidos, mesas, menú, cuentas) pasa.
-    """
+    """Solo usuarios logueados que pertenezcan al restaurante de la petición."""
 
     message = "No tiene acceso a este restaurante."
 
@@ -25,14 +21,6 @@ class IsTenantStaff(BasePermission):
         else:
             membership = getattr(user, "tenant_membership", None)
             if membership is None or membership.tenant_id != tenant.id:
-                return False
-
-        if request.method not in SAFE_METHODS:
-            from apps.shifts.services import MENSAJE_SIN_TURNO, turno_actual
-
-            if turno_actual() is None:
-                self.message = MENSAJE_SIN_TURNO
-                self.code = "sin_turno"
                 return False
         return True
 
@@ -62,9 +50,7 @@ def _administra(request) -> bool:
 
 
 class LeeLaCarta(BasePermission):
-    """Menú, ajustes y QR: cualquiera del restaurante puede leer. NO exige turno:
-    la carta se administra aunque la caja esté cerrada (y en el plan «menú» no
-    hay caja)."""
+    """Menú, ajustes y QR: cualquiera del restaurante puede leer."""
 
     message = "No tienes acceso a este restaurante."
 
