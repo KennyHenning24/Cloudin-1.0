@@ -48,8 +48,13 @@ FACTUS_PASSWORD = os.getenv("FACTUS_PASSWORD", "")
 ALLOWED_HOSTS = [h.strip() for h in os.getenv("ALLOWED_HOSTS", "*").split(",") if h.strip()]
 
 # Dominio base sobre el que se resuelven los subdominios de cada restaurante:
-# lajoya.cloudin.app -> slug "lajoya". En local: lajoya.localhost:8000
+# lajoya.cloudin.co -> slug "lajoya". En local: lajoya.localhost:8000. Es opcional:
+# sin dominio propio, cada restaurante se identifica por la ruta (/api/public/<slug>/…).
 TENANT_BASE_DOMAIN = os.getenv("TENANT_BASE_DOMAIN", "localhost")
+
+# Dirección pública de este servidor (sin / al final). Con ella se arman los enlaces
+# absolutos del menú público (fotos, API, runtime). Vacía: se usa la de la petición.
+CLOUDIN_PUBLIC_URL = os.getenv("CLOUDIN_PUBLIC_URL", "").rstrip("/")
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -65,6 +70,7 @@ INSTALLED_APPS = [
     "apps.tenants",
     "apps.business",
     "apps.catalog",
+    "apps.public_menu",
     "apps.dining",
     "apps.orders",
     "apps.billing",

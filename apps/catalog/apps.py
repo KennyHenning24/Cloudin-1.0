@@ -6,3 +6,6 @@ class CatalogConfig(AppConfig):
     name = "apps.catalog"
     label = "catalog"
     verbose_name = "Menú"
+
+    def ready(self):
+        from . import signals  # noqa: F401  (la versión del menú sube con cada cambio)

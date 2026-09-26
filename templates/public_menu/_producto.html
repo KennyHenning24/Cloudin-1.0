@@ -1,0 +1,18 @@
+{% comment %}
+Un producto del menú. Con molde=True sale vacío: es la <template> que usa el
+runtime. Sin molde, sale pre-renderizado con los datos. La estructura es la
+misma en los dos casos (así no hay salto visual cuando llegan los datos en vivo).
+{% endcomment %}<article class="plato"{% if not molde %} data-cloudin-key="{{ p.key }}" data-available="{{ p.available|yesno:'true,false' }}" data-featured="{{ p.featured|yesno:'true,false' }}"{% endif %}>{% if molde or p.image %}
+<img class="plato__foto" data-cloudin-if="product.image" data-cloudin-src="product.image"{% if not molde %} src="{{ p.image }}" alt="{{ p.name }}"{% endif %} loading="lazy" decoding="async" width="800" height="800">{% endif %}
+<div class="plato__cuerpo">
+<h3 class="plato__nombre" data-cloudin-field="product.name">{% if not molde %}{{ p.name }}{% endif %}</h3>{% if molde or p.description %}
+<p class="plato__desc" data-cloudin-if="product.description" data-cloudin-field="product.description">{% if not molde %}{{ p.description }}{% endif %}</p>{% endif %}
+<ul class="plato__tags" data-cloudin="tags">{% if not molde %}{% for t in p.tag_items %}<li data-cloudin-key="{{ t.key }}">{{ t.name }}</li>{% endfor %}{% endif %}<template data-cloudin-template="tag"><li data-cloudin-field="tag.name"></li></template></ul>
+<ul class="plato__variantes" data-cloudin="variants">{% if not molde %}{% for v in p.variants %}<li data-cloudin-key="{{ v.key }}"><span data-cloudin-field="variant.name">{{ v.name }}</span> <span data-cloudin-field="variant.price">{{ v.price_text }}</span></li>{% endfor %}{% endif %}<template data-cloudin-template="variant"><li><span data-cloudin-field="variant.name"></span> <span data-cloudin-field="variant.price"></span></li></template></ul>
+<div class="plato__pie">
+<strong class="plato__precio" data-cloudin-field="product.price">{% if not molde %}{{ p.price_text }}{% endif %}</strong>{% if molde or not p.available %}
+<span class="plato__agotado" data-cloudin-if="!product.available"><svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="m5.7 5.7 12.6 12.6"/></svg>Agotado</span>{% endif %}{% if molde or p.featured %}
+<span class="plato__destacado" data-cloudin-if="product.featured"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2L12 17.3l-5.6 2.9 1.1-6.2L3 9.6l6.2-.9z"/></svg>Destacado</span>{% endif %}
+</div>
+</div>
+</article>

@@ -1,0 +1,5 @@
+{% comment %}Una categoría. molde=True: la <template> del runtime; sin molde: pre-renderizada.{% endcomment %}<section class="cat"{% if not molde %} id="cat-{{ c.key }}" data-cloudin-key="{{ c.key }}"{% endif %}>
+<h2 class="cat__nombre" data-cloudin-field="category.name">{% if not molde %}{{ c.name }}{% endif %}</h2>{% if molde or c.description %}
+<p class="cat__desc" data-cloudin-if="category.description" data-cloudin-field="category.description">{% if not molde %}{{ c.description }}{% endif %}</p>{% endif %}
+<div class="cat__platos" data-cloudin="products">{% if not molde %}{% for p in c.products %}{% include "public_menu/_producto.html" with p=p molde=False %}{% endfor %}{% endif %}</div>
+</section>

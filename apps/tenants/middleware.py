@@ -15,8 +15,10 @@ from django.http import JsonResponse
 from .context import set_current_tenant
 from .models import Tenant
 
-# Rutas que nunca pertenecen a un restaurante (panel maestro de Juan).
-MASTER_PREFIXES = ("/admin/", "/static/", "/master/")
+# Rutas que nunca pertenecen a un restaurante (panel maestro de Juan), y las del
+# menú público, que llevan el restaurante en la ruta y lo resuelven ellas mismas
+# (así la sesión de un dueño abierta en el mismo navegador no se mezcla).
+MASTER_PREFIXES = ("/admin/", "/static/", "/master/", "/api/public/", "/m/")
 
 
 def _tenant_from_api_key(request):
