@@ -17,6 +17,8 @@ SOLO_POST = {
     "logout", "soporte-salir", "entrar-como", "turno-abrir", "turno-cerrar", "control-analizar",
     "empleado-marcar",
 }
+# Solo existen con DEBUG=True (tienen su propia prueba en test_diseno.py).
+SOLO_DEBUG = {"design-system"}
 # Pantallas principales: deben responder 200, no una redirección. («Nueva compra»
 # redirige a crear el proveedor mientras no haya uno: es lo esperado.)
 PRINCIPALES = {
@@ -58,7 +60,7 @@ def test_todas_las_pantallas_del_panel_abren(client, restaurante_listo):
     client.force_login(user)
     fallas = {}
     for nombre in _rutas_sin_parametros("panel"):
-        if nombre in SOLO_POST:
+        if nombre in SOLO_POST | SOLO_DEBUG:
             continue
         respuesta = client.get(reverse(f"panel:{nombre}"))
         esperado = (200,) if nombre in PRINCIPALES else (200, 302)

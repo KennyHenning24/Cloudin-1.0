@@ -39,6 +39,36 @@ def cantidad(valor, decimales=2):
     return texto or "0"
 
 
+@register.simple_tag
+def icono(nombre, clase="ico", etiqueta=""):
+    """{% icono "mas" %} · {% icono "agotado" "ico sm" "Agotado" %} — ver apps/panel/iconos.py."""
+    from django.utils.html import escape
+    from django.utils.safestring import mark_safe
+
+    from apps.panel.iconos import svg
+
+    return mark_safe(svg(str(nombre), escape(clase), escape(etiqueta)))
+
+
+@register.filter
+def cop(valor):
+    """12000 -> «$ 12.000» (el formato del contrato de menús)."""
+    from apps.common.money import formato_cop
+
+    return formato_cop(valor)
+
+
+@register.filter
+def palabras(texto):
+    """«a b c» -> ["a", "b", "c"] (para recorrer listas cortas en una plantilla)."""
+    return str(texto).split()
+
+
+@register.filter
+def get_item(diccionario, llave):
+    return (diccionario or {}).get(llave, "")
+
+
 @register.filter
 def split_pares(texto):
     """«a:Uno,b:Dos» -> [("a", "Uno"), ("b", "Dos")], para armar opciones en la plantilla."""

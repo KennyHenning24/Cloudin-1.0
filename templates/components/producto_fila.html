@@ -1,0 +1,33 @@
+{% load cloudin %}{% comment %}
+ProductCard en lista (Mi menú). Asa para arrastrar, precio editable en línea, switch de
+disponible, flechas ↑↓ (celular) y menú ⋯. Se ve bien sin foto, con nombre largo y agotado.
+{% include "components/producto_fila.html" with p=producto editar=url_editar %}
+{% endcomment %}<li class="producto" data-id="{{ p.uuid }}" data-available="{{ p.is_available|yesno:'true,false' }}" data-precio-actual="{{ p.price|default_if_none:'' }}">
+  <span class="asa" title="Arrastra para ordenar" aria-hidden="true">{% icono "asa" %}</span>
+  {% if p.foto %}<img class="foto" src="{{ p.foto }}" alt="" loading="lazy" width="56" height="56">{% else %}<span class="foto" aria-hidden="true">{% icono "imagen" %}</span>{% endif %}
+  <div class="cuerpo">
+    <a class="nombre" href="{{ editar|default:'#' }}">{{ p.name }}</a>
+    <div class="detalle">
+      <button type="button" class="precio-linea{% if p.price is None %} sin-precio{% endif %}" data-editar-precio aria-label="Cambiar el precio de {{ p.name }}{% if p.price is not None %}: {{ p.price|cop }}{% endif %}"><span>{% if p.price is not None %}{% if p.variants.all %}Desde {% endif %}{{ p.price|cop }}{% else %}Poner precio{% endif %}</span></button>
+      {% if p.price is None %}{% include "components/chip.html" with estado="sin_precio" %}{% elif not p.is_available %}{% include "components/chip.html" with estado="agotado" %}{% endif %}
+      {% if p.is_featured %}{% include "components/chip.html" with estado="destacado" %}{% endif %}
+      {% if not p.foto %}<span class="dim small">Sin foto</span>{% endif %}
+    </div>
+  </div>
+  <div class="mover-flechas">
+    <button type="button" class="btn fantasma icono sm" data-mover="arriba" aria-label="Subir {{ p.name }}">{% icono "flecha-arriba" %}</button>
+    <button type="button" class="btn fantasma icono sm" data-mover="abajo" aria-label="Bajar {{ p.name }}">{% icono "flecha-abajo" %}</button>
+  </div>
+  <label class="switch disponible">
+    <input type="checkbox" role="switch" data-disponible{% if p.is_available %} checked{% endif %}{% if p.price is None %} disabled{% endif %} aria-label="{{ p.name }} disponible">
+    <span class="estado" aria-hidden="true">{% if p.is_available %}Disponible{% else %}Agotado{% endif %}</span>
+  </label>
+  <details class="desplegable">
+    <summary class="btn fantasma icono sm" aria-label="Más acciones para {{ p.name }}">{% icono "mas-opciones" %}</summary>
+    <div class="opciones">
+      <a href="{{ editar|default:'#' }}">{% icono "lapiz" %}Editar</a>
+      <button type="button" data-accion="mover">{% icono "carpeta" %}Mover a otra categoría</button>
+      <button type="button" class="peligro" data-accion="eliminar">{% icono "papelera" %}Eliminar</button>
+    </div>
+  </details>
+</li>

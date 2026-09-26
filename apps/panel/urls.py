@@ -1,7 +1,7 @@
 from django.contrib.auth import views as auth_views
 from django.urls import path
 
-from . import control, inventario, menu, meseros, propinas, reservas, seguridad, turnos, views
+from . import control, design_system, inventario, menu, meseros, propinas, reservas, seguridad, turnos, views
 
 app_name = "panel"
 
@@ -31,6 +31,8 @@ urlpatterns = [
         template_name="panel/recuperar_listo.html"), name="recuperar-listo"),
 
     path("", views.inicio, name="inicio"),
+    # Guía viva del sistema de diseño (solo con DEBUG=True)
+    path("design-system/", design_system.pagina, name="design-system"),
     path("mesas/", views.tables, name="tables"),
     path("mesa/<int:table_id>/", views.table_detail, name="table-detail"),
     path("cocina/", views.kitchen, name="kitchen"),
