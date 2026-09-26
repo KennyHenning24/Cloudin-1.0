@@ -8,7 +8,7 @@ La identificación es doble: la API key dice de qué restaurante es la petición
 y el token dice de qué mesa. Nadie tiene que registrarse.
 """
 
-from decimal import Decimal, InvalidOperation
+from decimal import Decimal
 
 from django.core.exceptions import ValidationError
 from django.db import transaction

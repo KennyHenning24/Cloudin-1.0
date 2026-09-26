@@ -35,10 +35,14 @@
         <button type="button" data-tema="oscuro">Oscuro</button>
         <button type="button" data-tema="claro">Claro</button>
       </div>
-      <a class="btn ghost block" href="/admin/logout/">
-        <svg class="ico" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>
-        Salir
-      </a>
+      {# Desde Django 5 el cierre de sesión solo acepta POST. #}
+      <form method="post" action="/admin/logout/">
+        {% csrf_token %}
+        <button class="btn ghost block" type="submit">
+          <svg class="ico" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>
+          Salir
+        </button>
+      </form>
     </div>
   </aside>
 

@@ -180,7 +180,7 @@ def importar(datos: dict, url_base: str = "", aplicar: bool = True) -> dict:
                "sin_cambios": 0, "eliminados": 0, "errores": [], "nuevos": []}
 
     with transaction.atomic(using=Category.objects.db):
-        for ci, c in enumerate(categorias):
+        for c in categorias:
             resumen["errores"].extend(c["errores"])
             categoria = _buscar_categoria(c)
             if categoria is None:
@@ -219,13 +219,17 @@ def importar(datos: dict, url_base: str = "", aplicar: bool = True) -> dict:
                 # Ya existe: el panel manda. Solo se llena lo que esté vacío.
                 cambios = []
                 if not producto.description and p["descripcion"]:
-                    producto.description = p["descripcion"]; cambios.append("description")
+                    producto.description = p["descripcion"]
+                    cambios.append("description")
                 if not producto.image_url and not producto.imagen and p["imagen"]:
-                    producto.image_url = p["imagen"]; cambios.append("image_url")
+                    producto.image_url = p["imagen"]
+                    cambios.append("image_url")
                 if not producto.opciones and p["opciones"]:
-                    producto.opciones = p["opciones"]; cambios.append("opciones")
+                    producto.opciones = p["opciones"]
+                    cambios.append("opciones")
                 if not producto.clave_externa and p["id"]:
-                    producto.clave_externa = p["id"]; cambios.append("clave_externa")
+                    producto.clave_externa = p["id"]
+                    cambios.append("clave_externa")
                 if cambios:
                     resumen["productos_completados"] += 1
                     if aplicar:

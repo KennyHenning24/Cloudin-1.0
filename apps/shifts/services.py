@@ -97,9 +97,7 @@ def _documentos(turno):
 def resumen_turno(turno) -> dict:
     """Todo lo que pasó en el turno, listo para mostrar o congelar."""
     from apps.billing.models import DocumentoFiscal
-    from apps.orders.models import Order, TableSession
-
-    from apps.orders.models import NovedadCuenta
+    from apps.orders.models import NovedadCuenta, Order, TableSession
 
     lineas = _lineas(turno)
     ventas = lineas.aggregate(total=Sum(LINEA), pedidos=Count("order", distinct=True))

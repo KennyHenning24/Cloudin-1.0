@@ -149,8 +149,8 @@ def transmitir(documento, empresa=None, calculo=None):
     empresa = empresa or empresa_actual(db)
     if calculo is None:
         calculo = motor_de(empresa).calcular(
-            [(l["nombre"], l["cantidad"], Decimal(l["precio_unitario"]), None)
-             for l in documento.lineas]
+            [(ln["nombre"], ln["cantidad"], Decimal(ln["precio_unitario"]), None)
+             for ln in documento.lineas]
         )
 
     payload = construir_payload(documento, empresa, calculo, documento.cliente)

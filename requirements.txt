@@ -1,10 +1,16 @@
-Django>=4.2,<5.0
-djangorestframework>=3.15
+Django>=5.2,<5.3
+djangorestframework>=3.16
 django-cors-headers>=4.4
 python-dotenv>=1.0
 cryptography>=42.0
 qrcode[pil]>=7.4
+Pillow>=11.0
 requests>=2.32
-# Solo en producción con bases Postgres por restaurante:
-# psycopg2-binary>=2.9
-# gunicorn>=22.0
+drf-spectacular>=0.28
+django-simple-history>=3.8
+django-storages>=1.14
+rjsmin>=1.2
+# Solo en producción:
+# psycopg[binary]>=3.2   (bases Postgres por restaurante)
+# gunicorn>=23.0
+# boto3>=1.35            (fotos en Cloudflare R2 / S3 con django-storages)

@@ -9,8 +9,8 @@ from django.core.exceptions import PermissionDenied
 from django.core.validators import URLValidator, ValidationError
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
-from django.views.decorators.clickjacking import xframe_options_sameorigin
 from django.utils import timezone
+from django.views.decorators.clickjacking import xframe_options_sameorigin
 from django.views.decorators.http import require_POST
 
 from apps.catalog.models import Category
@@ -259,7 +259,6 @@ def cerrar_y_facturar(request, session_id):
     from django.core.exceptions import ValidationError as VE
 
     from apps.billing.services import facturar_sesion
-
     from apps.shifts.propinas import registrar_propina
 
     from .turnos import _plata

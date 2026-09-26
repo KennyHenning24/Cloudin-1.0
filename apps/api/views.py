@@ -13,11 +13,10 @@ from rest_framework import status
 from rest_framework.decorators import api_view, authentication_classes, permission_classes
 from rest_framework.response import Response
 
-from apps.catalog.models import Category
+from apps.catalog.models import Category, Product
+from apps.catalog.opciones import aplicar as aplicar_opciones
 from apps.dining.models import Table
 from apps.orders.models import Order, OrderItem, TableSession
-from apps.catalog.models import Product
-from apps.catalog.opciones import aplicar as aplicar_opciones
 from apps.shifts.services import MENSAJE_SIN_TURNO_CLIENTE, exigir_turno, turno_actual
 
 from .permissions import IsTenantAdminParaEscribir, IsTenantStaff
@@ -33,7 +32,6 @@ from .serializers import (
     TableSessionSerializer,
     TableWriteSerializer,
 )
-
 
 # --------------------------------------------------------------- utilidades
 

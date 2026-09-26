@@ -1,0 +1,30 @@
+[project]
+name = "cloudin"
+version = "1.0.0"
+description = "Backend multi-restaurante de Cloudin: menús digitales, pedidos, facturación e inventario."
+requires-python = ">=3.12"
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "config.settings"
+testpaths = ["tests", "apps"]
+python_files = ["test_*.py"]
+addopts = "-q -p no:cacheprovider"
+filterwarnings = [
+    "ignore::DeprecationWarning:django.*",
+]
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+extend-exclude = ["*/migrations/*", "staticfiles", "media", "tenant_dbs"]
+
+[tool.ruff.lint]
+# Errores reales, imports ordenados, modernización y trampas comunes.
+select = ["E", "F", "W", "I", "UP", "B"]
+ignore = [
+    "E501",   # el largo de línea lo cuida el formateador; hay textos largos en español
+    "B904",   # raise ... from err: no siempre aporta en mensajes para el usuario
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["apps", "config"]

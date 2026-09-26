@@ -9,8 +9,8 @@ La llave (CREDENTIAL_KEY) vive en el archivo .env, nunca en la base de datos ni
 en el repositorio. Sin esa llave, la columna cifrada es basura ilegible.
 """
 
-from django.conf import settings
 from cryptography.fernet import Fernet, InvalidToken
+from django.conf import settings
 
 _fernet = None
 

@@ -157,6 +157,9 @@ MEDIA_ROOT = BASE_DIR / "media"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
+# Una dirección escrita sin "http" se completa con https (lo que hará Django 6).
+FORMS_URLFIELD_ASSUME_HTTPS = True
+
 LOGIN_URL = "/panel/login/"
 LOGIN_REDIRECT_URL = "/panel/"
 LOGOUT_REDIRECT_URL = "/panel/login/"

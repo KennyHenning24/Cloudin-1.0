@@ -552,7 +552,7 @@ def sincronizar_rangos(empresa, cliente: ClienteFactus | None = None) -> dict:
     db = empresa._state.db
     creados = actualizados = 0
     for rango in cliente.rangos_numeracion(documento="21"):
-        def fecha(clave, por_defecto):
+        def fecha(clave, por_defecto, rango=rango):
             valor = rango.get(clave)
             if not valor:
                 return por_defecto

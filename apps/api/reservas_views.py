@@ -13,7 +13,7 @@ poder reservar a medianoche aunque el local esté cerrado.
     POST /api/v1/reservas/<codigo>/cancelar/ el cliente cancela (con su teléfono)
 """
 
-from datetime import date, timedelta
+from datetime import date
 
 from django.core.cache import cache
 from django.core.exceptions import ValidationError

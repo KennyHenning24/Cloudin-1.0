@@ -12,7 +12,7 @@ detectada». Nunca «robo»: hay muchas explicaciones honestas para cada cosa.
 from datetime import timedelta
 from decimal import ROUND_HALF_UP, Decimal
 
-from django.db.models import Avg, Count, Q, Sum
+from django.db.models import Count, Sum
 from django.urls import reverse
 from django.utils import timezone
 

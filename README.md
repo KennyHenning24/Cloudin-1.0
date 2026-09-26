@@ -41,14 +41,25 @@ generan sus credenciales.
 ## Arrancar en local
 
 ```bash
-C:\Users\guerr\.venvs\cloudin\Scripts\python.exe manage.py runserver
+C:\Users\guerr\.venvs\cloudin312\Scripts\python.exe manage.py runserver
 ```
 
-El entorno virtual vive fuera de OneDrive (`C:\Users\guerr\.venvs\cloudin`) para
-que OneDrive no sincronice miles de archivos. Para recrearlo:
+Python 3.12 + Django 5.2 LTS. El entorno virtual vive fuera de OneDrive
+(`C:\Users\guerr\.venvs\cloudin312`) para que OneDrive no sincronice miles de
+archivos. Para recrearlo (incluye pytest y ruff):
 
 ```bash
-python -m venv C:\Users\guerr\.venvs\cloudin && C:\Users\guerr\.venvs\cloudin\Scripts\pip install -r requirements.txt
+py -3.12 -m venv C:\Users\guerr\.venvs\cloudin312 && C:\Users\guerr\.venvs\cloudin312\Scripts\pip install -r requirements-dev.txt
+```
+
+Pruebas y revisión de estilo (no tocan las bases reales: usan bases temporales):
+
+```bash
+C:\Users\guerr\.venvs\cloudin312\Scripts\python.exe -m pytest
+```
+
+```bash
+C:\Users\guerr\.venvs\cloudin312\Scripts\ruff.exe check .
 ```
 
 Accesos:

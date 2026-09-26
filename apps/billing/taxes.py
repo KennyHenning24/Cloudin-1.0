@@ -58,7 +58,7 @@ class Calculo:
 
     def como_dict(self) -> dict:
         return {
-            "lineas": [l.como_dict() for l in self.lineas],
+            "lineas": [ln.como_dict() for ln in self.lineas],
             "total_base": str(self.total_base),
             "total_impuestos": str(self.total_impuestos),
             "total_general": str(self.total_general),

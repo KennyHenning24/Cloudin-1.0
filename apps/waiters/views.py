@@ -350,11 +350,11 @@ def api_pedido(request, tenant, mesero, numero):
         }, status=409)
 
     items = [{
-        "product_id": int(l["product_id"]),
-        "quantity": int(l.get("quantity", 1)),
-        "note": str(l.get("note") or "")[:200],
-        "opciones": l.get("opciones") if isinstance(l.get("opciones"), list) else [],
-    } for l in lineas]
+        "product_id": int(ln["product_id"]),
+        "quantity": int(ln.get("quantity", 1)),
+        "note": str(ln.get("note") or "")[:200],
+        "opciones": ln.get("opciones") if isinstance(ln.get("opciones"), list) else [],
+    } for ln in lineas]
 
     # Toppings y observación: se validan contra el producto antes de tocar la cocina.
     from django.core.exceptions import ValidationError
