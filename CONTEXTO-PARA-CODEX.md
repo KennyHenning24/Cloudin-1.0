@@ -18,6 +18,7 @@
 | `README.md` | Documentación técnica del producto, pantalla por pantalla |
 | `CONECTAR-MENU-A-CLOUDIN.md` | Cómo el sitio web de un restaurante le entrega su carta al panel |
 | `INTEGRACION-SITIO-WEB.md` | API para quien construya el sitio web del restaurante |
+| `DESPLIEGUE-CLOUDFLARE.md` | Cómo corre en Cloudflare (Containers, Postgres, R2), por qué no en Pages y el día a día del despliegue |
 | `..\Cloudin-para-restaurantes.md` | Qué problema resuelve el producto (material de venta) |
 | `..\cloudin-arquitectura.md` | Plan original por fases |
 | `..\especificacion-inventario-cloudin.md` | Especificación del módulo de inventario |
@@ -62,7 +63,8 @@ Supón un computador limpio. Esto es todo lo que hace falta.
 | Herramienta | Cuándo la necesitas |
 |---|---|
 | **Node.js 18+** | Solo para servir o tocar el sitio web de un restaurante (`npx http-server`) y correr `generar-cloudin-menu.js` de Cultura Brisket |
-| **PostgreSQL + `psycopg2-binary`** | Solo para producción (`TENANT_DB_ENGINE=postgres`). En local se usa SQLite y no hay nada que instalar |
+| **PostgreSQL + `psycopg[binary]`** | Solo para producción (`DATABASE_URL`, ver `DESPLIEGUE-CLOUDFLARE.md`). En local se usa SQLite y no hay nada que instalar. `requirements-produccion.txt` trae lo del servidor |
+| **Docker / `npx wrangler`** | Solo para probar la imagen del servidor o el Worker de Cloudflare en local. El despliegue normal lo hace Cloudflare en cada push a `main` |
 | **Playwright** | Solo para capturas automáticas o generar guías en PDF (`pip install playwright`) |
 | **Impresora térmica de 80 mm** | Solo para probar impresión real; sin ella el diálogo de impresión igual abre |
 | **`gunicorn`** | Solo al desplegar en un servidor Linux |
@@ -204,7 +206,11 @@ Las piezas que lo sostienen, en `apps/tenants/`:
 | `static/mesero/sw.js` | Service worker de la PWA del mesero |
 | `media/` | Fotos del menú subidas desde el panel (ignorado por git) |
 | `control.sqlite3`, `tenant_dbs/` | Bases de datos (ignoradas por git) |
-| `requirements.txt` | Django 4.2, DRF, cors-headers, python-dotenv, cryptography, qrcode, requests |
+| `requirements.txt` | Django 5.2, DRF, cors-headers, python-dotenv, cryptography, qrcode, requests |
+| `requirements-produccion.txt` | Lo que suma el servidor: psycopg 3, gunicorn, boto3 (R2), whitenoise |
+| `config/entorno.py` | Lee `DATABASE_URL` (Postgres) para la base de control y las de restaurante |
+| `Dockerfile`, `.dockerignore` | La imagen del servidor (Django + gunicorn) |
+| `wrangler.jsonc`, `cloudflare/worker.js`, `package.json` | Cloudflare: el Worker que pasa las visitas al contenedor. Guía: `DESPLIEGUE-CLOUDFLARE.md` |
 
 ### 4.2 `apps/tenants` — multi-tenancy y alta de clientes (base de control)
 
@@ -497,6 +503,14 @@ reales del restaurante del dueño.
   cambios de ese sitio sin permiso explícito del dueño.
 - En el emulador móvil de algunos navegadores automatizados, los clics de la app
   del mesero llegan a coordenadas equivocadas; usa el preset de tablet.
+- **`DATABASE_URL` en la terminal apunta a producción.** Si existe, Django deja
+  SQLite y usa ese Postgres (base de control y restaurantes). Úsala solo a
+  propósito para correr un comando en el servidor, y cierra la terminal después.
+- **El disco del servidor se borra** cada vez que el contenedor se duerme: nada
+  que deba durar se guarda en archivos locales (fotos → R2, datos → Postgres).
+- **La caché de Django vive en la memoria del único contenedor** (topes de login,
+  llaves anti-duplicado del mesero, token de Factus). No subas `max_instances` ni
+  los `--workers` de gunicorn sin mover antes esa caché a algo compartido.
 
 ---
 
@@ -515,10 +529,10 @@ completo, reloj de empleados y recuperación de contraseña por correo.
 **Lo que falta, en orden de importancia:**
 
 1. **Desplegar el panel en un servidor público.** Es lo único que impide operar de
-   verdad: Cloudflare Pages no sirve para Django y un sitio publicado no alcanza
-   `localhost:8000`. Al hacerlo: `DEBUG=0`, `SECRET_KEY` real, Postgres por
-   restaurante, `TENANT_BASE_DOMAIN` con DNS comodín, Gunicorn + Nginx y las fotos
-   del menú en almacenamiento de objetos en vez del disco del servidor.
+   verdad. Cloudflare Pages no sirve para Django; el código ya quedó listo para
+   **Cloudflare Containers** (Worker + contenedor, Postgres por restaurante con
+   `DATABASE_URL`, fotos en R2, WhiteNoise, `preparar_servidor` al arrancar). Falta
+   crear las cuentas y cargar los secretos: `DESPLIEGUE-CLOUDFLARE.md`.
 2. Habilitación de Factus en producción (hoy sandbox).
 3. Nómina electrónica con las horas de `staffing`.
 4. Notas crédito y débito, y exportes contables.

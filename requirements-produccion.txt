@@ -1,0 +1,8 @@
+# Lo que usa el servidor además de requirements.txt (lo instala el Dockerfile).
+# En local no hace falta, salvo psycopg para correr comandos contra la base de
+# producción (ver DESPLIEGUE-CLOUDFLARE.md).
+-r requirements.txt
+psycopg[binary]>=3.2    # bases Postgres (control y una por restaurante)
+gunicorn>=23.0          # servidor WSGI dentro del contenedor
+boto3>=1.35             # fotos en Cloudflare R2 con django-storages
+whitenoise>=6.8         # /static/ servido por el mismo Django

@@ -3,6 +3,8 @@ __pycache__/
 .venv/
 venv/
 .env
+.env.*
+!.env.example
 *.sqlite3
 tenant_dbs/
 qrcodes/
@@ -12,3 +14,8 @@ media/
 .pytest_cache/
 .ruff_cache/
 *.log
+
+# Cloudflare (wrangler)
+node_modules/
+.wrangler/
+.dev.vars*

@@ -317,17 +317,24 @@ necesitará un agente en la red local del restaurante.
 
 ## Pasar a producción
 
-1. `TENANT_DB_ENGINE=postgres` en `.env` + `pip install psycopg2-binary`.
-   `provision_tenant` ya hace el `CREATE DATABASE` por restaurante.
-2. `TENANT_BASE_DOMAIN=cloudin.app` y DNS comodín `*.cloudin.app`.
-3. `DEBUG=0`, `SECRET_KEY` real, `ALLOWED_HOSTS=.cloudin.app`.
-4. Gunicorn + Nginx (o el hosting que se elija) — un solo despliegue para todos.
+Montado para **Cloudflare Containers** (Pages no ejecuta Django): un Worker
+(`cloudflare/worker.js`) delante de un contenedor con Django + gunicorn
+(`Dockerfile`), la base de control y las de cada restaurante en Postgres
+(`DATABASE_URL`) y las fotos en Cloudflare R2. Cada push a `main` se despliega solo.
+Pasos, secretos y complicaciones: **[DESPLIEGUE-CLOUDFLARE.md](DESPLIEGUE-CLOUDFLARE.md)**.
+
+- Con `DATABASE_URL` de Postgres, `TENANT_DB_ENGINE` pasa a `postgres` y
+  `TENANT_PG_*` salen de esa misma URL; `provision_tenant` hace el
+  `CREATE DATABASE` de cada restaurante (psycopg 3 o psycopg2).
+- Al arrancar, el contenedor corre `python manage.py preparar_servidor`
+  (`migrate` + `migrate_tenants` + superusuario inicial).
+- El mismo `Dockerfile` sirve en cualquier otro servidor con Docker.
 
 ## Lo que sigue
 
 - **Desplegar el panel en un host público.** Es lo único que falta para operar de
-  verdad: Cloudflare Pages no sirve para Django, y un sitio publicado no alcanza
-  `localhost:8000`.
+  verdad. El código ya está listo para Cloudflare Containers; faltan la cuenta
+  (Workers Paid, Neon, R2) y los secretos: ver DESPLIEGUE-CLOUDFLARE.md.
 - **Proveedor tecnológico real** en lugar del simulado (`apps/billing/providers/`),
   y el set de pruebas de habilitación ante la DIAN.
 - **Nómina electrónica** con las horas de Cloudin Employees: el modelo ya guarda

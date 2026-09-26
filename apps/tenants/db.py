@@ -20,6 +20,9 @@ def tenant_db_settings(tenant) -> dict:
             "PASSWORD": settings.TENANT_PG["PASSWORD"],
             "HOST": settings.TENANT_PG["HOST"],
             "PORT": settings.TENANT_PG["PORT"],
+            "OPTIONS": dict(settings.TENANT_PG.get("OPTIONS", {})),  # sslmode=require…
+            "CONN_MAX_AGE": settings.DB_CONN_MAX_AGE,
+            "CONN_HEALTH_CHECKS": settings.DB_CONN_MAX_AGE > 0,
         }
     else:
         cfg = {

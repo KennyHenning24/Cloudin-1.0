@@ -1,0 +1,45 @@
+// Cloudin en Cloudflare: un Worker (cloudflare/worker.js) delante de un contenedor
+// con Django (Dockerfile). Lo despliega Workers Builds en cada push a la rama de
+// producción, o a mano con `npx wrangler deploy`. Guía: DESPLIEGUE-CLOUDFLARE.md
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	// Debe coincidir con el nombre del Worker en el dashboard de Cloudflare.
+	"name": "cloudin",
+	"main": "cloudflare/worker.js",
+	"compatibility_date": "2026-09-01",
+	"observability": { "enabled": true },
+
+	"containers": [
+		{
+			"class_name": "ContenedorCloudin",
+			"image": "./Dockerfile",
+			// basic = 1/4 vCPU, 1 GiB de RAM, 4 GB de disco (que se borra al dormir).
+			"instance_type": "basic",
+			// Uno solo: la caché de Django vive en su memoria (ver cloudflare/worker.js).
+			"max_instances": 1,
+			// Cerca de la base de datos: Django hace decenas de consultas por página (y
+			// cientos al dar de alta un restaurante). La base va en AWS us-east-1 (Virginia).
+			"constraints": { "regions": ["ENAM"] }
+		}
+	],
+	"durable_objects": {
+		"bindings": [{ "name": "CLOUDIN", "class_name": "ContenedorCloudin" }]
+	},
+	"migrations": [{ "tag": "v1", "new_sqlite_classes": ["ContenedorCloudin"] }],
+
+	// Configuración que NO es secreta. Los secretos (SECRET_KEY, CREDENTIAL_KEY,
+	// DATABASE_URL, R2_*, FACTUS_*, EMAIL_*…) van en el dashboard: Workers & Pages →
+	// cloudin → Settings → Variables and Secrets, tipo «Secret». Nunca aquí.
+	"vars": {
+		"DEBUG": "0",
+		// El Worker solo recibe tráfico de sus propias direcciones; localhost es el
+		// chequeo de salud interno del contenedor.
+		"ALLOWED_HOSTS": ".workers.dev,localhost",
+		"CSRF_TRUSTED_ORIGINS": "https://*.workers.dev",
+		// Vacía: se usa la dirección por la que llegó la visita. Con dominio propio,
+		// pon aquí https://tu-dominio (y agrégalo a ALLOWED_HOSTS y CSRF_TRUSTED_ORIGINS).
+		"CLOUDIN_PUBLIC_URL": "",
+		"DB_CONN_MAX_AGE": "60",
+		"DJANGO_LOG_LEVEL": "INFO"
+	}
+}
