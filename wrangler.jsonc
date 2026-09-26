@@ -3,8 +3,9 @@
 // producción, o a mano con `npx wrangler deploy`. Guía: DESPLIEGUE-CLOUDFLARE.md
 {
 	"$schema": "node_modules/wrangler/config-schema.json",
-	// Debe coincidir con el nombre del Worker en el dashboard de Cloudflare.
-	"name": "cloudin",
+	// Debe coincidir con el nombre del Worker en el dashboard de Cloudflare (Workers
+	// Builds falla si no). Cloudflare lo propuso con el nombre del repositorio.
+	"name": "cloudin-1-0",
 	"main": "cloudflare/worker.js",
 	"compatibility_date": "2026-09-01",
 	"observability": { "enabled": true },
@@ -28,8 +29,8 @@
 	"migrations": [{ "tag": "v1", "new_sqlite_classes": ["ContenedorCloudin"] }],
 
 	// Configuración que NO es secreta. Los secretos (SECRET_KEY, CREDENTIAL_KEY,
-	// DATABASE_URL, R2_*, FACTUS_*, EMAIL_*…) van en el dashboard: Workers & Pages →
-	// cloudin → Settings → Variables and Secrets, tipo «Secret». Nunca aquí.
+	// DATABASE_URL, R2_*, EMAIL_*…) van en el dashboard: Workers & Pages →
+	// cloudin-1-0 → Settings → Variables and Secrets, tipo «Secret». Nunca aquí.
 	"vars": {
 		"DEBUG": "0",
 		// El Worker solo recibe tráfico de sus propias direcciones; localhost es el

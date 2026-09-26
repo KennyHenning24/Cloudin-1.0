@@ -17,7 +17,7 @@ llega una visita. Delante va un Worker pequeño que recibe el tráfico. Y como e
 disco del contenedor se borra, los datos van afuera:
 
 ```
- navegador ──► Worker "cloudin" (cloudflare/worker.js)
+ navegador ──► Worker "cloudin-1-0" (cloudflare/worker.js)
                   │  pone X-Forwarded-Proto y la IP real del cliente
                   ▼
             Contenedor (Dockerfile): Django + gunicorn, región ENAM
@@ -99,7 +99,7 @@ primero hay que mover esa caché a algo compartido (la base de datos o Redis).
 ### 2.6 Subdominios por restaurante
 
 El diseño original usa `<slug>.cloudin.app`. En la dirección gratuita
-`cloudin.<tu-cuenta>.workers.dev` **no hay subdominios comodín**. No bloquea nada:
+`cloudin-1-0.<tu-cuenta>.workers.dev` **no hay subdominios comodín**. No bloquea nada:
 el panel identifica al restaurante por el usuario que entra, la API por la
 `X-API-Key` y el menú público por la ruta (`/api/public/<slug>/menu/`). Con un
 dominio propio en Cloudflare se agrega una ruta `*.cloudin.app/*` al Worker y
@@ -195,8 +195,13 @@ completo Worker → contenedor → Django funciona (redirecciones, login con CSR
 
 ### 4.2 Base de datos (Neon)
 1. Crear cuenta en neon.tech → **New project** → región **AWS US East 1 (N. Virginia)**.
-2. **Connect** → desactivar *Connection pooling* → copiar la cadena, algo como
+2. Abrir el proyecto (clic en su nombre en la lista de proyectos). En el **Project
+   Dashboard**, el botón **Connect** está arriba a la derecha; abre «Connect to your
+   database». Dejar la rama, la base (`neondb`) y el rol que trae, **desactivar
+   *Connection pooling*** y copiar la cadena, algo como
    `postgresql://neondb_owner:…@ep-…us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require`.
+   Si quedó copiada la que tiene `-pooler` en el host (`ep-…-pooler.us-east-1…`),
+   basta con borrarle `-pooler`: es la misma base con conexión directa.
    Esa es `DATABASE_URL`: ahí queda la base de control, y Cloudin crea al lado una
    base `cloudin_<slug>` por restaurante.
 
@@ -212,11 +217,14 @@ completo Worker → contenedor → Django funciona (redirecciones, login con CSR
 ### 4.4 El Worker con el contenedor
 1. Cambiar la cuenta a **Workers Paid** (Workers & Pages → Plans).
 2. **Workers & Pages → Create → Import a repository** → `KennyHenning24/Cloudin-1.0`.
-   - Nombre del proyecto: **`cloudin`** (debe coincidir con `name` en `wrangler.jsonc`).
+   - Nombre del proyecto: **`cloudin-1-0`** (el que Cloudflare propone con el nombre del
+     repositorio). Tiene que ser igual a `name` en `wrangler.jsonc`, o el build falla.
    - Rama de producción: `main`.
    - Build command: `npm ci` · Deploy command: `npx wrangler deploy` · Directorio raíz: `/`.
 3. El primer despliegue construye la imagen (varios minutos). Todavía no abre: faltan los secretos.
-4. **Workers & Pages → cloudin → Settings → Variables and Secrets → Add**, tipo
+   Si falla con `npm ci can only install with an existing package-lock.json`, Cloudflare
+   construyó una rama sin el código (`main` antes de fusionar): fusiona y reintenta.
+4. **Workers & Pages → cloudin-1-0 → Settings → Variables and Secrets → Add**, tipo
    **Secret**:
 
 | Secreto | Obligatorio | Valor |
@@ -234,7 +242,7 @@ completo Worker → contenedor → Django funciona (redirecciones, login con CSR
    Lo que **no** es secreto (`DEBUG`, `ALLOWED_HOSTS`…) ya está en `wrangler.jsonc`.
    No lo pongas en el dashboard como texto plano: cada despliegue lo reemplaza.
 5. **Deployments → Retry build** (o cualquier push a `main`). Al terminar, abrir
-   `https://cloudin.<tu-cuenta>.workers.dev/master/` y entrar con el superusuario.
+   `https://cloudin-1-0.<tu-cuenta>.workers.dev/master/` y entrar con el superusuario.
    La primera visita tarda (crea todas las tablas).
 6. Dar de alta un restaurante en `/master/nuevo/`.
 7. Publicar su menú digital en Cloudflare Pages y conectarlo (registrar la «Página del
@@ -245,13 +253,13 @@ completo Worker → contenedor → Django funciona (redirecciones, login con CSR
 
 - **Cambiar algo:** editar en GitHub (o en tu PC y `git push`) sobre `main` →
   Workers Builds construye la imagen y la despliega sola (unos minutos). El estado
-  sale en **Workers & Pages → cloudin → Deployments** y como *check* en GitHub.
+  sale en **Workers & Pages → cloudin-1-0 → Deployments** y como *check* en GitHub.
 - **Cambiar modelos:** después de `makemigrations` basta con subir el código: al
   arrancar, el contenedor corre `migrate` y `migrate_tenants`.
 - **Probar sin tocar producción:** trabajar en otra rama y abrir un PR. Ojo: en
   ramas que no son la de producción Workers Builds sube solo el Worker, **no** la
   imagen nueva del contenedor.
-- **Ver errores:** Workers & Pages → cloudin → **Logs** (Worker) y la sección
+- **Ver errores:** Workers & Pages → cloudin-1-0 → **Logs** (Worker) y la sección
   **Containers** del dashboard (salida de Django y gunicorn), o `npx wrangler tail`.
 - **Cambiar un secreto:** se toma cuando el contenedor vuelve a arrancar (tras un
   despliegue, o al dormirse y despertar).
@@ -272,7 +280,7 @@ completo Worker → contenedor → Django funciona (redirecciones, login con CSR
 ## 6. Dominio propio (cuando toque)
 
 1. Agregar el dominio a Cloudflare (DNS).
-2. Workers & Pages → cloudin → **Settings → Domains & Routes**: dominio del panel
+2. Workers & Pages → cloudin-1-0 → **Settings → Domains & Routes**: dominio del panel
    (p. ej. `app.cloudin.co`) y, para subdominios por restaurante, la ruta
    `*.cloudin.co/*` con un registro DNS comodín con proxy.
 3. En `wrangler.jsonc`: `CLOUDIN_PUBLIC_URL`, `ALLOWED_HOSTS`,

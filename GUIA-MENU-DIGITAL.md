@@ -105,7 +105,7 @@ corre en Cloudflare:
 
 | Dato | Dónde se ve | Ejemplo |
 |---|---|---|
-| Dirección del servidor Cloudin | La del Worker (`DESPLIEGUE-CLOUDFLARE.md`) | `https://cloudin.<tu-cuenta>.workers.dev` |
+| Dirección del servidor Cloudin | La del Worker (`DESPLIEGUE-CLOUDFLARE.md`) | `https://cloudin-1-0.<tu-cuenta>.workers.dev` |
 | Identificador (slug) | Panel maestro `/master/` | `culturabrisket` |
 | Llave de conexión (`ck_…`) | Panel maestro → el restaurante → **API key** (o su panel → Configuración → Sitio web) | `ck_Xa3…` |
 | Plan | Panel maestro | **Cloudin completo** para recibir pedidos |
@@ -151,7 +151,7 @@ Al final de `index.html`, en este orden:
 <script>
   window.CLOUDIN_CONFIG = {
     restaurant: "culturabrisket",                    // el slug
-    api: "https://cloudin.<tu-cuenta>.workers.dev/api/public/culturabrisket/menu/",
+    api: "https://cloudin-1-0.<tu-cuenta>.workers.dev/api/public/culturabrisket/menu/",
     contract: 1,
     locale: "es-CO",
     currency: "COP",
@@ -160,7 +160,7 @@ Al final de `index.html`, en este orden:
     apiKey: "ck_…"        // solo si el restaurante recibe pedidos por el QR (sección 3)
   };
 </script>
-<script src="https://cloudin.<tu-cuenta>.workers.dev/static/cloudin-menu.v1.js" defer></script>
+<script src="https://cloudin-1-0.<tu-cuenta>.workers.dev/static/cloudin-menu.v1.js" defer></script>
 <script src="carrito.js" defer></script>
 ```
 
@@ -203,7 +203,7 @@ inmediato.
 
 ### 4.4 Registrar la página en Cloudin
 
-En `https://cloudin.<tu-cuenta>.workers.dev/admin/` → **Restaurantes** → el restaurante →
+En `https://cloudin-1-0.<tu-cuenta>.workers.dev/admin/` → **Restaurantes** → el restaurante →
 sección **«Sitio web y menú»**:
 
 | Campo | Qué poner | Para qué |
@@ -251,7 +251,7 @@ Un archivo `_headers` en la raíz de lo que se publica:
   X-Content-Type-Options: nosniff
   Referrer-Policy: strict-origin-when-cross-origin
   Permissions-Policy: camera=(), microphone=(), geolocation=()
-  Content-Security-Policy: frame-ancestors 'self' https://cloudin.<tu-cuenta>.workers.dev
+  Content-Security-Policy: frame-ancestors 'self' https://cloudin-1-0.<tu-cuenta>.workers.dev
 ```
 
 - **No pongas `X-Frame-Options: DENY`**: el panel del restaurante (Personalizar) muestra
@@ -276,8 +276,8 @@ terminar.
 ### 5.1 La petición
 
 ```
-GET https://cloudin.<tu-cuenta>.workers.dev/api/public/<slug>/menu/
-GET https://cloudin.<tu-cuenta>.workers.dev/api/public/<slug>/menu/?table=<token>
+GET https://cloudin-1-0.<tu-cuenta>.workers.dev/api/public/<slug>/menu/
+GET https://cloudin-1-0.<tu-cuenta>.workers.dev/api/public/<slug>/menu/?table=<token>
 ```
 
 | | |
@@ -299,7 +299,7 @@ GET https://cloudin.<tu-cuenta>.workers.dev/api/public/<slug>/menu/?table=<token
     "name": "La Casa",
     "tagline": "Comida casera",
     "description": null,
-    "logo": "https://cloudin.<tu-cuenta>.workers.dev/media/…/logo.webp",
+    "logo": "https://cloudin-1-0.<tu-cuenta>.workers.dev/media/…/logo.webp",
     "cover": null,
     "brand": { "primary": "#B3261E", "secondary": "#F2C14E", "background": "#1A1110", "text": null },
     "contact": { "whatsapp": null, "phone": "+573001234567", "email": null,
@@ -323,7 +323,7 @@ GET https://cloudin.<tu-cuenta>.workers.dev/api/public/<slug>/menu/?table=<token
               "id": "6f1c2a90-…", "key": "hamburguesa", "name": "Hamburguesa",
               "description": "Carne de res, queso y papas.",
               "price": 24000,
-              "image": "https://cloudin.<tu-cuenta>.workers.dev/media/…/hamburguesa.webp",
+              "image": "https://cloudin-1-0.<tu-cuenta>.workers.dev/media/…/hamburguesa.webp",
               "available": true, "featured": false, "tags": ["recomendado"], "tax": null,
               "variants": [
                 { "id": "9a2e41c7-…", "key": "doble-carne", "name": "Doble carne", "price": 32000 }
@@ -406,7 +406,7 @@ La referencia viva de plantillas, CSS mínimo y animaciones es `client/example/i
 ### 5.5 Sin el runtime (tu propio JavaScript)
 
 ```js
-const CARTA = "https://cloudin.<tu-cuenta>.workers.dev/api/public/culturabrisket/menu/";
+const CARTA = "https://cloudin-1-0.<tu-cuenta>.workers.dev/api/public/culturabrisket/menu/";
 
 async function cargarCarta() {
   let guardada = null;
@@ -441,7 +441,7 @@ Escapa **todo** texto que venga de la carta antes de meterlo con `innerHTML` (o 
 - Cada petición de pedido lleva la cabecera **`X-API-Key: ck_…`** (dice de qué restaurante
   es) y el token va en la ruta (dice qué mesa). El cliente no se registra.
 - Todas las rutas de esta sección cuelgan de
-  `https://cloudin.<tu-cuenta>.workers.dev/api/v1/mesa/<token>/`.
+  `https://cloudin-1-0.<tu-cuenta>.workers.dev/api/v1/mesa/<token>/`.
 
 ### 6.2 El recorrido
 
@@ -791,7 +791,7 @@ Para usarlo en otro diseño:
 ### 11.2 Con `curl` contra el servidor
 
 ```bash
-S=https://cloudin.<tu-cuenta>.workers.dev
+S=https://cloudin-1-0.<tu-cuenta>.workers.dev
 K=ck_...          # la llave del restaurante
 T=td8vIrnwaZPF    # el token de una mesa (lo que va después de ?mesa= en su QR)
 
