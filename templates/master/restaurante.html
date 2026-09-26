@@ -1,0 +1,219 @@
+{% extends "master/_base.html" %}
+{% block title %}{{ t.name }} — Cloudin{% endblock %}
+{% block titulo %}{{ t.name }}{% endblock %}
+{% block subtitulo %}
+  <p class="sub">
+    <code>{{ t.slug }}</code> ·
+    <span class="pill {% if t.is_active %}ok{% else %}off{% endif %}">
+      <i class="dot"></i>{% if t.is_active %}Activo{% else %}Inactivo{% endif %}</span>
+  </p>
+{% endblock %}
+{% block acciones %}
+  <a class="btn" href="{% url 'panel:soporte' %}?tenant={{ t.slug }}">Entrar en modo soporte</a>
+  <a class="btn ghost" href="{{ enlace }}" target="_blank" rel="noopener">Login del restaurante</a>
+{% endblock %}
+
+{% block content %}
+
+{% if credencial %}
+<div class="card fade-in" style="border-color:rgba(62,207,142,.4);margin-bottom:var(--sp-4)">
+  <div class="card-head">
+    <div>
+      <h2>✅ {{ credencial.titulo }}</h2>
+      <p>
+        {% if hay_llave %}Queda guardada: puedes volver a verla en la tabla de usuarios.
+        {% else %}Esta contraseña no se vuelve a mostrar.{% endif %}
+      </p>
+    </div>
+  </div>
+  <dl class="kv" style="max-width:640px">
+    <dt>Usuario</dt>
+    <dd class="row" style="justify-content:flex-end">
+      <code>{{ credencial.usuario }}</code>
+      <button class="btn quiet sm" onclick="copiar('{{ credencial.usuario }}', this)">Copiar</button>
+    </dd>
+    <dt>Contraseña</dt>
+    <dd class="row" style="justify-content:flex-end">
+      <code style="letter-spacing:1px">{{ credencial.password }}</code>
+      <button class="btn quiet sm" onclick="copiar('{{ credencial.password }}', this)">Copiar</button>
+    </dd>
+    <dt>Enlace</dt>
+    <dd class="row" style="justify-content:flex-end">
+      <code>{{ credencial.enlace }}</code>
+      <button class="btn quiet sm" onclick="copiar('{{ credencial.enlace }}', this)">Copiar</button>
+    </dd>
+  </dl>
+  <div class="sep"></div>
+  <div class="row">
+    <button class="btn" onclick="copiarTodo(this)">Copiar mensaje para enviar</button>
+    <a class="btn ghost" href="{{ credencial.enlace }}" target="_blank" rel="noopener">Abrir el panel</a>
+  </div>
+  <textarea id="mensaje" style="position:absolute;left:-9999px" aria-hidden="true" tabindex="-1">Hola, este es el acceso al panel de {{ credencial.restaurante }} en Cloudin:
+
+Enlace: {{ credencial.enlace }}
+Usuario: {{ credencial.usuario }}
+Contraseña: {{ credencial.password }}
+
+Al entrar por primera vez, cambien la contraseña.</textarea>
+</div>
+{% endif %}
+
+<div class="stack">
+
+  <div class="stack">
+    <div class="card">
+      <div class="card-head">
+        <div>
+          <h2>Usuarios</h2>
+          <p>{{ empleados|length }} con acceso al panel del restaurante</p>
+        </div>
+      </div>
+
+      {% if not hay_llave %}
+        <div class="aviso alerta">
+          Falta <code>CREDENTIAL_KEY</code> en el <code>.env</code>: las contraseñas
+          nuevas no se podrán volver a mostrar.
+        </div>
+      {% endif %}
+
+      <div class="tabla-wrap">
+        <table>
+          <thead>
+            <tr><th>Usuario</th><th>Persona</th><th>Rol</th><th>Contraseña</th><th class="fin"></th></tr>
+          </thead>
+          <tbody>
+            {% for m in empleados %}
+            {% with clave=m.password_visible %}
+            <tr>
+              <td><code>{{ m.user.username }}</code></td>
+              <td class="muted">{{ m.user.first_name|default:"—" }}
+                <div class="dim small">{{ m.user.email|default:"sin correo" }}</div></td>
+              <td><span class="pill rol">{{ m.get_role_display }}</span></td>
+              <td>
+                {% if clave %}
+                  <span class="row" style="gap:6px;flex-wrap:nowrap">
+                    <code class="clave" data-clave="{{ clave }}">••••••••</code>
+                    <button class="btn quiet sm" onclick="verClave(this)">Ver</button>
+                    <button class="btn quiet sm" onclick="copiar('{{ clave|escapejs }}', this)">Copiar</button>
+                  </span>
+                {% else %}
+                  <span class="dim small">no guardada</span>
+                {% endif %}
+              </td>
+              <td class="fin">
+                <div class="acciones">
+                  <button class="btn ghost sm" onclick="abrirCambio({{ m.user_id }})">Cambiar</button>
+                  <form method="post" action="{% url 'master:empleado-eliminar' t.slug m.user_id %}"
+                        onsubmit="return confirm('¿Eliminar a {{ m.user.username }}? No podrá volver a entrar.')">
+                    {% csrf_token %}<button class="btn danger sm" type="submit">Eliminar</button>
+                  </form>
+                </div>
+              </td>
+            </tr>
+            <tr id="cambio-{{ m.user_id }}" hidden>
+              <td colspan="5" style="background:var(--bg)">
+                <form method="post" action="{% url 'master:empleado-clave' t.slug m.user_id %}" class="row">
+                  {% csrf_token %}
+                  <span class="small muted">Nueva contraseña para <code>{{ m.user.username }}</code></span>
+                  <input type="text" name="password" placeholder="Vacío = se genera una al azar"
+                         minlength="6" style="max-width:290px">
+                  <button class="btn sm" type="submit">Guardar</button>
+                  <button class="btn quiet sm" type="button" onclick="abrirCambio({{ m.user_id }})">Cancelar</button>
+                  {% if m.password_actualizada %}
+                    <span class="dim small">cambiada el {{ m.password_actualizada|date:"d/m/Y H:i" }}</span>
+                  {% endif %}
+                </form>
+              </td>
+            </tr>
+            {% endwith %}
+            {% empty %}
+            <tr><td colspan="5" class="vacio">Este restaurante no tiene usuarios.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <div>
+          <h2>Agregar usuario</h2>
+          <p>Se le genera una contraseña y se te muestra una sola vez arriba.</p>
+        </div>
+      </div>
+      <form method="post" action="{% url 'master:empleado-nuevo' t.slug %}">
+        {% csrf_token %}
+        <div class="form-row">
+          {% include "master/_campo.html" with campo=form.usuario %}
+          {% include "master/_campo.html" with campo=form.nombre %}
+          {% include "master/_campo.html" with campo=form.correo %}
+          {% include "master/_campo.html" with campo=form.rol %}
+        </div>
+        <button class="btn" type="submit">Crear usuario</button>
+      </form>
+    </div>
+  </div>
+
+  <div class="cols cols-half">
+    <div class="card">
+      <div class="card-head"><div><h2>Acceso</h2></div></div>
+      <label>Enlace del panel</label>
+      <div class="row" style="margin-bottom:var(--sp-3)">
+        <code style="flex:1">{{ enlace }}</code>
+        <button class="btn quiet sm" onclick="copiar('{{ enlace }}', this)">Copiar</button>
+      </div>
+      <label>API key (para su sitio web)</label>
+      <div class="row">
+        <code style="flex:1">{{ t.api_key }}</code>
+        <button class="btn quiet sm" onclick="copiar('{{ t.api_key }}', this)">Copiar</button>
+      </div>
+      <div class="sep"></div>
+      <form method="post" action="{% url 'master:restaurante-api-key' t.slug %}"
+            onsubmit="return confirm('Al regenerarla, el sitio del restaurante deja de funcionar hasta que se actualice. ¿Continuar?')">
+        {% csrf_token %}<button class="btn ghost sm" type="submit">Regenerar API key</button>
+      </form>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><div><h2>Técnico</h2></div></div>
+      <dl class="kv">
+        <dt>Identificador</dt><dd><code>{{ t.slug }}</code></dd>
+        <dt>Base de datos</dt><dd class="dim small">{{ t.db_name }}</dd>
+        <dt>Aprovisionada</dt><dd class="dim small">{{ t.provisioned_at|date:"d/m/Y H:i"|default:"—" }}</dd>
+        <dt>Subdominio</dt><dd class="dim small">{{ t.domain }}</dd>
+        <dt>Sitio web</dt><dd class="dim small">{{ t.site_origin|default:"— sin registrar —" }}</dd>
+        {% if t.nit %}<dt>NIT</dt><dd class="muted">{{ t.nit }}</dd>{% endif %}
+      </dl>
+      <div class="sep"></div>
+      <form method="post" action="{% url 'master:restaurante-activo' t.slug %}">
+        {% csrf_token %}
+        <button class="btn {% if t.is_active %}danger{% else %}ok{% endif %} sm" type="submit">
+          {% if t.is_active %}Desactivar restaurante{% else %}Activar restaurante{% endif %}
+        </button>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function copiarTodo(boton) {
+  const t = document.getElementById("mensaje");
+  if (t) copiar(t.value, boton);
+}
+// La contraseña viaja en el HTML (la página es solo para el superusuario) y se
+// revela al hacer clic, para que no quede a la vista de quien pase al lado.
+function verClave(boton) {
+  const code = boton.parentElement.querySelector(".clave");
+  const oculta = code.textContent.startsWith("•");
+  code.textContent = oculta ? code.dataset.clave : "••••••••";
+  boton.textContent = oculta ? "Ocultar" : "Ver";
+}
+function abrirCambio(id) {
+  const fila = document.getElementById("cambio-" + id);
+  fila.hidden = !fila.hidden;
+  if (!fila.hidden) fila.querySelector("input").focus();
+}
+</script>
+{% endblock %}

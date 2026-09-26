@@ -1,0 +1,50 @@
+{% extends "panel/_base.html" %}
+{% block title %}Proveedores — Cloudin{% endblock %}
+{% block titulo %}Proveedores{% endblock %}
+{% block subtitulo %}<p class="sub dim small">A quién le compras los insumos</p>{% endblock %}
+{% block acciones %}
+  <a class="btn" href="{% url 'panel:proveedor-nuevo' %}">
+    <svg class="ico" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+    Nuevo proveedor
+  </a>
+{% endblock %}
+
+{% block content %}
+{% include "panel/_inv_nav.html" %}
+
+<div class="card">
+  <div class="tabla-wrap">
+    <table>
+      <thead>
+        <tr><th>Proveedor</th><th>NIT</th><th>Contacto</th><th class="fin">Insumos</th>
+            <th class="fin">Compras</th><th class="fin">Crédito</th><th class="fin"></th></tr>
+      </thead>
+      <tbody>
+        {% for p in proveedores %}
+        <tr>
+          <td><strong>{{ p.nombre }}</strong>
+            {% if not p.activo %}<span class="pill neutro">inactivo</span>{% endif %}
+            {% if p.direccion %}<div class="dim small">{{ p.direccion }}</div>{% endif %}</td>
+          <td><code>{{ p.nit|default:"—" }}</code></td>
+          <td class="dim small">
+            {{ p.contacto|default:"—" }}
+            {% if p.telefono %}<div>{{ p.telefono }}</div>{% endif %}
+          </td>
+          <td class="fin">{{ p.insumos.count }}</td>
+          <td class="fin">{{ p.compras.count }}</td>
+          <td class="fin">{% if p.dias_credito %}{{ p.dias_credito }} días{% else %}de contado{% endif %}</td>
+          <td class="fin">
+            <a class="btn quiet sm" href="{% url 'panel:proveedor-editar' p.id %}">Editar</a>
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="7" class="vacio">
+          Todavía no hay proveedores.
+          <a href="{% url 'panel:proveedor-nuevo' %}" style="color:var(--brand)">Registra el primero</a>.
+        </td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

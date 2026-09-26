@@ -1,0 +1,8 @@
+{% extends "panel/_auth_base.html" %}
+{% block title %}Contraseña cambiada — Cloudin{% endblock %}
+{% block encabezado %}Contraseña cambiada{% endblock %}
+{% block bajada %}Ya puedes entrar al panel con tu contraseña nueva.{% endblock %}
+
+{% block cuerpo %}
+<a class="btn block" href="{% url 'panel:login' %}">Entrar al panel</a>
+{% endblock %}

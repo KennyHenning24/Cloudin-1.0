@@ -1,0 +1,26 @@
+{% extends "mesero/base.html" %}
+{% load static %}
+{% block title %}Meseros · {{ t.name }}{% endblock %}
+
+{% block head %}
+<style>
+  .pantalla{min-height:100dvh;display:grid;place-items:center;padding:24px;text-align:center}
+  .caja{max-width:420px}
+  .caja img{height:54px;margin-bottom:18px;opacity:.9}
+  .caja h1{font-size:22px;font-weight:720;margin-bottom:10px}
+  .caja p{color:var(--text-2);line-height:1.6}
+</style>
+{% endblock %}
+
+{% block body %}
+<main class="pantalla">
+  <div class="caja">
+    <img src="{% static 'img/cloudin-marca.png' %}" alt="Cloudin">
+    <h1>El servicio de meseros no está activo</h1>
+    <p>
+      {{ t.name }} toma los pedidos por autoservicio. Si quieres usar la tablet de meseros,
+      el administrador puede activarlo en el panel, en <strong>Meseros</strong>.
+    </p>
+  </div>
+</main>
+{% endblock %}

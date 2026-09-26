@@ -1,0 +1,30 @@
+{% extends "panel/_form_page.html" %}
+{% block title %}{% if es_nuevo %}Nuevo proveedor{% else %}{{ proveedor.nombre }}{% endif %} — Cloudin{% endblock %}
+{% block titulo %}{% if es_nuevo %}Nuevo proveedor{% else %}Editar {{ proveedor.nombre }}{% endif %}{% endblock %}
+{% block subtitulo %}<p class="sub dim small">Inventario</p>{% endblock %}
+
+{% block seccion_nombre %}Inventario{% endblock %}
+{% block encabezado %}{% if es_nuevo %}¿A quién le compras?{% else %}{{ proveedor.nombre }}{% endif %}{% endblock %}
+{% block bajada %}
+  Con el proveedor registrado, cada compra queda asociada a él: así se puede ver cuánto se le
+  compra, qué precios maneja y qué se le debe.
+{% endblock %}
+{% block volver %}{% url 'panel:proveedores' %}{% endblock %}
+{% block boton %}{% if es_nuevo %}Registrar proveedor{% else %}Guardar cambios{% endif %}{% endblock %}
+
+{% block campos %}
+  <div class="form-row">
+    {% include "master/_campo.html" with campo=form.nombre %}
+    {% include "master/_campo.html" with campo=form.nit %}
+  </div>
+  <div class="form-row">
+    {% include "master/_campo.html" with campo=form.contacto %}
+    {% include "master/_campo.html" with campo=form.telefono %}
+    {% include "master/_campo.html" with campo=form.correo %}
+  </div>
+  <div class="form-row">
+    {% include "master/_campo.html" with campo=form.direccion %}
+    {% include "master/_campo.html" with campo=form.dias_credito %}
+  </div>
+  {% include "master/_campo.html" with campo=form.notas %}
+{% endblock %}

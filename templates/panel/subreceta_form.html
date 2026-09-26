@@ -1,0 +1,30 @@
+{% extends "panel/_form_page.html" %}
+{% block title %}Nueva subreceta — Cloudin{% endblock %}
+{% block titulo %}Nueva subreceta{% endblock %}
+{% block subtitulo %}<p class="sub dim small">Inventario · recetas</p>{% endblock %}
+
+{% block seccion_nombre %}Inventario{% endblock %}
+{% block encabezado %}Una preparación que usan varios platos{% endblock %}
+{% block bajada %}
+  La salsa base, el adobo, el caldo: algo que se prepara una vez y entra en varios platos.
+  Se define aquí con su rendimiento y sus insumos, y después se usa en las recetas como si
+  fuera un insumo más. Si cambia el precio de un ingrediente, todos los platos que la usan
+  se recalculan solos.
+{% endblock %}
+{% block volver %}{% url 'panel:recetas' %}{% endblock %}
+{% block boton %}Crear subreceta{% endblock %}
+
+{% block campos %}
+  {% include "master/_campo.html" with campo=form.nombre %}
+  <div class="form-row">
+    {% include "master/_campo.html" with campo=form.rendimiento %}
+    {% include "master/_campo.html" with campo=form.unidad_rendimiento %}
+  </div>
+  {% include "master/_campo.html" with campo=form.notas %}
+{% endblock %}
+
+{% block despues %}
+<p class="nota-pie">
+  Después de crearla vas a poder agregarle sus insumos.
+</p>
+{% endblock %}

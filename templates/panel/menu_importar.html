@@ -1,0 +1,104 @@
+{% extends "panel/_base.html" %}
+{% load static %}
+{% block title %}Importar la carta — Cloudin{% endblock %}
+{% block titulo %}Importar la carta desde el sitio web{% endblock %}
+{% block subtitulo %}<p class="sub dim small"><a href="{% url 'panel:configuracion' %}?paso=menu" style="color:var(--text-3)">← Volver al menú</a></p>{% endblock %}
+
+{% block head %}
+{{ block.super }}
+<style>
+  .imp{max-width:880px}
+  .imp-hero{position:relative;overflow:hidden;border-radius:var(--r-xl);padding:var(--sp-5);
+    background:linear-gradient(125deg,rgba(239,112,38,.15),transparent 62%),var(--surface);border:1px solid var(--line)}
+  .imp-hero .marca-agua{position:absolute;right:20px;bottom:-30px;height:150px;opacity:.07}
+  .imp-hero .dentro{position:relative;z-index:1}
+  .reglas{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));margin-top:var(--sp-4)}
+  .regla{display:flex;gap:9px;font-size:13px;color:var(--text-2)}
+  .regla b{color:var(--text)}
+  .regla .ok{color:var(--ok);font-weight:800}
+  .cifras{display:grid;gap:var(--sp-3);grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}
+  .cifras .c{padding:14px;border-radius:var(--r-lg);background:var(--surface-2);border:1px solid var(--line)}
+  .cifras .c b{display:block;font-size:26px;font-weight:760}
+  .cifras .c span{font-size:12px;color:var(--text-3)}
+  .lista-nuevos{columns:2 260px;font-size:13px;color:var(--text-2);margin:var(--sp-3) 0 0;padding-left:18px}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="imp stack">
+  <div class="imp-hero">
+    <img class="marca-agua" src="{% static 'img/cloudin-marca.png' %}" alt="">
+    <div class="dentro">
+      <div class="eyebrow">Carta automática</div>
+      <h2 style="font-size:21px;margin-top:4px">No hay que digitar la carta desde cero</h2>
+      <p class="dim small" style="margin-top:6px;max-width:64ch">
+        Si tu sitio web publica la carta en el formato de Cloudin, el panel la lee y crea los productos
+        con sus fotos, descripciones y toppings. Primero te muestra qué va a pasar; nada cambia hasta que confirmes.
+      </p>
+      <div class="reglas">
+        <div class="regla"><span class="ok">✓</span><span><b>Lo nuevo se crea.</b> Categorías y productos que el panel no tenía.</span></div>
+        <div class="regla"><span class="ok">✓</span><span><b>Lo tuyo no se pisa.</b> Lo que editaste en el panel se respeta; solo se llenan campos vacíos.</span></div>
+        <div class="regla"><span class="ok">✓</span><span><b>Nada se borra ni revive.</b> Si el sitio quita un plato, en el panel lo eliminas tú; lo que eliminaste no vuelve.</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-head"><div><h2>¿De dónde se lee la carta?</h2>
+      <p>La dirección del archivo <code>cloudin-menu.json</code> de tu sitio, o la página que tenga la carta incrustada.</p></div></div>
+    <form method="post" enctype="multipart/form-data" class="stack-sm">
+      {% csrf_token %}
+      <div class="campo">
+        <label for="fuente">Dirección de la carta</label>
+        <input type="url" id="fuente" name="fuente" value="{{ fuente }}" placeholder="https://mirestaurante.com/cloudin-menu.json">
+      </div>
+      <div class="campo">
+        <label for="archivo">…o sube el archivo</label>
+        <input type="file" id="archivo" name="archivo" accept=".json,application/json,text/html">
+        <div class="ayuda">Útil si el sitio todavía no está publicado. Si subes archivo y pones dirección, las fotos relativas se completan con esa dirección.</div>
+      </div>
+      <div class="row">
+        <button class="btn ghost" type="submit" name="accion" value="revisar">Revisar sin cambiar nada</button>
+        {% if resumen and not aplicado %}
+          <button class="btn" type="submit" name="accion" value="importar">Importar ahora</button>
+        {% endif %}
+      </div>
+    </form>
+  </div>
+
+  {% if resumen %}
+  <div class="card">
+    <div class="card-head"><div>
+      <h2>{% if aplicado %}Listo, esto fue lo que se importó{% else %}Esto es lo que va a pasar{% endif %}</h2>
+      <p>{% if restaurante %}Carta de «{{ restaurante }}» · {% endif %}{{ resumen.total_categorias }} categorías y {{ resumen.total_productos }} productos en el archivo.</p>
+    </div></div>
+    <div class="cifras">
+      <div class="c"><b>{{ resumen.productos_nuevos }}</b><span>productos nuevos</span></div>
+      <div class="c"><b>{{ resumen.categorias_nuevas }}</b><span>categorías nuevas</span></div>
+      <div class="c"><b>{{ resumen.productos_completados }}</b><span>productos que se completan</span></div>
+      <div class="c"><b>{{ resumen.sin_cambios }}</b><span>ya estaban igual</span></div>
+      {% if resumen.eliminados %}<div class="c"><b>{{ resumen.eliminados }}</b><span>eliminados en el panel (no vuelven)</span></div>{% endif %}
+    </div>
+    {% if resumen.nuevos %}
+      <ul class="lista-nuevos">{% for n in resumen.nuevos|slice:":60" %}<li>{{ n }}</li>{% endfor %}</ul>
+    {% endif %}
+    {% if resumen.errores %}
+      <div class="aviso alerta" style="margin-top:var(--sp-3)">
+        No se pudieron leer {{ resumen.errores|length }} producto(s): {{ resumen.errores|join:"; " }}
+      </div>
+    {% endif %}
+    {% if aplicado %}
+      <div class="row" style="margin-top:var(--sp-4)">
+        <a class="btn" href="{% url 'panel:configuracion' %}?paso=menu">Ver la carta</a>
+      </div>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  <p class="dim small">
+    ¿Cómo tiene que estar hecho el sitio? Está explicado paso a paso en
+    <code>CONECTAR-MENU-A-CLOUDIN.md</code>. En pocas palabras: un archivo JSON con las categorías,
+    y en cada producto su nombre, precio, descripción, foto, toppings y si permite observación.
+  </p>
+</div>
+{% endblock %}

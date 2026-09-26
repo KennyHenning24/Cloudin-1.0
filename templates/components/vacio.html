@@ -1,0 +1,8 @@
+{% load cloudin %}{% comment %}
+EmptyState: mensaje amable y su acción.
+{% include "components/vacio.html" with titulo="Aún no tienes productos en Bebidas" accion="Agregar el primero" icono="menu-lista" %}
+{% endcomment %}<div class="vacio-amable">
+  <span class="circulo">{% icono icono|default:"menu-lista" %}</span>
+  <div><strong>{{ titulo }}</strong>{% if texto %}<p class="dim small" style="margin-top:4px">{{ texto }}</p>{% endif %}</div>
+  {% if accion %}{% if href %}<a class="btn secundario" href="{{ href }}">{% icono "mas" %}{{ accion }}</a>{% else %}<button type="button" class="btn secundario"{% if abre %} data-abrir="{{ abre }}"{% endif %}{% if accion_js %} data-accion="{{ accion_js }}"{% endif %}>{% icono "mas" %}{{ accion }}</button>{% endif %}{% endif %}
+</div>

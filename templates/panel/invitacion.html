@@ -1,0 +1,30 @@
+{% extends "panel/_auth_base.html" %}
+{% block title %}Crea tu contraseña — Cloudin{% endblock %}
+{% block encabezado %}{% if validlink %}Bienvenido a Cloudin{% else %}Ese enlace ya no sirve{% endif %}{% endblock %}
+{% block bajada %}
+  {% if validlink %}Crea la contraseña de tu app{% if restaurante %} para <strong>{{ restaurante }}</strong>{% endif %}. Después entras con tu correo.
+  {% else %}Las invitaciones vencen a los 7 días y solo se usan una vez. Escríbenos por WhatsApp (321 671 8431) y te mandamos una nueva, o pide un enlace para crear la contraseña.{% endif %}
+{% endblock %}
+
+{% block cuerpo %}
+{% if validlink %}
+  <form method="post">
+    {% csrf_token %}
+    <div class="campo">
+      <label for="id_new_password1">Contraseña</label>
+      <input type="password" name="new_password1" id="id_new_password1"
+             autocomplete="new-password" required autofocus>
+      {% for e in form.new_password1.errors %}<div class="error">{{ e }}</div>{% endfor %}
+    </div>
+    <div class="campo">
+      <label for="id_new_password2">Repítela</label>
+      <input type="password" name="new_password2" id="id_new_password2"
+             autocomplete="new-password" required>
+      {% for e in form.new_password2.errors %}<div class="error">{{ e }}</div>{% endfor %}
+    </div>
+    <button class="btn block" type="submit">Crear contraseña y entrar</button>
+  </form>
+{% else %}
+  <a class="btn block" href="{% url 'panel:recuperar' %}">Pedir un enlace nuevo</a>
+{% endif %}
+{% endblock %}

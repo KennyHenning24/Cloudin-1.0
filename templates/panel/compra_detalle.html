@@ -1,0 +1,141 @@
+{% extends "panel/_base.html" %}
+{% load static cloudin %}
+{% block title %}Compra {{ c.numero_factura|default:c.id }} — Cloudin{% endblock %}
+{% block titulo %}Compra a {{ c.proveedor.nombre }}{% endblock %}
+{% block subtitulo %}
+<p class="sub dim small">
+  {{ c.fecha|date:"j \d\e F \d\e Y" }}
+  {% if c.numero_factura %}· factura {{ c.numero_factura }}{% endif %}
+  {% if c.usuario %}· registró {{ c.usuario }}{% endif %}
+</p>
+{% endblock %}
+{% block acciones %}
+  {% if c.estado == "registrada" %}<span class="pill ok"><i class="dot"></i>Registrada</span>
+  {% else %}<span class="pill neutro"><i class="dot"></i>{{ c.get_estado_display }}</span>{% endif %}
+  <a class="btn ghost" href="{% url 'panel:compras' %}">Todas las compras</a>
+{% endblock %}
+
+{% block content %}
+{% include "panel/_inv_nav.html" %}
+
+<div class="cols cols-2">
+  <div>
+    <div class="bloque-cab" style="margin-top:0">
+      <svg class="ico" viewBox="0 0 24 24"><path d="M20 7L12 3 4 7v10l8 4 8-4z"/><path d="M4 7l8 4 8-4M12 11v10"/></svg>
+      <h2>Lo que entró</h2>
+    </div>
+    <div class="card">
+      <div class="tabla-wrap">
+        <table>
+          <thead>
+            <tr><th>Insumo</th><th class="fin">Cantidad</th><th class="fin">Valor unitario</th>
+                <th class="fin">Equivale a</th><th class="fin">Costo por unidad</th>
+                <th class="fin">Subtotal</th></tr>
+          </thead>
+          <tbody>
+            {% for i in items %}
+            <tr>
+              <td><a href="{% url 'panel:insumo-detalle' i.insumo_id %}">{{ i.insumo.nombre }}</a>
+                {% if i.lote %}<div class="dim small">lote {{ i.lote }}
+                  {% if i.vence %}· vence {{ i.vence|date:"d/m/Y" }}{% endif %}</div>{% endif %}</td>
+              <td class="fin">{{ i.cantidad|cantidad }}
+                  <div class="dim small">{{ i.insumo.unidad_compra }}</div></td>
+              <td class="fin">${{ i.valor_unitario|pesos }}</td>
+              <td class="fin">{{ i.cantidad_consumo|floatformat:0 }}
+                  <div class="dim small">{{ i.insumo.unidad_consumo }}</div></td>
+              <td class="fin">${{ i.costo_consumo|pesos:2 }}</td>
+              <td class="fin"><strong>${{ i.subtotal|pesos }}</strong></td>
+            </tr>
+            {% endfor %}
+          </tbody>
+          <tfoot>
+            <tr><td colspan="5" class="fin"><strong>Total</strong></td>
+                <td class="fin"><strong>${{ c.total|pesos }}</strong></td></tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>
+
+    <div class="bloque-cab">
+      <svg class="ico" viewBox="0 0 24 24"><path d="M3 6h18v13a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M3 10h18"/></svg>
+      <h2>Movimientos que generó</h2>
+    </div>
+    <div class="card">
+      <div class="tabla-wrap">
+        <table>
+          <thead><tr><th>Insumo</th><th class="fin">Entró</th><th class="fin">Costo</th>
+                     <th class="fin">Saldo después</th><th class="fin">Promedio después</th></tr></thead>
+          <tbody>
+            {% for m in movimientos %}
+            <tr>
+              <td>{{ m.insumo.nombre }}</td>
+              <td class="fin">+{{ m.cantidad|cantidad }} {{ m.insumo.unidad_consumo }}</td>
+              <td class="fin">${{ m.costo_unitario|pesos:2 }}</td>
+              <td class="fin">{{ m.saldo_cantidad|cantidad }}</td>
+              <td class="fin"><strong>${{ m.saldo_costo_promedio|pesos:2 }}</strong></td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="5" class="vacio">Esta compra todavía no movió el inventario.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <div class="sep"></div>
+      <p class="dim small">
+        Así queda el <strong>promedio ponderado</strong>: el costo nuevo es el valor que ya
+        había más el de esta compra, dividido entre la cantidad total. Las salidas anteriores
+        no se recalculan.
+      </p>
+    </div>
+  </div>
+
+  <div>
+    <div class="bloque-cab" style="margin-top:0">
+      <svg class="ico" viewBox="0 0 24 24"><path d="M3 6h18v13a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M3 10h18M7 15h4"/></svg>
+      <h2>De dónde salió la plata</h2>
+    </div>
+    <div class="card">
+      <dl class="kv">
+        <dt>Medio de pago</dt><dd><strong>{{ c.get_medio_pago_display }}</strong></dd>
+        {% if c.cuenta %}<dt>Cuenta / tarjeta</dt><dd>{{ c.cuenta }}</dd>{% endif %}
+        <dt>Estado</dt>
+        <dd>
+          {% if c.pagada %}<span class="pill ok"><i class="dot"></i>Pagada</span>
+          {% elif c.vencida %}<span class="pill bad"><i class="dot"></i>Vencida</span>
+          {% else %}<span class="pill warn"><i class="dot"></i>Por pagar</span>{% endif %}
+        </dd>
+        {% if c.vence %}<dt>Vence</dt><dd>{{ c.vence|date:"d/m/Y" }}</dd>{% endif %}
+        <dt>Entra a</dt><dd>{{ c.bodega.nombre }}</dd>
+        <dt>Total</dt><dd><strong>${{ c.total|pesos }}</strong></dd>
+      </dl>
+      {% if not c.pagada %}
+        <div class="sep"></div>
+        <form method="post" action="{% url 'panel:compra-pagar' c.id %}">
+          {% csrf_token %}
+          <button class="btn ok block" type="submit">Marcar como pagada</button>
+        </form>
+      {% endif %}
+      {% if c.notas %}
+        <div class="sep"></div>
+        <div class="eyebrow">Notas</div>
+        <p class="small muted" style="margin-top:5px">{{ c.notas }}</p>
+      {% endif %}
+    </div>
+
+    <div class="bloque-cab">
+      <svg class="ico" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      <h2>El proveedor</h2>
+    </div>
+    <div class="card">
+      <dl class="kv">
+        <dt>Nombre</dt><dd><strong>{{ c.proveedor.nombre }}</strong></dd>
+        {% if c.proveedor.nit %}<dt>NIT</dt><dd>{{ c.proveedor.nit }}</dd>{% endif %}
+        {% if c.proveedor.telefono %}<dt>Teléfono</dt><dd>{{ c.proveedor.telefono }}</dd>{% endif %}
+        {% if c.proveedor.contacto %}<dt>Contacto</dt><dd>{{ c.proveedor.contacto }}</dd>{% endif %}
+      </dl>
+      <div class="sep"></div>
+      <a class="btn ghost block" href="{% url 'panel:proveedor-editar' c.proveedor_id %}">Ver proveedor</a>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" role="img" aria-label="Restaurante Ejemplo">
+  <circle cx="60" cy="60" r="58" fill="#B3261E"/>
+  <circle cx="60" cy="60" r="50" fill="none" stroke="#F2C14E" stroke-width="3"/>
+  <text x="60" y="75" text-anchor="middle" font-family="Georgia, serif" font-size="44" font-weight="700" fill="#FFF6EC">RE</text>
+</svg>

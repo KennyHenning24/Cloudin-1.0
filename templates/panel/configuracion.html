@@ -1,0 +1,521 @@
+{% extends "panel/_base.html" %}
+{% block title %}Configuración — Cloudin{% endblock %}
+{% block titulo %}Configuración{% endblock %}
+{% block subtitulo %}<p class="sub dim small">Tres pasos para dejar el restaurante funcionando</p>{% endblock %}
+
+{% block head %}
+{{ block.super }}
+<style>
+  .pasos{display:grid;gap:var(--sp-2);grid-template-columns:repeat(auto-fit,minmax(230px,1fr));
+         margin-bottom:var(--sp-4)}
+  .paso{display:flex;align-items:center;gap:11px;background:var(--surface);border:1px solid var(--line);
+        border-radius:var(--r-lg);padding:13px 15px;cursor:pointer;text-align:left;color:var(--text);
+        font:inherit;transition:border-color .15s,background .15s}
+  .paso:hover{border-color:var(--brand-line)}
+  .paso.on{border-color:var(--brand-line);background:var(--brand-soft)}
+  .paso .ico-paso{width:19px;height:19px;stroke:var(--text-3);fill:none;stroke-width:1.7;
+        stroke-linecap:round;stroke-linejoin:round;flex:none}
+  .paso.on .ico-paso{stroke:var(--brand)}
+  .paso .num{width:27px;height:27px;border-radius:50%;background:var(--surface-3);color:var(--text-3);
+        display:grid;place-items:center;font-size:13px;font-weight:700;flex:none}
+  .paso.on .num{background:var(--brand);color:#12141a}
+  .paso .txt strong{display:block;font-size:14px;font-weight:620}
+  .paso .txt span{font-size:12px;color:var(--text-3)}
+  .paso .listo{margin-left:auto;color:var(--ok)}
+  .seccion{display:none}
+  .seccion.activa{display:block}
+  .estado{display:flex;align-items:center;gap:11px;padding:14px 16px;border-radius:var(--r-lg);
+          margin-bottom:var(--sp-4);border:1px solid;font-size:14px}
+  .estado .punto{width:10px;height:10px;border-radius:50%;flex:none}
+  .estado.si{background:var(--ok-soft);border-color:rgba(62,207,142,.35)}
+  .estado.si .punto{background:var(--ok);box-shadow:0 0 0 4px rgba(62,207,142,.16)}
+  .estado.no{background:var(--warn-soft);border-color:rgba(240,180,41,.35)}
+  .estado.no .punto{background:var(--warn)}
+  .estado.nada{background:var(--surface);border-color:var(--line)}
+  .estado.nada .punto{background:var(--text-3)}
+  pre{background:var(--bg);border:1px solid var(--line);border-radius:var(--r);padding:14px;
+      overflow-x:auto;font:500 12.5px/1.6 ui-monospace,"SF Mono",Consolas,monospace;
+      color:var(--text-2);margin:var(--sp-2) 0 0}
+  /* Cada categoría es una tarjeta que se abre y se cierra. Por dentro se acomoda
+     según su propio ancho (container query): en una columna angosta los botones
+     bajan a su propia fila en vez de montarse sobre el nombre. */
+  .cat{container-type:inline-size;border:1px solid var(--line);border-radius:var(--r-lg);margin-bottom:12px;
+    background:var(--surface);transition:border-color .25s,box-shadow .25s}
+  .cat.abierta{border-color:var(--brand-line);box-shadow:var(--shadow)}
+  .cat-cab{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:14px 16px}
+  .cat-titulo{display:flex;align-items:center;gap:10px;flex:1 1 220px;min-width:0;cursor:pointer;
+    background:none;border:0;color:var(--text);font:inherit;text-align:left;padding:0}
+  .cat-titulo strong{font-size:16px;font-weight:800;overflow-wrap:anywhere}
+  .cat-titulo .flecha{width:30px;height:30px;border-radius:10px;display:grid;place-items:center;flex:none;
+    background:var(--surface-2);transition:transform .35s var(--ease)}
+  .cat.abierta .cat-titulo .flecha{transform:rotate(180deg)}
+  .cat-titulo .flecha svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2.2}
+  .cat-cab .acciones{display:flex;gap:6px;flex-wrap:wrap;margin-left:auto}
+  .cat-cuerpo{display:grid;grid-template-rows:0fr;transition:grid-template-rows .4s var(--ease)}
+  .cat.abierta .cat-cuerpo{grid-template-rows:1fr}
+  .cat-cuerpo>div{overflow:hidden;padding:0 16px}
+  .cat.abierta .cat-cuerpo>div{padding-bottom:14px}
+  .prod{display:grid;grid-template-columns:44px minmax(0,1fr) auto;align-items:center;gap:12px;padding:12px 0;
+    border-top:1px solid var(--line-soft)}
+  .prod .acciones{display:flex;gap:6px;flex-wrap:nowrap}
+  .prod .nombre{font-weight:700;overflow-wrap:anywhere}
+  .nuevo-prod{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+  .nuevo-prod input[type=text]{flex:1 1 180px}
+  .nuevo-prod input[type=number]{flex:0 1 150px}
+  .barra-cartas{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 12px}
+  @container (max-width:620px){
+    .prod{grid-template-columns:44px minmax(0,1fr)}
+    .prod .acciones{grid-column:1/-1;display:grid;grid-template-columns:repeat(3,minmax(0,1fr))}
+    .prod .acciones .btn{width:100%;min-width:0;padding:6px 8px}
+    .cat-cab .acciones{width:100%;margin-left:0}
+    .cat-cab .acciones .btn{flex:1}
+    .nuevo-prod>*{flex:1 1 100%!important;max-width:none!important}
+  }
+  .eliminados{margin-top:var(--sp-2);border-top:1px dashed var(--line);padding-top:var(--sp-2)}
+  .eliminados summary{cursor:pointer}
+  .miniatura{width:44px;height:44px;border-radius:12px;flex:none;background:var(--surface-3) center/cover no-repeat;
+    display:grid;place-items:center;color:var(--text-3)}
+  .miniatura svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.7}
+  .prod .datos{min-width:0;display:grid;gap:3px}
+  .prod .extras{display:flex;gap:6px;flex-wrap:wrap}
+  .prod .extras .pill{font-size:11px;padding:2px 8px}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="pasos">
+  <button class="paso on" data-ir="mesas">
+    <span class="num">1</span>
+    <svg class="ico-paso" viewBox="0 0 24 24"><rect x="7" y="7" width="10" height="10" rx="2.5"/><path d="M10.5 3.5h3M10.5 20.5h3M3.5 10.5v3M20.5 10.5v3"/></svg>
+    <span class="txt"><strong>Mesas y QR</strong><span>Cuántas mesas hay en el local</span></span>
+    <span class="listo" id="ok-mesas" hidden>✓</span>
+  </button>
+  <button class="paso" data-ir="menu">
+    <span class="num">2</span>
+    <svg class="ico-paso" viewBox="0 0 24 24"><path d="M4 4h11a2 2 0 0 1 2 2v14H6a2 2 0 0 1-2-2z"/><path d="M8 8h5M8 12h5M8 16h3M17 8h3v10a2 2 0 0 1-2 2"/></svg>
+    <span class="txt"><strong>Menú</strong><span>Lo que se puede pedir</span></span>
+    <span class="listo" id="ok-menu" hidden>✓</span>
+  </button>
+  <button class="paso" data-ir="sitio">
+    <span class="num">3</span>
+    <svg class="ico-paso" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a15 15 0 0 1 0 18 15 15 0 0 1 0-18z"/></svg>
+    <span class="txt"><strong>Sitio web</strong><span>De dónde llegan los pedidos</span></span>
+    <span class="listo" id="ok-sitio" hidden>✓</span>
+  </button>
+</div>
+
+<!-- ---------------------------------------------------------------- MESAS -->
+<section class="seccion activa" id="sec-mesas">
+  <div class="card">
+    <div class="card-head">
+      <div>
+        <h2>Mesas del local</h2>
+        <p>Cada mesa se identifica por su número y tiene su propio código QR.</p>
+      </div>
+      <a class="btn ghost fin" href="{% url 'panel:mesas-qr' %}">Ver e imprimir los QR</a>
+    </div>
+
+    <form onsubmit="crearMesa(event)" class="form-row" style="margin-bottom:var(--sp-3)">
+      <div><label for="numero">Número de mesa</label><input type="number" id="numero" min="1" required></div>
+      <div><label for="puestos">Puestos</label><input type="number" id="puestos" min="1" value="4"></div>
+      <div><button class="btn" type="submit">Agregar mesa</button></div>
+      <div class="row" style="justify-content:flex-end">
+        <input type="number" id="cuantas" min="1" max="60" placeholder="10" style="max-width:90px">
+        <button class="btn ghost" type="button" onclick="crearVarias()">Crear varias</button>
+      </div>
+    </form>
+    <div id="error-mesa" class="aviso malo" hidden></div>
+
+    <div class="tabla-wrap"><table id="tabla-mesas"></table></div>
+  </div>
+</section>
+
+<!-- ----------------------------------------------------------------- MENÚ -->
+<section class="seccion" id="sec-menu">
+  <div class="card">
+    <div class="card-head">
+      <div>
+        <h2>Menú</h2>
+        <p>Primero una categoría, y dentro de ella los productos. Lo apagado no se ve en el sitio.</p>
+      </div>
+      <div class="fin row">
+        <a class="btn ghost" href="{% url 'panel:menu-importar' %}">
+          <svg class="ico" viewBox="0 0 24 24"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>
+          Importar desde mi sitio
+        </a>
+        <a class="btn" href="{% url 'panel:producto-nuevo' %}">+ Producto con foto</a>
+      </div>
+    </div>
+
+    <form onsubmit="crearCategoria(event)" class="row" style="margin-bottom:var(--sp-3)">
+      <div style="flex:1;max-width:320px">
+        <label for="cat-nombre">Nueva categoría</label>
+        <input type="text" id="cat-nombre" placeholder="Ej. Platos fuertes" required>
+      </div>
+      <button class="btn ghost" type="submit" style="align-self:flex-end">Agregar categoría</button>
+    </form>
+    <div id="error-menu" class="aviso malo" hidden></div>
+
+    <div id="menu"></div>
+  </div>
+</section>
+
+<!-- ------------------------------------------------------------- SITIO WEB -->
+<section class="seccion" id="sec-sitio">
+  <div id="estado-sitio" class="estado nada">
+    <span class="punto"></span><span id="estado-texto">Comprobando…</span>
+  </div>
+
+  <div class="cols cols-2">
+    <div class="stack">
+      <div class="card">
+        <div class="card-head">
+          <div>
+            <h2>Dirección del sitio</h2>
+            <p>Solo esta dirección puede enviarle pedidos al panel; cualquier otra queda bloqueada.</p>
+          </div>
+        </div>
+        <form method="post" class="form-row">
+          {% csrf_token %}
+          <div>
+            <label for="site_url">Link del sitio web</label>
+            <input type="url" id="site_url" name="site_url" value="{{ tenant.site_url }}"
+                   placeholder="https://pedidos.mirestaurante.com">
+          </div>
+          <div>
+            <label for="table_page_path">Página de las mesas</label>
+            <input type="text" id="table_page_path" name="table_page_path"
+                   value="{{ tenant.table_page_path }}" placeholder="/mesa.html">
+          </div>
+          <div><button class="btn" type="submit">Guardar</button></div>
+        </form>
+        <p class="dim small" style="margin-top:var(--sp-2)">
+          Los QR apuntan a
+          <code>{{ tenant.site_url|default:"https://tusitio.com" }}{{ tenant.table_page_path }}?m=…</code>
+        </p>
+      </div>
+
+      <div class="card">
+        <div class="card-head">
+          <div>
+            <h2>Cómo conectar el sitio</h2>
+            <p>Dos llamadas y queda funcionando. La llave va en la cabecera <code>X-API-Key</code>.</p>
+          </div>
+        </div>
+        <p class="eyebrow" style="margin-top:var(--sp-3)">1 · Leer mesas y menú</p>
+        <pre id="snippet-info"></pre>
+        <p class="eyebrow" style="margin-top:var(--sp-4)">2 · Enviar un pedido</p>
+        <pre id="snippet-pedido"></pre>
+        <div class="row" style="margin-top:var(--sp-3)">
+          <button class="btn ghost sm" onclick="copiarGuia(this)">Copiar toda la guía</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="stack">
+      <div class="card">
+        <div class="card-head"><div><h2>Llave de conexión</h2><p>Es la contraseña del sitio.</p></div></div>
+        <code style="display:block;margin-bottom:var(--sp-2)">{{ tenant.api_key }}</code>
+        <button class="btn ghost sm" onclick="copiar('{{ tenant.api_key }}', this)">Copiar llave</button>
+        <div class="sep"></div>
+        <dl class="kv">
+          <dt>Panel</dt><dd class="dim small">{{ request.scheme }}://{{ request.get_host }}</dd>
+          <dt>Pedidos recibidos</dt><dd id="pedidos-total" class="metric-sm">—</dd>
+          <dt>Hoy</dt><dd id="pedidos-hoy" class="dim small">—</dd>
+        </dl>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const API = "{{ request.scheme }}://{{ request.get_host }}";
+const LLAVE = "{{ tenant.api_key }}";
+
+document.querySelectorAll(".paso").forEach(b => b.addEventListener("click", () => {
+  document.querySelectorAll(".paso").forEach(x => x.classList.toggle("on", x === b));
+  document.querySelectorAll(".seccion").forEach(s =>
+    s.classList.toggle("activa", s.id === "sec-" + b.dataset.ir));
+  if (b.dataset.ir === "sitio") estadoSitio();
+}));
+{
+  const paso = new URLSearchParams(location.search).get("paso");
+  const boton = paso && document.querySelector(`.paso[data-ir="${paso}"]`);
+  if (boton) window.addEventListener("DOMContentLoaded", () => boton.click());
+}
+
+const marcar = (id, ok) => { document.getElementById(id).hidden = !ok; };
+function mostrarError(id, texto) {
+  const el = document.getElementById(id);
+  el.textContent = texto;
+  el.hidden = !texto;
+}
+function detalleError(err) {
+  try { return Object.values(JSON.parse(err.message)).flat().join(" "); }
+  catch (e) { return "No se pudo completar la acción."; }
+}
+
+/* ------------------------------------------------------------------ mesas */
+async function cargarMesas() {
+  const mesas = await api("/api/v1/staff/tables/?todas=1");
+  marcar("ok-mesas", mesas.length > 0);
+  pintarSiCambia(document.getElementById("tabla-mesas"), mesas.length
+    ? `<thead><tr><th>Mesa</th><th>Puestos</th><th>Estado</th><th class="fin"></th></tr></thead><tbody>`
+      + mesas.map(m => `<tr>
+          <td><strong>Mesa ${m.number}</strong></td>
+          <td>${m.seats}</td>
+          <td><span class="pill ${m.is_active ? (m.is_occupied ? "busy" : "free") : "off"}">
+            <i class="dot"></i>${!m.is_active ? "Inactiva" : m.is_occupied ? "Ocupada" : "Libre"}</span></td>
+          <td class="fin"><div class="acciones">
+            <button class="btn ghost sm" onclick="activarMesa(${m.id}, ${!m.is_active})">
+              ${m.is_active ? "Desactivar" : "Activar"}</button>
+            <button class="btn danger sm" onclick="borrarMesa(${m.id}, ${m.number})">Eliminar</button>
+          </div></td></tr>`).join("") + "</tbody>"
+    : '<tbody><tr><td class="vacio">Todavía no hay mesas. Agrega la primera arriba.</td></tr></tbody>');
+}
+
+async function crearMesa(e) {
+  e.preventDefault();
+  mostrarError("error-mesa", "");
+  try {
+    await api("/api/v1/staff/tables/", {method: "POST", body: JSON.stringify({
+      number: Number(document.getElementById("numero").value),
+      seats: Number(document.getElementById("puestos").value) || 4
+    })});
+    document.getElementById("numero").value = "";
+    document.getElementById("numero").focus();
+    cargarMesas();
+  } catch (err) { mostrarError("error-mesa", detalleError(err)); }
+}
+
+async function crearVarias() {
+  const cuantas = Number(document.getElementById("cuantas").value);
+  if (!cuantas) { mostrarError("error-mesa", "Escribe cuántas mesas quieres crear."); return; }
+  mostrarError("error-mesa", "");
+  const existentes = (await api("/api/v1/staff/tables/?todas=1")).map(m => m.number);
+  let numero = 1, creadas = 0;
+  while (creadas < cuantas) {
+    if (!existentes.includes(numero)) {
+      await api("/api/v1/staff/tables/", {method: "POST", body: JSON.stringify({number: numero, seats: 4})});
+      creadas++;
+    }
+    numero++;
+  }
+  document.getElementById("cuantas").value = "";
+  cargarMesas();
+}
+
+async function activarMesa(id, activa) {
+  await api(`/api/v1/staff/tables/${id}/`, {method: "PATCH", body: JSON.stringify({is_active: activa})});
+  cargarMesas();
+}
+
+async function borrarMesa(id, numero) {
+  if (!confirm(`¿Eliminar la mesa ${numero}?`)) return;
+  const r = await api(`/api/v1/staff/tables/${id}/`, {method: "DELETE"});
+  if (r.desactivada) alert("Esa mesa ya tuvo pedidos, así que quedó desactivada en vez de borrada.");
+  cargarMesas();
+}
+
+/* ------------------------------------------------------------------- menú */
+async function cargarMenu() {
+  const cats = await api("/api/v1/staff/menu/");
+  marcar("ok-menu", cats.some(c => c.products.length));
+  // Qué categorías tiene abiertas esta persona (se recuerda en su navegador).
+  const abiertas = new Set(JSON.parse(localStorage.getItem("cloudin-cats-abiertas") || "[]"));
+  if (!localStorage.getItem("cloudin-cats-abiertas") && cats.length <= 2) cats.forEach(c => abiertas.add(c.id));
+  const icoPlato = '<svg viewBox="0 0 24 24"><path d="M3 11h18M5 11a7 7 0 0 1 14 0M4 15h16l-1.5 4h-13z"/></svg>';
+  pintarSiCambia(document.getElementById("menu"), cats.length ? `
+    <div class="barra-cartas">
+      <button class="btn ghost sm" type="button" onclick="todasLasCategorias(true)">Abrir todas</button>
+      <button class="btn ghost sm" type="button" onclick="todasLasCategorias(false)">Cerrar todas</button>
+    </div>` + cats.map(c => `
+    <div class="cat ${abiertas.has(c.id) ? "abierta" : ""}" data-cat="${c.id}">
+      <div class="cat-cab">
+        <button class="cat-titulo" type="button" onclick="alternarCategoria(${c.id})"
+                aria-expanded="${abiertas.has(c.id)}" aria-controls="cuerpo-${c.id}">
+          <span class="flecha"><svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></span>
+          <span><strong>${escHTML(c.name)}</strong>
+            <span class="dim small" style="display:block">${c.products.length} producto${c.products.length === 1 ? "" : "s"}${c.is_active ? "" : " · apagada"}</span></span>
+        </button>
+        <span class="acciones">
+          <button class="btn ghost sm" onclick="activarCategoria(${c.id}, ${!c.is_active})">
+            ${c.is_active ? "Apagar categoría" : "Encender categoría"}</button>
+          <button class="btn danger sm" onclick="borrarCategoria(${c.id})">Eliminar</button>
+        </span>
+      </div>
+      <div class="cat-cuerpo" id="cuerpo-${c.id}"><div>
+      ${c.products.map(p => `
+        <div class="prod">
+          <span class="miniatura" ${p.foto ? `style="background-image:url('${escHTML(String(p.foto).replace(/'/g, "%27"))}')"` : ""}>
+            ${p.foto ? "" : icoPlato}</span>
+          <span class="datos">
+            <span class="nombre" style="${p.is_available ? "" : "opacity:.55"}">${escHTML(p.name)}</span>
+            <span class="dim small">${money(p.price)}${p.is_available ? "" : ' · <span class="pill amarillo">Agotado</span>'}</span>
+            <span class="extras">
+              ${(p.opciones || []).length ? `<span class="pill info">${p.opciones.length} grupo(s) de toppings</span>` : ""}
+              ${p.permite_observacion ? "" : '<span class="pill neutro">sin observación</span>'}
+              ${p.description ? "" : '<span class="pill neutro">sin descripción</span>'}
+            </span>
+          </span>
+          <span class="acciones">
+            <a class="btn ghost sm" href="/panel/menu/producto/${Number(p.id)}/">Editar</a>
+            <button class="btn ghost sm" onclick="disponible(${p.id}, ${!p.is_available})"
+                    title="${p.is_available ? "Marcarlo como agotado: deja de verse en la carta" : "Volver a ofrecerlo"}">
+              ${p.is_available ? "Agotar" : "Disponible"}</button>
+            <button class="btn danger sm" onclick="borrarProducto(${p.id})">Eliminar</button>
+          </span>
+        </div>`).join("")}
+      ${(c.eliminados || []).length ? `<details class="eliminados">
+          <summary class="dim small">Eliminados de la carta · ${c.eliminados.length}</summary>
+          ${c.eliminados.map(e => `<div class="prod" style="grid-template-columns:minmax(0,1fr) auto"><span class="dim" style="text-decoration:line-through">${escHTML(e.name)}</span>
+            <button class="btn ghost sm" onclick="restaurarProducto(${e.id})">Restaurar</button></div>`).join("")}
+        </details>` : ""}
+      <form onsubmit="crearProducto(event, ${c.id})" class="nuevo-prod">
+        <input type="text" placeholder="Nombre del producto nuevo" required maxlength="120">
+        <input type="number" placeholder="Precio" min="0" step="100" required>
+        <button class="btn sm" type="submit">Agregar</button>
+      </form>
+      </div></div>
+    </div>`).join("")
+    : '<p class="vacio">Todavía no hay categorías. Crea la primera arriba.</p>');
+}
+
+function guardarAbiertas() {
+  const ids = [...document.querySelectorAll(".cat.abierta")].map(x => Number(x.dataset.cat));
+  try { localStorage.setItem("cloudin-cats-abiertas", JSON.stringify(ids)); } catch (e) {}
+}
+function alternarCategoria(id) {
+  const cat = document.querySelector(`.cat[data-cat="${id}"]`);
+  const abierta = cat.classList.toggle("abierta");
+  cat.querySelector(".cat-titulo").setAttribute("aria-expanded", String(abierta));
+  guardarAbiertas();
+  // La próxima repintada respeta lo que se abrió o cerró.
+  document.getElementById("menu").dataset.firma = "";
+}
+function todasLasCategorias(abrir) {
+  document.querySelectorAll(".cat").forEach(c => c.classList.toggle("abierta", abrir));
+  guardarAbiertas();
+  document.getElementById("menu").dataset.firma = "";
+}
+
+async function crearCategoria(e) {
+  e.preventDefault();
+  mostrarError("error-menu", "");
+  try {
+    await api("/api/v1/staff/menu/categories/", {method: "POST",
+      body: JSON.stringify({name: document.getElementById("cat-nombre").value})});
+    document.getElementById("cat-nombre").value = "";
+    cargarMenu();
+  } catch (err) { mostrarError("error-menu", detalleError(err)); }
+}
+
+async function crearProducto(e, categoria) {
+  e.preventDefault();
+  mostrarError("error-menu", "");
+  const [nombre, precio] = e.target.querySelectorAll("input");
+  try {
+    await api("/api/v1/staff/menu/products/", {method: "POST", body: JSON.stringify({
+      category: categoria, name: nombre.value, price: precio.value
+    })});
+    cargarMenu();
+  } catch (err) { mostrarError("error-menu", detalleError(err)); }
+}
+
+async function activarCategoria(id, activa) {
+  await api(`/api/v1/staff/menu/categories/${id}/`, {method: "PATCH", body: JSON.stringify({is_active: activa})});
+  cargarMenu();
+}
+async function borrarCategoria(id) {
+  if (!confirm("¿Eliminar la categoría?")) return;
+  try { await api(`/api/v1/staff/menu/categories/${id}/`, {method: "DELETE"}); }
+  catch (err) { mostrarError("error-menu", detalleError(err)); }
+  cargarMenu();
+}
+async function disponible(id, valor) {
+  await api(`/api/v1/staff/menu/products/${id}/`, {method: "PATCH", body: JSON.stringify({is_available: valor})});
+  cargarMenu();
+}
+async function borrarProducto(id) {
+  if (!confirm("¿Eliminar el producto de la carta? Deja de verse en el sitio, en la app de meseros y en el QR. Las ventas viejas no se tocan y lo puedes restaurar.")) return;
+  await api(`/api/v1/staff/menu/products/${id}/`, {method: "DELETE"});
+  cargarMenu();
+}
+async function restaurarProducto(id) {
+  await api(`/api/v1/staff/menu/products/${id}/`, {method: "PATCH", body: JSON.stringify({eliminado: false})});
+  cargarMenu();
+}
+
+/* -------------------------------------------------------------- sitio web */
+const hace = iso => {
+  const seg = Math.floor((Date.now() - new Date(iso)) / 1000);
+  if (seg < 60) return "hace un momento";
+  if (seg < 3600) return `hace ${Math.floor(seg / 60)} min`;
+  if (seg < 86400) return `hace ${Math.floor(seg / 3600)} h`;
+  return new Date(iso).toLocaleDateString("es-CO");
+};
+
+async function estadoSitio() {
+  const s = await api("/api/v1/staff/site/status/");
+  marcar("ok-sitio", s.conectado);
+  const caja = document.getElementById("estado-sitio");
+  const texto = document.getElementById("estado-texto");
+  if (!s.site_url) {
+    caja.className = "estado nada";
+    texto.innerHTML = "<strong>Sin sitio web registrado.</strong> Guarda abajo el link de la página.";
+  } else if (s.conectado) {
+    caja.className = "estado si";
+    texto.innerHTML = `<strong>Conectado y recibiendo pedidos.</strong> Última señal de
+      <code>${s.origen}</code> ${hace(s.ultima_conexion)}.`;
+  } else if (s.ultima_conexion) {
+    caja.className = "estado no";
+    texto.innerHTML = `<strong>Sin actividad reciente.</strong> <code>${s.origen}</code>
+      se comunicó por última vez ${hace(s.ultima_conexion)}.`;
+  } else {
+    caja.className = "estado no";
+    texto.innerHTML = `<strong><code>${s.origen}</code> está autorizado, pero no se ha conectado.</strong>
+      En cuanto el sitio haga su primera llamada, aparece aquí.`;
+  }
+  document.getElementById("pedidos-total").textContent = s.pedidos_total;
+  document.getElementById("pedidos-hoy").textContent = `${s.pedidos_hoy} hoy`;
+}
+
+const GUIA_INFO =
+`// Mesas y menú del restaurante
+const r = await fetch("${API}/api/v1/site/info/", {
+  headers: { "X-API-Key": "${LLAVE}" }
+});
+const { restaurante, mesas, categorias } = await r.json();`;
+
+const GUIA_PEDIDO =
+`// Enviar un pedido al panel
+await fetch("${API}/api/v1/site/orders/", {
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json",
+    "X-API-Key": "${LLAVE}"
+  },
+  body: JSON.stringify({
+    table_number: 3,              // número de la mesa
+    customer_name: "María",       // opcional
+    note: "Sin cebolla",          // opcional
+    items: [
+      { product_id: 12, quantity: 2 }
+    ]
+  })
+});`;
+
+document.getElementById("snippet-info").textContent = GUIA_INFO;
+document.getElementById("snippet-pedido").textContent = GUIA_PEDIDO;
+function copiarGuia(boton) { copiar(GUIA_INFO + "\n\n" + GUIA_PEDIDO, boton); }
+
+cargarMesas();
+cargarMenu();
+estadoSitio();
+setInterval(() => {
+  if (document.getElementById("sec-sitio").classList.contains("activa")) estadoSitio();
+}, 10000);
+</script>
+{% endblock %}

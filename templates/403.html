@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block title %}Sin acceso — Cloudin{% endblock %}
+
+{% block layout %}
+<div class="content" style="max-width:520px;margin:12vh auto">
+  <div class="card" style="text-align:center;padding:var(--sp-6)">
+    <div style="font-size:32px">🔒</div>
+    <h1 style="margin:var(--sp-3) 0 var(--sp-1);font-size:20px">Sin acceso</h1>
+    <p class="muted" style="margin-bottom:var(--sp-4)">
+      {{ exception|default:"No tienes permiso para ver esta página." }}
+    </p>
+    <a class="btn" href="/panel/">Volver al panel</a>
+  </div>
+</div>
+{% endblock %}

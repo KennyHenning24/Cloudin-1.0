@@ -1,0 +1,6 @@
+{% load cloudin %}{% comment %}
+Button. Variantes: (vacío)=primario, grad, secundario, fantasma, peligro. Tamaños: sm, (md), lg.
+{% include "components/boton.html" with texto="Guardar" icono="check" tipo="submit" %}
+{% include "components/boton.html" with texto="Ver mi menú" href=url variante="secundario" icono="enlace-externo" %}
+Solo ícono: pasa etiqueta="Cerrar" y solo_icono=True (el texto se lee en voz alta, no se ve).
+{% endcomment %}{% if href %}<a class="btn {{ variante }} {{ tamano }}{% if solo_icono %} icono{% endif %}{% if clase %} {{ clase }}{% endif %}" href="{{ href }}"{% if id %} id="{{ id }}"{% endif %}{% if solo_icono %} aria-label="{{ etiqueta|default:texto }}"{% endif %}{% if nueva_pestana %} target="_blank" rel="noopener"{% endif %}>{% if icono %}{% icono icono %}{% endif %}{% if not solo_icono %}{{ texto }}{% endif %}</a>{% else %}<button class="btn {{ variante }} {{ tamano }}{% if solo_icono %} icono{% endif %}{% if clase %} {{ clase }}{% endif %}" type="{{ tipo|default:'button' }}"{% if id %} id="{{ id }}"{% endif %}{% if solo_icono %} aria-label="{{ etiqueta|default:texto }}"{% endif %}{% if deshabilitado %} disabled{% endif %}{% if cargando %} aria-busy="true"{% endif %}{% if abre %} data-abrir="{{ abre }}"{% endif %}>{% if icono %}{% icono icono %}{% endif %}{% if not solo_icono %}{{ texto }}{% endif %}</button>{% endif %}

@@ -1,0 +1,15 @@
+Hola, {{ nombre }}:
+
+Tu menú digital de {{ restaurante }} ya está conectado a Cloudin. Desde tu app
+puedes cambiar precios, fotos y productos, y marcar lo que se agote.
+
+Crea tu contraseña aquí (el enlace sirve una sola vez y vence en {{ dias }} días):
+{{ enlace }}
+
+Después entras con tu correo ({{ correo }}) en {{ panel }}
+Tu usuario, si lo necesitas: {{ usuario }}
+
+Consejo: abre el enlace en tu celular y agrega la app a tu pantalla de inicio.
+
+BarberTech · Cloudin
+WhatsApp 321 671 8431

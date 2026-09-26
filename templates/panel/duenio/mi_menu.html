@@ -1,0 +1,190 @@
+{% extends "panel/_base.html" %}
+{% load cloudin static %}
+{% block title %}Mi menú · Cloudin{% endblock %}
+{% block titulo %}Mi menú{% endblock %}
+{% block acciones %}
+  <a class="btn secundario solo-pc" href="{{ enlace }}" target="_blank" rel="noopener">{% icono "ojo" %}Vista previa</a>
+  {% if es_admin %}
+  <button type="button" class="btn secundario" data-abrir="dialogo-categoria">{% icono "mas" %}Categoría</button>
+  <a class="btn" href="{% url 'panel:carta-producto-nuevo' %}?categoria={{ categorias.0.uuid|default:'' }}" data-atajo="n" data-editor>{% icono "mas" %}Producto <kbd class="atajo">N</kbd></a>
+  {% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="mi-menu" id="mi-menu" data-menu="{{ menu.uuid }}" data-admin="{{ es_admin|yesno:'1,0' }}">
+
+  <div class="menus-cab">
+    <nav class="pestanas" aria-label="Tus menús">
+      {% for m in menus %}
+      <a href="?menu={{ m.uuid }}"{% if m.pk == menu.pk %} aria-current="page"{% endif %} data-menu-tab="{{ m.uuid }}"><span class="nombre-menu">{{ m.name }}</span> <span class="cuenta">· {{ m.categorias }}</span></a>
+      {% endfor %}
+      {% if es_admin %}<button type="button" data-abrir="dialogo-menu">{% icono "mas" %}Nuevo menú</button>{% endif %}
+    </nav>
+    {% if es_admin %}
+    <details class="desplegable">
+      <summary class="btn fantasma icono sm" aria-label="Más acciones para el menú {{ menu.name }}">{% icono "mas-opciones" %}</summary>
+      <div class="opciones">
+        <button type="button" data-accion="renombrar-menu">{% icono "lapiz" %}Cambiar el nombre de «{{ menu.name }}»</button>
+        <button type="button" class="peligro" data-accion="archivar-menu">{% icono "papelera" %}Archivar este menú</button>
+      </div>
+    </details>
+    {% endif %}
+  </div>
+
+  <div class="filtros" role="search">
+    <div class="buscar">
+      {% icono "buscar" %}
+      <label class="sr-only" for="buscar">Buscar producto</label>
+      <input type="search" id="buscar" placeholder="Buscar producto" value="{{ q }}" autocomplete="off">
+      <kbd class="atajo solo-pc">/</kbd>
+    </div>
+    <label class="sr-only" for="filtro-categoria">Categoría</label>
+    <select id="filtro-categoria">
+      <option value="">Todas las categorías</option>
+      {% for c in categorias %}<option value="{{ c.uuid }}">{{ c.name }}</option>{% endfor %}
+    </select>
+    <div class="segmento" role="group" aria-label="Mostrar">
+      <button type="button" data-estado="" class="{% if not estado %}on{% endif %}" aria-pressed="{% if not estado %}true{% else %}false{% endif %}">Todos <span class="cuenta">{{ cuentas.todos }}</span></button>
+      <button type="button" data-estado="disponibles" class="{% if estado == 'disponibles' %}on{% endif %}" aria-pressed="{% if estado == 'disponibles' %}true{% else %}false{% endif %}">Disponibles <span class="cuenta">{{ cuentas.disponibles }}</span></button>
+      <button type="button" data-estado="agotados" class="{% if estado == 'agotados' %}on{% endif %}" aria-pressed="{% if estado == 'agotados' %}true{% else %}false{% endif %}">Agotados <span class="cuenta">{{ cuentas.agotados }}</span></button>
+      {% if cuentas.sin_precio or estado == 'sin_precio' %}<button type="button" data-estado="sin_precio" class="{% if estado == 'sin_precio' %}on{% endif %}" aria-pressed="{% if estado == 'sin_precio' %}true{% else %}false{% endif %}">Sin precio <span class="cuenta">{{ cuentas.sin_precio }}</span></button>{% endif %}
+      {% if cuentas.sin_foto or estado == 'sin_foto' %}<button type="button" data-estado="sin_foto" class="{% if estado == 'sin_foto' %}on{% endif %}" aria-pressed="{% if estado == 'sin_foto' %}true{% else %}false{% endif %}">Sin foto <span class="cuenta">{{ cuentas.sin_foto }}</span></button>{% endif %}
+    </div>
+    {% if es_admin and cuentas.todos %}
+    <button type="button" class="btn secundario solo-movil" id="ordenar" aria-pressed="false">{% icono "asa" %}Ordenar</button>
+    <button type="button" class="btn secundario" id="seleccionar" aria-pressed="false">{% icono "check" %}Seleccionar</button>
+    {% endif %}
+  </div>
+
+  {% if es_admin %}
+  <div class="barra-masiva" id="barra-masiva" hidden role="region" aria-label="Acciones con los seleccionados">
+    <label class="todos"><input type="checkbox" id="seleccionar-todos" aria-label="Seleccionar todos los que se ven"></label>
+    <strong id="cuantos-seleccionados" aria-live="polite">0 seleccionados</strong>
+    <span class="fin"></span>
+    <button type="button" class="btn sm" data-masivo="soldout">{% icono "agotado" %}Agotar</button>
+    <button type="button" class="btn sm" data-masivo="available">{% icono "check" %}Disponibles</button>
+    <button type="button" class="btn sm" data-masivo="price_percent">{% icono "porcentaje" %}Subir precios %</button>
+    <button type="button" class="btn sm" data-masivo="move">{% icono "carpeta" %}Mover a…</button>
+    <button type="button" class="btn sm" data-masivo="delete">{% icono "papelera" %}Eliminar</button>
+    <button type="button" class="btn sm" data-masivo="cancelar" aria-label="Terminar la selección">{% icono "x" %}<span class="solo-pc">Cancelar</span></button>
+  </div>
+  {% endif %}
+
+  {% if categorias %}
+  <ol class="categorias" data-ordenable="categories" data-asa=".asa-cat">
+    {% for c in categorias %}
+    <li class="categoria" data-id="{{ c.uuid }}" data-nombre="{{ c.name }}">
+      <div class="categoria-cab">
+        {% if es_admin %}<span class="asa-cat" title="Arrastra para ordenar las categorías" aria-hidden="true">{% icono "asa" %}</span>{% endif %}
+        <h2><span class="nombre-categoria">{{ c.name }}</span> <span class="dim cuenta-categoria">· {{ c.lista|length }}</span></h2>
+        {% if es_admin %}
+        <div class="mover-flechas">
+          <button type="button" class="btn fantasma icono sm" data-mover="arriba" aria-label="Subir la categoría {{ c.name }}">{% icono "flecha-arriba" %}</button>
+          <button type="button" class="btn fantasma icono sm" data-mover="abajo" aria-label="Bajar la categoría {{ c.name }}">{% icono "flecha-abajo" %}</button>
+        </div>
+        <a class="btn fantasma sm agregar-aqui" href="{% url 'panel:carta-producto-nuevo' %}?categoria={{ c.uuid }}" data-editor>{% icono "mas" %}<span>Agregar aquí</span></a>
+        <details class="desplegable">
+          <summary class="btn fantasma icono sm" aria-label="Más acciones para la categoría {{ c.name }}">{% icono "mas-opciones" %}</summary>
+          <div class="opciones">
+            <button type="button" data-accion="renombrar-categoria">{% icono "lapiz" %}Cambiar el nombre</button>
+            <button type="button" class="peligro" data-accion="archivar-categoria">{% icono "papelera" %}Archivar la categoría</button>
+          </div>
+        </details>
+        {% endif %}
+      </div>
+      <ul class="productos" data-ordenable="products">
+        {% for p in c.lista %}
+          {% url 'panel:carta-producto' p.uuid as editar %}
+          {% include "components/producto_fila.html" with p=p editar=editar admin=es_admin %}
+        {% endfor %}
+      </ul>
+      <div class="vacio-categoria"{% if c.lista %} hidden{% endif %}>
+        {% if es_admin %}
+        {% include "components/vacio.html" with titulo="Aún no tienes productos en "|add:c.name accion="Agregar el primero" href=c.url_nuevo icono="menu-lista" %}
+        {% else %}<p class="dim small">Aún no hay productos en esta categoría.</p>{% endif %}
+      </div>
+    </li>
+    {% endfor %}
+  </ol>
+  <div class="vacio-amable" id="sin-resultados" hidden>
+    <span class="circulo">{% icono "buscar" %}</span>
+    <div><strong>Ningún producto coincide</strong><p class="dim small" style="margin-top:4px">Prueba con otra palabra o quita los filtros.</p></div>
+    <button type="button" class="btn secundario" data-accion="limpiar-filtros">Quitar filtros</button>
+  </div>
+  {% else %}
+  <div class="card">
+    {% include "components/vacio.html" with titulo="Tu menú está vacío" texto="Empieza por una categoría, por ejemplo «Platos fuertes» o «Bebidas»." accion="Crear la primera categoría" abre="dialogo-categoria" icono="menu-lista" %}
+  </div>
+  {% endif %}
+</div>
+
+{# Piezas que el JS copia al cambiar el estado de un producto #}
+<template id="t-chip-agotado">{% include "components/chip.html" with estado="agotado" %}</template>
+<template id="t-chip-sin-precio">{% include "components/chip.html" with estado="sin_precio" %}</template>
+<template id="t-guardar">{% icono "check" %}</template>
+
+{% if es_admin %}
+<dialog id="dialogo-categoria" aria-labelledby="t-dialogo-categoria">
+  <form method="dialog" data-formulario="categoria">
+    <h2 id="t-dialogo-categoria">Nueva categoría</h2>
+    <p class="dim small" style="margin-bottom:12px">Agrupa tus productos: Entradas, Hamburguesas, Bebidas…</p>
+    <div class="campo"><label for="c-categoria-nombre">Nombre</label><input id="c-categoria-nombre" name="name" maxlength="80" required autocomplete="off"></div>
+    <div class="acciones-dialogo"><button type="button" class="btn fantasma" data-cerrar>Cancelar</button><button class="btn" type="submit">Crear categoría</button></div>
+  </form>
+</dialog>
+<dialog id="dialogo-renombrar" aria-labelledby="t-dialogo-renombrar">
+  <form method="dialog" data-formulario="renombrar">
+    <h2 id="t-dialogo-renombrar">Cambiar el nombre</h2>
+    <div class="campo"><label for="c-renombrar">Nombre</label><input id="c-renombrar" name="name" maxlength="80" required autocomplete="off"></div>
+    <div class="acciones-dialogo"><button type="button" class="btn fantasma" data-cerrar>Cancelar</button><button class="btn" type="submit">Guardar</button></div>
+  </form>
+</dialog>
+<dialog id="dialogo-menu" aria-labelledby="t-dialogo-menu">
+  <form method="dialog" data-formulario="menu">
+    <h2 id="t-dialogo-menu">Nuevo menú</h2>
+    <p class="dim small" style="margin-bottom:12px">Por ejemplo «Desayunos» o «Almuerzo ejecutivo». Cada menú tiene sus propias categorías.</p>
+    <div class="campo"><label for="c-menu-nombre">Nombre</label><input id="c-menu-nombre" name="name" maxlength="80" required autocomplete="off"></div>
+    <div class="acciones-dialogo"><button type="button" class="btn fantasma" data-cerrar>Cancelar</button><button class="btn" type="submit">Crear menú</button></div>
+  </form>
+</dialog>
+<dialog id="dialogo-porcentaje" aria-labelledby="t-dialogo-porcentaje">
+  <form method="dialog" data-formulario="porcentaje">
+    <h2 id="t-dialogo-porcentaje">Cambiar precios en %</h2>
+    <p class="dim small" style="margin-bottom:12px">Se redondean a los $ 100 más cercanos. Para bajar, usa un número negativo (−10).</p>
+    <div class="campo"><label for="c-porcentaje">Porcentaje</label><input id="c-porcentaje" name="porcentaje" type="number" inputmode="decimal" step="0.5" min="-90" max="300" value="5" required></div>
+    <p class="small" id="porcentaje-ejemplo" aria-live="polite"></p>
+    <div class="acciones-dialogo"><button type="button" class="btn fantasma" data-cerrar>Cancelar</button><button class="btn" type="submit">Aplicar</button></div>
+  </form>
+</dialog>
+<dialog id="dialogo-mover" aria-labelledby="t-dialogo-mover">
+  <form method="dialog" data-formulario="mover">
+    <h2 id="t-dialogo-mover">Mover a otra categoría</h2>
+    <div class="campo"><label for="c-mover">Categoría</label>
+      <select id="c-mover" name="categoria" required>
+        {% regroup todas_las_categorias by menu as por_menu %}
+        {% for grupo in por_menu %}<optgroup label="{{ grupo.grouper.name }}">{% for c in grupo.list %}<option value="{{ c.uuid }}">{{ c.name }}</option>{% endfor %}</optgroup>{% endfor %}
+      </select></div>
+    <div class="acciones-dialogo"><button type="button" class="btn fantasma" data-cerrar>Cancelar</button><button class="btn" type="submit">Mover</button></div>
+  </form>
+</dialog>
+<dialog id="dialogo-confirmar" aria-labelledby="t-dialogo-confirmar">
+  <form method="dialog" data-formulario="confirmar">
+    <h2 id="t-dialogo-confirmar">¿Seguro?</h2>
+    <p id="confirmar-texto"></p>
+    <div class="acciones-dialogo"><button type="button" class="btn fantasma" data-cerrar>Cancelar</button><button class="btn peligro" type="submit">Sí, archivar</button></div>
+  </form>
+</dialog>
+<dialog class="hoja cajon-editor" id="cajon-editor" aria-label="Editor de producto"></dialog>
+{% endif %}
+{% endblock %}
+
+{% block fab %}{% if es_admin %}<a class="fab" href="{% url 'panel:carta-producto-nuevo' %}?categoria={{ categorias.0.uuid|default:'' }}">{% icono "mas" %}Producto</a>{% endif %}{% endblock %}
+
+{% block scripts %}
+<script src="{% static 'vendor/sortable.min.js' %}"></script>
+<script src="{% static 'panel/js/ordenar.js' %}"></script>
+<script src="{% static 'panel/js/subir-foto.js' %}"></script>
+<script src="{% static 'panel/js/vista-previa.js' %}"></script>
+<script src="{% static 'panel/js/editor-producto.js' %}"></script>
+<script src="{% static 'panel/js/mi-menu.js' %}"></script>
+{% endblock %}

@@ -1,0 +1,236 @@
+{% extends "base.html" %}
+{% load static cloudin %}
+{% block title %}Sistema de diseño — Cloudin{% endblock %}
+{% block head %}
+<style>
+  /* Solo para esta guía: la maqueta de la página, no componentes. */
+  .guia{max-width:1120px;margin:0 auto;padding:var(--space-5) var(--space-4) var(--space-7)}
+  .guia header{display:flex;align-items:center;gap:var(--space-3);flex-wrap:wrap;margin-bottom:var(--space-6)}
+  .guia header img{height:28px}
+  .guia h1{font-size:var(--fs-32);font-weight:800;letter-spacing:-.02em}
+  .guia h2.seccion{font-size:var(--fs-24);font-weight:800;margin:var(--space-7) 0 var(--space-3);padding-top:var(--space-4);border-top:1px solid var(--line)}
+  .guia h3{font-size:var(--fs-16);font-weight:800;margin:var(--space-5) 0 var(--space-2)}
+  .muestras{display:grid;gap:var(--space-3);grid-template-columns:repeat(auto-fill,minmax(150px,1fr))}
+  .muestra{border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;background:var(--surface);font-size:12px}
+  .muestra i{display:block;height:56px}
+  .muestra div{padding:8px 10px}
+  .muestra code{font-size:11px}
+  .fila-demo{display:flex;flex-wrap:wrap;gap:var(--space-3);align-items:center}
+  .caja-demo{border:1px dashed var(--line-strong);border-radius:var(--radius);padding:var(--space-4);background:var(--surface)}
+  .forzar-foco{outline:2px solid var(--focus);outline-offset:2px}
+  .regla{display:flex;align-items:center;gap:var(--space-3);margin:6px 0}
+  .regla i{display:block;height:16px;background:var(--brand-soft);border:1px solid var(--brand-line)}
+  .iconos-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:var(--space-2)}
+  .iconos-grid div{display:flex;flex-direction:column;align-items:center;gap:6px;padding:10px;border:1px solid var(--line);border-radius:10px;background:var(--surface);font-size:11px;color:var(--text-2)}
+  .contraste-tabla td,.contraste-tabla th{padding:8px 10px;font-size:13px}
+  .par{display:inline-flex;align-items:center;justify-content:center;width:64px;height:28px;border-radius:6px;font-weight:700;font-size:12px;border:1px solid var(--line)}
+  .lista-demo{list-style:none;margin:0;padding:0;border:1px solid var(--line);border-radius:var(--radius);overflow:hidden}
+</style>
+{% endblock %}
+
+{% block layout %}
+<div class="guia">
+  <header>
+    <img class="wm-oscuro" src="{% static 'img/cloudin-texto.png' %}" alt="Cloudin"><img class="wm-claro" src="{% static 'img/cloudin-texto-claro.png' %}" alt="" aria-hidden="true">
+    <div style="flex:1"><h1>Sistema de diseño</h1><p class="muted">La guía viva del panel. Todo sale de <code>static/css/cloudin.css</code>; nada de colores fijos en las plantillas.</p></div>
+    <div class="tema" role="group" aria-label="Tema" style="width:220px">
+      <button type="button" data-tema="oscuro">{% icono "luna" %}Oscuro</button>
+      <button type="button" data-tema="claro">{% icono "sol" %}Claro</button>
+    </div>
+  </header>
+
+  <div class="sin-conexion" style="display:flex;border-radius:var(--radius)">{% icono "sin-internet" "ico sm" %}Así se ve el aviso sin conexión: «No hay internet. Tus cambios se guardan al reconectar.»</div>
+
+  <!-- ================================================================ COLOR -->
+  <h2 class="seccion">Color</h2>
+  <h3>Marca (iguales en los dos temas)</h3>
+  <div class="muestras">
+    {% for nombre, valor in t.marca.items %}{% if nombre|slice:":6" == "color-" or nombre == "gradient-brand" or nombre == "on-brand" %}
+    <div class="muestra"><i style="background:var(--{{ nombre }})"></i><div><strong>--{{ nombre }}</strong><br><code>{{ valor }}</code></div></div>
+    {% endif %}{% endfor %}
+  </div>
+  <h3>Neutrales y estados (del tema activo)</h3>
+  <div class="muestras">
+    {% for nombre in "bg surface surface-2 surface-3 line line-strong text text-2 text-3 brand-text ok ok-soft danger danger-soft warn warn-soft info info-soft"|palabras %}
+    <div class="muestra"><i style="background:var(--{{ nombre }})"></i><div><strong>--{{ nombre }}</strong><br><code>claro {{ t.claro|get_item:nombre }}</code><br><code>oscuro {{ t.oscuro|get_item:nombre }}</code></div></div>
+    {% endfor %}
+  </div>
+
+  <h3>Contraste (WCAG 2.1 AA): medido del CSS real</h3>
+  <div class="card" style="padding:0"><div class="tabla-wrap" style="margin:0;padding:0">
+    <table class="contraste-tabla">
+      <thead><tr><th>Par</th><th>Tema</th><th>Muestra</th><th>Relación</th><th>Mínimo</th><th>Resultado</th></tr></thead>
+      <tbody>{% for f in contrastes %}
+        <tr><td>{{ f.nombre }}</td><td class="dim">{{ f.tema }}</td>
+          <td><span class="par" style="color:{{ f.texto }};background:{{ f.fondo }}">Aa 123</span></td>
+          <td><strong>{{ f.ratio }}:1</strong></td><td class="dim">{{ f.minimo }}:1</td>
+          <td>{% if f.pasa %}<span class="chip disponible">{% icono "check" %}Pasa</span>{% else %}<span class="chip agotado">{% icono "x" %}No pasa</span>{% endif %}</td></tr>
+      {% endfor %}</tbody>
+    </table>
+  </div></div>
+
+  <!-- ============================================================ TIPOGRAFÍA -->
+  <h2 class="seccion">Tipografía, espacio y radios</h2>
+  <p class="muted">Plus Jakarta Sans, servida desde Cloudin (static/fonts). Los campos usan 16 px para que el iPhone no haga zoom.</p>
+  {% for tamano in escala %}<div style="font-size:{{ tamano }}px;font-weight:{% if tamano >= 20 %}800{% else %}500{% endif %};margin:6px 0">{{ tamano }} px · Cambia un precio en tres toques</div>{% endfor %}
+  <h3>Retícula de 4 px</h3>
+  {% for e in espacios %}<div class="regla"><code style="width:48px">{{ e }}</code><i style="width:{{ e }}px"></i></div>{% endfor %}
+  <h3>Radios</h3>
+  <div class="fila-demo">
+    <div class="caja-demo" style="border-radius:var(--radius-sm)">8 px · campos</div>
+    <div class="caja-demo" style="border-radius:var(--radius)">12 px · tarjetas y botones</div>
+    <span class="chip">999 px · chips</span>
+  </div>
+
+  <!-- ================================================================ BOTONES -->
+  <h2 class="seccion">Botones</h2>
+  <p class="muted">Pasa el mouse para ver el estado hover. Mínimo 44 × 44 px para tocar con el dedo.</p>
+  <div class="stack">
+    <div class="fila-demo">
+      {% include "components/boton.html" with texto="Primario" icono="check" %}
+      {% include "components/boton.html" with texto="Momento clave" variante="grad" icono="brillo" %}
+      {% include "components/boton.html" with texto="Secundario" variante="secundario" %}
+      {% include "components/boton.html" with texto="Fantasma" variante="fantasma" %}
+      {% include "components/boton.html" with texto="Eliminar" variante="peligro" icono="papelera" %}
+      {% include "components/boton.html" with texto="Cerrar" solo_icono=True icono="x" variante="secundario" %}
+    </div>
+    <div class="fila-demo">
+      {% include "components/boton.html" with texto="Pequeño" tamano="sm" %}
+      {% include "components/boton.html" with texto="Mediano" %}
+      {% include "components/boton.html" with texto="Grande" tamano="lg" %}
+    </div>
+    <div class="fila-demo">
+      <button type="button" class="btn forzar-foco">Con foco</button>
+      {% include "components/boton.html" with texto="Deshabilitado" deshabilitado=True %}
+      {% include "components/boton.html" with texto="Guardando" cargando=True %}
+      {% include "components/boton.html" with texto="Guardando" variante="secundario" cargando=True %}
+    </div>
+  </div>
+
+  <!-- ================================================================ CAMPOS -->
+  <h2 class="seccion">Campos</h2>
+  <div class="cols cols-half" style="gap:var(--space-5)">
+    <div>
+      {% include "components/campo.html" with nombre="d-nombre" etiqueta="Nombre" valor="Hamburguesa clásica" requerido=True ayuda="Como aparece en el menú." %}
+      {% include "components/campo.html" with nombre="d-error" etiqueta="Ciudad" error="Escribe la ciudad para que tus clientes te encuentren." %}
+      {% include "components/campo.html" with nombre="d-off" etiqueta="Clave (no se cambia)" valor="hamburguesa-clasica" deshabilitado=True %}
+      <div class="campo"><label for="d-sel">Categoría</label><select id="d-sel"><option>Hamburguesas</option><option>Bebidas</option></select></div>
+    </div>
+    <div>
+      {% include "components/precio.html" with nombre="d-precio" etiqueta="Precio" valor=24000 %}
+      {% include "components/campo.html" with nombre="d-desc" etiqueta="Descripción" tipo="textarea" maximo=140 valor="Carne de res, queso, lechuga, tomate y papas." %}
+      <div class="campo"><label for="d-buscar" class="sr-only">Buscar producto</label><div class="buscar">{% icono "buscar" %}<input id="d-buscar" type="search" placeholder="Buscar producto"></div></div>
+      <div class="campo"><label for="d-foco">Campo con foco</label><input id="d-foco" class="forzar-foco" value="Así se ve el foco"></div>
+    </div>
+  </div>
+
+  <h3>Switch, checkbox y radio</h3>
+  <div class="fila-demo">
+    {% include "components/interruptor.html" with nombre="d1" encendido=True disponible=True etiqueta="Hamburguesa" %}
+    {% include "components/interruptor.html" with nombre="d2" disponible=True etiqueta="Limonada" %}
+    {% include "components/interruptor.html" with nombre="d3" encendido=True etiqueta="Destacar en el menú" %}
+    {% include "components/interruptor.html" with nombre="d4" deshabilitado=True etiqueta="Deshabilitado" %}
+    <label class="row" style="margin:0"><input type="checkbox" checked> Vegetariano</label>
+    <label class="row" style="margin:0"><input type="radio" name="d-imp" checked> INC 8 %</label>
+    <label class="row" style="margin:0"><input type="radio" name="d-imp"> IVA 19 %</label>
+  </div>
+
+  <h3>Chips y etiquetas</h3>
+  <div class="fila-demo">
+    {% include "components/chip.html" with estado="disponible" %}
+    {% include "components/chip.html" with estado="agotado" %}
+    {% include "components/chip.html" with estado="destacado" %}
+    {% include "components/chip.html" with estado="sin_precio" %}
+    {% include "components/chip.html" with texto="Vegetariano" %}
+    <button type="button" class="chip" aria-pressed="true">Recomendado</button>
+    <button type="button" class="chip" aria-pressed="false">Picante</button>
+  </div>
+
+  <!-- ============================================================ TARJETAS -->
+  <h2 class="seccion">Tarjetas y ProductCard</h2>
+  <p class="muted">Sin foto, con nombre largo, agotado y sin precio: el dueño va a cargar cosas que no imaginamos.</p>
+  <ul class="lista-demo" data-ordenable="demo">{% for p in productos_demo %}{% include "components/producto_fila.html" with p=p admin=True editar="#" %}{% endfor %}</ul>
+  <div class="grid-cards" style="margin-top:var(--space-4)">
+    {% for p in productos_demo %}
+    <article class="ficha-producto" data-available="{{ p.is_available|yesno:'true,false' }}">
+      <div class="foto">{% icono "imagen" "ico lg" %}</div>
+      <div class="cuerpo"><strong class="nombre">{{ p.name }}</strong><span class="row">{% if p.price is not None %}<strong>{{ p.price|cop }}</strong>{% endif %}{% if not p.is_available %}{% include "components/chip.html" with estado="agotado" %}{% endif %}</span></div>
+    </article>
+    {% endfor %}
+  </div>
+
+  <!-- ========================================================= SUPERPOSICIONES -->
+  <h2 class="seccion">Modal, bottom sheet y drawer</h2>
+  <div class="fila-demo">
+    <button type="button" class="btn secundario" data-abrir="d-modal">Abrir modal</button>
+    <button type="button" class="btn secundario" data-abrir="d-hoja">Abrir hoja (abajo en celular, al lado en escritorio)</button>
+  </div>
+  <dialog id="d-modal" aria-labelledby="d-modal-t">
+    <h2 id="d-modal-t">¿Borrar «Bebidas»?</h2>
+    <p class="muted">Tiene 6 productos. Si la borras, dejan de verse en el menú. Podrás restaurarla después.</p>
+    <div class="acciones-dialogo"><button class="btn fantasma" data-cerrar>Cancelar</button><button class="btn peligro" data-cerrar>Borrar categoría</button></div>
+  </dialog>
+  <dialog id="d-hoja" class="hoja" aria-labelledby="d-hoja-t">
+    <div class="row" style="justify-content:space-between"><h2 id="d-hoja-t">Editar producto</h2><button class="btn fantasma icono" data-cerrar aria-label="Cerrar">{% icono "x" %}</button></div>
+    {% include "components/campo.html" with nombre="h-nombre" etiqueta="Nombre" valor="Hamburguesa clásica" %}
+    {% include "components/precio.html" with nombre="h-precio" valor=24000 %}
+    <div class="acciones-dialogo"><button class="btn" data-cerrar>Guardar cambios</button></div>
+  </dialog>
+
+  <h2 class="seccion">Toast, pestañas, menú y tooltip</h2>
+  <div class="fila-demo">
+    <button type="button" class="btn secundario" onclick="Cloudin.aviso('Hamburguesa marcada como agotada', {accion:'Deshacer', alHacer:()=>Cloudin.aviso('Listo: vuelve a estar disponible')})">Toast con «Deshacer»</button>
+    <button type="button" class="btn secundario" onclick="Cloudin.aviso('Guardado ✓')">Toast simple</button>
+    <button type="button" class="btn secundario" onclick="Cloudin.aviso('No se pudo guardar. Revisa tu conexión.', {tipo:'error'})">Toast de error</button>
+    <details class="desplegable"><summary class="btn secundario">Más acciones {% icono "abajo" %}</summary>
+      <div class="opciones"><button type="button">{% icono "lapiz" %}Editar</button><button type="button" class="peligro">{% icono "papelera" %}Eliminar</button></div></details>
+    <button type="button" class="btn secundario icono" data-tip="Ver cómo lo ven tus clientes" aria-label="Vista previa">{% icono "ojo" %}</button>
+  </div>
+  <div class="pestanas" role="tablist" aria-label="Menús" style="margin-top:var(--space-4)">
+    <button type="button" role="tab" aria-selected="true" aria-controls="d-t1" id="d-tab1">Carta <span class="cuenta">42</span></button>
+    <button type="button" role="tab" aria-selected="false" aria-controls="d-t2" id="d-tab2">Desayunos <span class="cuenta">12</span></button>
+  </div>
+  <div id="d-t1" role="tabpanel" aria-labelledby="d-tab1" class="caja-demo" style="margin-top:8px">Panel de la Carta (flechas ← → para cambiar de pestaña).</div>
+  <div id="d-t2" role="tabpanel" aria-labelledby="d-tab2" class="caja-demo" style="margin-top:8px" hidden>Panel de Desayunos.</div>
+
+  <h2 class="seccion">Estados vacíos, carga y progreso</h2>
+  <div class="cols cols-half">
+    <div class="card">{% include "components/vacio.html" with titulo="Aún no tienes productos en Bebidas" accion="Agregar el primero" %}</div>
+    <div class="card stack-sm">
+      <div class="esqueleto" style="height:56px"></div>
+      <div class="esqueleto" style="width:70%"></div>
+      <div class="esqueleto" style="width:40%"></div>
+      <div class="progreso" role="progressbar" aria-valuenow="62" aria-valuemin="0" aria-valuemax="100" aria-label="Subiendo foto"><span style="width:62%"></span></div>
+    </div>
+  </div>
+
+  <h2 class="seccion">Foto, color y QR</h2>
+  <div class="cols cols-half">
+    <div>{% include "components/subir_foto.html" with titulo="Prueba: elige una foto y recórtala" %}</div>
+    <div>
+      {% include "components/color.html" with nombre="d-color-fondo" etiqueta="Fondo" valor="#1A1110" %}
+      {% include "components/color.html" with nombre="d-color-texto" etiqueta="Texto" valor="#FFF6EC" %}
+      <span class="contraste" id="d-contraste" aria-live="polite"></span>
+    </div>
+  </div>
+  <div style="margin-top:var(--space-4)">{% include "components/qr.html" with titulo="Tu menú" enlace="https://cloudin.example/m/restaurante-ejemplo/" png=qr %}</div>
+
+  <h2 class="seccion">Íconos (Lucide)</h2>
+  <div class="iconos-grid">{% for nombre in iconos %}<div>{% icono nombre "ico lg" %}<code>{{ nombre }}</code></div>{% endfor %}</div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{% static 'vendor/sortable.min.js' %}"></script>
+<script src="{% static 'panel/js/ordenar.js' %}"></script>
+<script src="{% static 'panel/js/subir-foto.js' %}"></script>
+<script>
+  // La guía no guarda el orden (no hay API detrás): solo muestra el arrastre.
+  document.querySelector('[data-ordenable="demo"]').removeAttribute("data-ordenable");
+  window.Sortable && Sortable.create(document.querySelector(".lista-demo"), {handle: ".asa", animation: 150});
+  const revisar = () => Cloudin.revisarContraste(document.getElementById("d-contraste"),
+    document.getElementById("c-d-color-texto").value, document.getElementById("c-d-color-fondo").value);
+  document.addEventListener("cambio-color", revisar);
+  document.addEventListener("DOMContentLoaded", revisar);
+</script>
+{% endblock %}

@@ -1,0 +1,91 @@
+{% extends "legal/_base.html" %}
+{% block title %}Términos y condiciones — Cloudin{% endblock %}
+{% block legal %}
+<h1>Términos y condiciones de uso de Cloudin</h1>
+<p class="version">Versión {{ legal.version }}</p>
+
+<div class="resumen">
+  <p><strong>En pocas palabras:</strong> Cloudin es una herramienta para administrar tu restaurante. Tus datos
+  y los de tus clientes son tuyos; nosotros los guardamos y procesamos para prestarte el servicio. Tú eres
+  responsable de la información que registras (precios, facturas, personal) y de cumplir tus obligaciones
+  con la DIAN. Las alertas de Cloudin Control son estimaciones que te ayudan a revisar, no acusaciones.</p>
+</div>
+
+<h2>1. Quiénes somos y qué es Cloudin</h2>
+<p>Cloudin es un software como servicio (SaaS) de {{ legal.responsable }}{% if legal.nit %}, NIT {{ legal.nit }}{% endif %},
+que permite a restaurantes, bares y negocios de comida gestionar su carta digital, pedidos por QR y por meseros,
+mesas, reservas, cocina, turnos de caja, propinas, inventario, empleados, facturación electrónica y análisis del
+negocio. En estos términos, «el Restaurante» es la empresa o persona que contrata Cloudin y «el Usuario» es cada
+persona a la que el Restaurante le da acceso.</p>
+
+<h2>2. Aceptación</h2>
+<p>Para usar Cloudin cada Usuario debe aceptar estos términos y la <a href="{% url 'legal-privacidad' %}" style="color:var(--brand)">política de privacidad</a>
+la primera vez que entra. Si no los acepta, no puede usar la plataforma. Cuando los documentos cambien de forma
+importante, se publicará una nueva versión y se pedirá aceptarla de nuevo.</p>
+
+<h2>3. Cuentas y acceso</h2>
+<ul>
+  <li>Las cuentas del panel las crea Cloudin al dar de alta al Restaurante; las de meseros las crea el Restaurante.</li>
+  <li>Cada Usuario es responsable de guardar su contraseña y no compartirla. El Restaurante responde por lo que
+      hagan las cuentas que autoriza.</li>
+  <li>Si sospechas que alguien entró con tu cuenta, cambia la contraseña y avísanos de inmediato.</li>
+</ul>
+
+<h2>4. Uso permitido</h2>
+<p>Cloudin se usa para la operación lícita del Restaurante. No está permitido: intentar acceder a datos de otros
+restaurantes, vulnerar la seguridad del sistema, usarlo para enviar publicidad no autorizada, cargar información
+falsa en facturas o usar la plataforma para actividades contrarias a la ley.</p>
+
+<h2>5. Los datos del Restaurante</h2>
+<p>La información que el Restaurante registra (carta, ventas, clientes, reservas, inventario, empleados) le pertenece.
+Cada restaurante tiene su propia base de datos, separada de las demás. Cloudin la trata como <strong>encargado</strong>
+del tratamiento, solo para prestar el servicio, de acuerdo con la política de privacidad. El Restaurante es el
+<strong>responsable</strong> de los datos de sus clientes y empleados, y debe contar con su autorización cuando la
+ley lo exija (Ley 1581 de 2012). Cloudin pone a su disposición una política de datos para sus comensales y la
+casilla de autorización en los formularios de reserva.</p>
+
+<h2>6. Facturación electrónica</h2>
+<p>Cloudin se conecta con un proveedor tecnológico autorizado por la DIAN para emitir facturas electrónicas. El
+Restaurante es responsable de sus datos fiscales, resoluciones de numeración, tarifas de impuestos y del
+cumplimiento de sus obligaciones tributarias. Si el proveedor o la DIAN no responden, la factura queda en
+contingencia y se reintenta; la operación del Restaurante no se detiene.</p>
+
+<h2>7. Cloudin Control y recomendaciones</h2>
+<p>Las alertas, el detector de fugas y las recomendaciones de ventas se calculan con la información registrada y
+son <strong>estimaciones</strong> para ayudar a revisar el negocio. Una diferencia o posible fuga no significa que
+alguien haya actuado mal: puede tener muchas explicaciones. Las decisiones que se tomen con esa información son
+del Restaurante.</p>
+
+<h2>8. Disponibilidad y soporte</h2>
+<p>Trabajamos para que Cloudin esté disponible todo el tiempo, pero puede haber interrupciones por mantenimiento,
+fallas de internet, del hosting o de terceros (como el proveedor de facturación). Avisaremos con anticipación los
+mantenimientos programados cuando sea posible.</p>
+
+<h2>9. Pagos</h2>
+<p>El valor del servicio, el plan y la forma de pago se acuerdan en la propuesta comercial o contrato con el
+Restaurante. Si el pago se atrasa, Cloudin puede suspender el acceso después de avisar; los datos no se borran
+durante la suspensión.</p>
+
+<h2>10. Propiedad intelectual</h2>
+<p>El software, la marca Cloudin, el diseño y la documentación son de {{ legal.responsable }}. El Restaurante recibe
+un derecho de uso mientras el servicio esté vigente; no puede copiar, revender ni modificar el software.</p>
+
+<h2>11. Responsabilidad</h2>
+<p>Cloudin no responde por pérdidas derivadas de información mal registrada, del uso indebido de las cuentas, de
+fallas de terceros (internet, DIAN, proveedor tecnológico) ni de decisiones tomadas con base en las estimaciones
+del sistema. En todo caso, la responsabilidad de Cloudin se limita al valor pagado por el servicio en los últimos
+tres meses, salvo lo que la ley colombiana no permita limitar.</p>
+
+<h2>12. Terminación</h2>
+<p>El Restaurante puede terminar el servicio cuando quiera. Al terminar, puede solicitar una copia de su
+información dentro de los 30 días siguientes; después se podrá eliminar de forma segura, salvo lo que la ley
+obligue a conservar.</p>
+
+<h2>13. Ley aplicable</h2>
+<p>Estos términos se rigen por las leyes de la República de Colombia. Cualquier diferencia se intentará resolver
+primero de forma directa.</p>
+
+<h2>14. Contacto</h2>
+<p>{% if legal.correo %}Escríbenos a <strong>{{ legal.correo }}</strong>.{% else %}Comunícate con nosotros por los canales de soporte indicados en tu contrato.{% endif %}
+{% if legal.direccion %}Dirección: {{ legal.direccion }}, {{ legal.ciudad }}.{% endif %}</p>
+{% endblock %}

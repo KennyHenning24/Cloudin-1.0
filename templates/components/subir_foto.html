@@ -1,0 +1,14 @@
+{% load cloudin %}{% comment %}
+ImageUploader: cámara o galería en el celular, recorte, compresión en el navegador y vista previa.
+{% include "components/subir_foto.html" with url=url_de_subida foto=producto.foto proporcion=1 %}
+Sin url, la foto queda lista en el elemento (evento «foto-lista») para subirla al guardar.
+sin_camara=True para logos (nadie le toma foto al logo). En un PC (mouse) el botón de cámara no sale.
+{% endcomment %}<div class="subir-foto{% if foto %} con-foto{% endif %}" data-subir-foto{% if url %} data-url="{{ url }}"{% endif %} data-proporcion="{{ proporcion|default:1 }}" data-lado="{{ lado|default:1200 }}"{% if id %} id="{{ id }}"{% endif %}>
+  <img class="vista" alt="{% if foto %}Foto actual{% endif %}" {% if foto %}src="{{ foto }}"{% else %}hidden{% endif %}>
+  <div class="indicaciones">{% icono "camara" "ico lg" %}<div><strong>{{ titulo|default:"Toma o elige una foto" }}</strong><div class="dim small">Foto real del plato. La recortas y la ajustamos para que cargue rápido.</div></div></div>
+  <div class="botones">
+    {% if not sin_camara %}<label class="btn secundario sm solo-tactil">{% icono "camara" %}Cámara<input type="file" accept="image/*" capture="environment" class="sr-only"></label>{% endif %}
+    <label class="btn secundario sm">{% icono "imagen" %}<span class="texto-galeria">{% if foto %}Cambiar{% else %}{% if sin_camara %}Elegir{% else %}Galería{% endif %}{% endif %}</span><input type="file" accept="image/*" class="sr-only"></label>
+  </div>
+  <div class="progreso" hidden style="position:absolute;left:12px;right:12px;top:12px"><span></span></div>
+</div>

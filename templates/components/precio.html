@@ -1,0 +1,9 @@
+{% load cloudin %}{% comment %}
+PriceInput: formato COP «$ 25.000» mientras se escribe, teclado numérico, sin decimales.
+Al enviar un formulario normal viaja el número limpio (25000). En JS: Cloudin.valorPrecio(input).
+{% include "components/precio.html" with nombre="price" etiqueta="Precio" valor=producto.price %}
+{% endcomment %}{% with id_campo=id|default:nombre %}<div class="campo precio{% if error %} con-error{% endif %}">
+  <label for="c-{{ id_campo }}">{{ etiqueta|default:"Precio" }}{% if requerido %} <span aria-hidden="true">*</span>{% endif %}</label>
+  <input id="c-{{ id_campo }}" name="{{ nombre|default:'price' }}" type="text" data-precio value="{% if valor is not None %}{{ valor|cop }}{% endif %}" placeholder="$ 0"{% if requerido %} required{% endif %}{% if error %} aria-invalid="true" aria-describedby="e-{{ id_campo }}"{% endif %}>
+  {% if error %}<div class="error" id="e-{{ id_campo }}">{% icono "alerta" "ico sm" %}<span>{{ error }}</span></div>{% elif ayuda %}<div class="ayuda">{{ ayuda }}</div>{% endif %}
+</div>{% endwith %}

@@ -1,0 +1,49 @@
+{% load static %}<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<link rel="icon" href="{% static 'img/favicon.ico' %}" sizes="any">
+<title>Cuenta mesa {{ cuenta.table.number }}</title>
+<style>
+  @page { size: 80mm auto; margin: 3mm; }
+  body { font-family: "Courier New", monospace; font-size: 13px; color:#000; background:#fff;
+         width: 74mm; margin: 0 auto; }
+  h1 { font-size: 16px; text-align:center; margin: 0 0 2px; }
+  .sep { border-top: 1px dashed #000; margin: 6px 0; }
+  .fila { display:flex; justify-content:space-between; gap:8px; }
+  .total { font-size: 16px; font-weight: bold; }
+  .aviso { text-align:center; font-size: 11px; margin-top: 8px; }
+  @media print { .noprint { display: none; } }
+</style>
+</head>
+<body>
+  <h1>{{ tenant.name }}</h1>
+  {% if tenant.nit %}<div style="text-align:center">NIT {{ tenant.nit }}</div>{% endif %}
+  {% if tenant.address %}<div style="text-align:center">{{ tenant.address }}</div>{% endif %}
+  <div class="sep"></div>
+  <div class="fila"><span>Mesa</span><strong>{{ cuenta.table.number }}</strong></div>
+  <div class="fila"><span>Cuenta</span><span>#{{ cuenta.id }}</span></div>
+  <div class="fila"><span>Abierta</span><span>{{ cuenta.opened_at|date:"d/m/Y H:i" }}</span></div>
+  <div class="sep"></div>
+  {% for item in lineas %}
+    <div class="fila">
+      <span>{{ item.quantity }} x {{ item.product_name }}</span>
+      <span>{{ item.line_total|floatformat:0 }}</span>
+    </div>
+  {% endfor %}
+  <div class="sep"></div>
+  <div class="fila total"><span>TOTAL</span><span>${{ total|floatformat:0 }}</span></div>
+  {% if propina %}
+    <div class="fila"><span>Propina voluntaria</span><span>${{ propina|floatformat:0 }}</span></div>
+    <div class="fila total"><span>TOTAL PAGADO</span><span>${{ total_con_propina|floatformat:0 }}</span></div>
+  {% endif %}
+  <div class="aviso">Documento no válido como factura electrónica.</div>
+  <p class="noprint" style="text-align:center;margin-top:16px">
+    <button onclick="window.print()">Imprimir</button>
+    <button onclick="window.close()">Cerrar</button>
+  </p>
+<script>
+  if (window.self === window.top) window.addEventListener("load", () => window.print());
+</script>
+</body>
+</html>

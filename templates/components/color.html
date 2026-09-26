@@ -1,0 +1,11 @@
+{% comment %}
+ColorPicker: rueda de color + código #RRGGBB, sincronizados. Dispara «cambio-color».
+{% include "components/color.html" with nombre="color_primary" etiqueta="Principal" ayuda="Botones y precios" valor=ajustes.color_primary %}
+{% endcomment %}<div class="campo">
+  <label for="c-{{ nombre }}">{{ etiqueta }}</label>
+  <div class="color" data-color="{{ nombre }}">
+    <input type="color" value="{{ valor|default:'#B3261E' }}" aria-label="Elegir el color {{ etiqueta|lower }}" tabindex="-1">
+    <input type="text" id="c-{{ nombre }}" name="{{ nombre }}" value="{{ valor|default:'' }}" maxlength="7" placeholder="#RRGGBB" autocomplete="off" spellcheck="false">
+  </div>
+  {% if ayuda %}<div class="ayuda">{{ ayuda }}</div>{% endif %}
+</div>

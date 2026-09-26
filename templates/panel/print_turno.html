@@ -1,0 +1,135 @@
+{% load static cloudin %}<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<link rel="icon" href="{% static 'img/favicon.ico' %}" sizes="any">
+<title>Cierre de turno {{ t.numero }}</title>
+<style>
+  @page { size: 80mm auto; margin: 3mm; }
+  body { font-family: "Courier New", monospace; font-size: 12.5px; color:#000; background:#fff;
+         width: 74mm; margin: 0 auto; }
+  h1 { font-size: 15px; text-align:center; margin: 0 0 2px; }
+  h2 { font-size: 12.5px; margin: 8px 0 3px; text-transform: uppercase; letter-spacing:.5px; }
+  .centro { text-align:center; }
+  .sep { border-top: 1px dashed #000; margin: 6px 0; }
+  .doble { border-top: 2px solid #000; margin: 6px 0; }
+  .fila { display:flex; justify-content:space-between; gap:8px; }
+  .total { font-size: 15px; font-weight: bold; }
+  .chico { font-size: 11px; }
+  .marca { display:block; width: 34mm; margin: 0 auto 4px; }
+  .aviso { text-align:center; font-size: 10.5px; margin-top: 8px; }
+  @media print { .noprint { display: none; } }
+</style>
+</head>
+<body>
+  <img class="marca" src="{% static 'img/cloudin-logo.png' %}" alt="Cloudin">
+  <h1>{{ empresa.razon_social|default:tenant.name }}</h1>
+  {% if empresa.nit %}<div class="centro chico">NIT {{ empresa.nit }}{% if empresa.digito_verificacion %}-{{ empresa.digito_verificacion }}{% endif %}</div>{% endif %}
+  {% if empresa.direccion %}<div class="centro chico">{{ empresa.direccion }}{% if empresa.ciudad %}, {{ empresa.ciudad }}{% endif %}</div>{% endif %}
+
+  <div class="doble"></div>
+  <div class="centro"><strong>CIERRE DE TURNO {{ t.numero }}</strong></div>
+  <div class="centro chico">
+    {% if t.abierto %}PARCIAL — TURNO EN CURSO{% else %}INFORME DEFINITIVO{% endif %}
+  </div>
+  <div class="doble"></div>
+
+  <div class="fila chico"><span>Apertura</span><span>{{ t.abierto_en|date:"d/m/Y H:i" }}</span></div>
+  {% if t.abierto_por %}<div class="fila chico"><span>Abrió</span><span>{{ t.abierto_por }}</span></div>{% endif %}
+  <div class="fila chico">
+    <span>Cierre</span>
+    <span>{% if t.cerrado_en %}{{ t.cerrado_en|date:"d/m/Y H:i" }}{% else %}—{% endif %}</span>
+  </div>
+  {% if t.cerrado_por %}<div class="fila chico"><span>Cerró</span><span>{{ t.cerrado_por }}</span></div>{% endif %}
+  <div class="fila chico"><span>Duración</span><span>{{ t.horas }} h</span></div>
+
+  <div class="sep"></div>
+  <h2>Venta del turno</h2>
+  <div class="fila"><span>Pedidos</span><span>{{ r.total_pedidos }}</span></div>
+  <div class="fila"><span>Mesas</span><span>{{ r.total_mesas }}</span></div>
+  <div class="fila"><span>Comensales</span><span>{{ r.total_comensales }}</span></div>
+  <div class="sep"></div>
+  <div class="fila total"><span>TOTAL VENDIDO</span><span>${{ r.total_ventas|pesos }}</span></div>
+
+  <div class="sep"></div>
+  <h2>Facturación electrónica</h2>
+  <div class="fila"><span>Base gravable</span><span>${{ r.facturado.base|pesos }}</span></div>
+  <div class="fila"><span>Impuestos</span><span>${{ r.facturado.impuestos|pesos }}</span></div>
+  <div class="fila"><span>Facturado</span><span>${{ r.facturado.total|pesos }}</span></div>
+  <div class="fila chico"><span>Documentos</span><span>{{ r.documentos|length }}</span></div>
+  {% for d in r.documentos %}
+    <div class="fila chico">
+      <span>{{ d.numero }} {% if d.mesa %}m{{ d.mesa }}{% endif %}</span>
+      <span>${{ d.total|pesos }}</span>
+    </div>
+  {% endfor %}
+
+  <div class="sep"></div>
+  <h2>Caja</h2>
+  <div class="fila"><span>Base inicial</span><span>${{ t.base_inicial|pesos }}</span></div>
+  {% for m in r.ventas_otros_medios %}<div class="fila chico"><span>- {{ m.medio }}</span><span>-${{ m.total|pesos }}</span></div>{% endfor %}
+  {% if r.propinas and r.propinas.efectivo != "0" %}<div class="fila chico"><span>+ Propinas efectivo</span><span>+${{ r.propinas.efectivo|pesos }}</span></div>{% endif %}
+  <div class="fila"><span>Debería haber</span><span>${{ t.efectivo_esperado|pesos }}</span></div>
+  {% if t.efectivo_contado != None %}
+    <div class="fila"><span>Contado</span><span>${{ t.efectivo_contado|pesos }}</span></div>
+    <div class="fila total">
+      <span>{% if t.diferencia < 0 %}FALTANTE{% elif t.diferencia > 0 %}SOBRANTE{% else %}CUADRÓ{% endif %}</span>
+      <span>${{ t.diferencia|pesos }}</span>
+    </div>
+  {% else %}
+    <div class="fila chico"><span>Contado</span><span>no se contó</span></div>
+  {% endif %}
+
+  <div class="sep"></div>
+  <h2>Lo más vendido</h2>
+  {% for p in r.productos|slice:":15" %}
+    <div class="fila chico">
+      <span>{{ p.cantidad }} x {{ p.nombre|truncatechars:22 }}</span>
+      <span>${{ p.total|pesos }}</span>
+    </div>
+  {% empty %}
+    <div class="chico">Sin ventas.</div>
+  {% endfor %}
+
+  {% if r.empleados %}
+    <div class="sep"></div>
+    <h2>Personal del turno</h2>
+    {% for e in r.empleados %}
+      <div class="fila chico">
+        <span>{{ e.nombre|truncatechars:20 }}</span>
+        <span>{{ e.horas|floatformat:1 }} h</span>
+      </div>
+    {% endfor %}
+  {% endif %}
+
+  {% if r.inventario.movimientos %}
+    <div class="sep"></div>
+    <h2>Insumos consumidos</h2>
+    <div class="fila"><span>Costo de insumos</span><span>${{ r.inventario.valor|pesos }}</span></div>
+    <div class="fila chico"><span>Movimientos</span><span>{{ r.inventario.movimientos }}</span></div>
+  {% endif %}
+
+  {% if t.notas %}
+    <div class="sep"></div>
+    <h2>Notas</h2>
+    <div class="chico">{{ t.notas }}</div>
+  {% endif %}
+
+  <div class="doble"></div>
+  <div class="aviso">
+    Informe de cierre de caja. No es una factura electrónica:<br>
+    cada venta tiene la suya, listada arriba.
+  </div>
+  <div class="aviso">Cloudin · {{ tenant.name }}</div>
+
+  <p class="noprint" style="text-align:center;margin-top:16px">
+    <button onclick="window.print()">Imprimir</button>
+    <button onclick="window.close()">Cerrar</button>
+  </p>
+<script>
+  // Igual que la comanda: sola si se abrió en pestaña propia; dentro del iframe
+  // el panel dispara la impresión para no hacerlo dos veces.
+  if (window.self === window.top) window.addEventListener("load", () => window.print());
+</script>
+</body>
+</html>

@@ -1,0 +1,14 @@
+{% comment %}
+Sub-navegación del inventario. El módulo tiene varias pantallas y todas
+comparten esta fila, para que nadie se pierda entre insumos, compras y recetas.
+{% endcomment %}
+<nav class="subnav">
+  <a href="{% url 'panel:inventario' %}" class="{% if sub == 'resumen' %}on{% endif %}">Resumen</a>
+  <a href="{% url 'panel:insumos' %}" class="{% if sub == 'insumos' %}on{% endif %}">Insumos</a>
+  <a href="{% url 'panel:compras' %}" class="{% if sub == 'compras' %}on{% endif %}">Compras</a>
+  <a href="{% url 'panel:proveedores' %}" class="{% if sub == 'proveedores' %}on{% endif %}">Proveedores</a>
+  <a href="{% url 'panel:recetas' %}" class="{% if sub == 'recetas' %}on{% endif %}">Recetas</a>
+  <a href="{% url 'panel:conteos' %}" class="{% if sub == 'conteos' %}on{% endif %}">Conteo físico</a>
+  <a href="{% url 'panel:inventario-reportes' %}" class="{% if sub == 'reportes' %}on{% endif %}">Reportes</a>
+  <a href="{% url 'panel:inventario-maestros' %}" class="{% if sub == 'maestros' %}on{% endif %}">Bodegas</a>
+</nav>

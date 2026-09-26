@@ -1,0 +1,15 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "cloudin",
+      "runtimeExecutable": "C:\\Users\\guerr\\.venvs\\cloudin312\\Scripts\\python.exe",
+      "runtimeArgs": [
+        "manage.py",
+        "runserver",
+        "8000"
+      ],
+      "port": 8000
+    }
+  ]
+}
