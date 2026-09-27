@@ -40,6 +40,7 @@
         <div class="row">
           <a class="btn secundario sm" href="{% url 'api:qr-mesa' m.mesa.id 'png' %}" download>{% icono "descargar" %}PNG</a>
           <a class="btn secundario sm" href="{% url 'api:qr-mesa' m.mesa.id 'svg' %}" download>SVG</a>
+          <button type="button" class="btn fantasma sm" onclick="copiar('{{ m.enlace|escapejs }}', this)">{% icono "copiar" %}Copiar enlace</button>
         </div>
         {% else %}
         <span class="dim small">Su QR aparece cuando tu menú digital esté publicado.</span>

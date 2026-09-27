@@ -11,6 +11,7 @@ from django.contrib.staticfiles import finders
 from django.core import mail
 from django.core.cache import cache
 from django.urls import reverse
+from django.utils.html import escapejs
 from PIL import Image
 
 from apps.business.models import OpeningHours, RestaurantSettings
@@ -253,7 +254,10 @@ def test_crear_mesas_y_ver_sus_qr(client, menu_digital, en_restaurante):
     assert client.get(reverse("api:qr-mesa", args=[mesa.id, "png"])).status_code == 404
     menu_digital.tenant.menu_page = "https://birria-lucho.pages.dev/"
     menu_digital.tenant.save()
-    assert reverse("api:qr-mesas-pdf") in client.get(reverse("panel:qr")).content.decode()
+    html = client.get(reverse("panel:qr")).content.decode()
+    assert reverse("api:qr-mesas-pdf") in html
+    # Cada mesa deja copiar su enlace (con el token), para probar el menú sin escanear el QR.
+    assert f"copiar('{escapejs(f'https://birria-lucho.pages.dev/?mesa={mesa.token}')}'" in html
     r = client.get(reverse("api:qr-mesa", args=[mesa.id, "png"]))
     assert r.status_code == 200 and r["Content-Type"] == "image/png"
 
