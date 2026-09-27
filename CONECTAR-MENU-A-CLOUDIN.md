@@ -399,9 +399,8 @@ o `GET /api/v1/mesa/<token>/estado/` (cada 4 s). Detalle en
 
 | Código | `codigo` / cuerpo | Qué pasó | Qué mostrar |
 |---|---|---|---|
-| `403` | `sin_pedidos` | (Pedidos por QR) el plan del restaurante es solo el menú digital | «Pídele tu pedido al mesero.» |
+| `403` | `sin_pedidos` | (Pedidos por QR) el restaurante apagó los pedidos por QR en su panel | «Pídele tu pedido al mesero.» |
 | `429` | `demasiados` | Muchos pedidos seguidos desde la misma IP | El mensaje tal cual (no borres el carrito) |
-| `403` | `solo_meseros` | El restaurante trabaja solo con meseros | «Llama al mesero, él toma tu pedido.» |
 | `400` | `{"items": ["Falta elegir «Elige la carne» para …"]}` | Topping obligatorio sin elegir, máximo superado u opción que ya no existe | El mensaje tal cual y recargar la carta |
 | `400` | `Productos no disponibles o inexistentes: [9]` | Se agotó o se borró | Recargar la carta |
 | `409` | `agotado` (carrito compartido) | Un producto del borrador se apagó | Quitarlo del carrito |

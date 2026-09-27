@@ -159,18 +159,18 @@ python manage.py build_runtime
 
 | Pantalla | Para qué |
 |---|---|
-| **Inicio** (`/panel/`) | Estado del menú (publicado, en línea) y, en el plan completo, «Pedidos y mesas»: mesas ocupadas, pedidos por atender y pedidos de hoy |
+| **Inicio** (`/panel/`) | Estado del menú (publicado, en línea) y «Pedidos y mesas»: el interruptor de los pedidos por QR, mesas ocupadas, pedidos por atender y pedidos de hoy |
 | **Mesas** (`/panel/mesas/`) | Tablero: mesa libre u ocupada, cliente y total en curso. Desde la mesa se agregan pedidos, se registran novedades y se **cierra la cuenta** |
 | **Mensajes** (`/panel/mensajes/`) | Los pedidos que llegan del menú digital y de los meseros, con mesa y cliente. Marca los nuevos y lleva un contador en la barra |
 | **Cocina** (`/panel/cocina/`) | Comandas por hacer, con semáforo por tiempo de espera |
 | **Mi menú** (`/panel/mi-menu/`) | La carta: categorías, productos, precios, fotos, presentaciones, adiciones y agotados |
 | **Personalizar** (`/panel/personalizar/`) | Marca, colores, portada, datos del negocio y horario, con vista previa del menú digital |
-| **Códigos QR** (`/panel/mesas-y-qr/`) | Cuántas mesas hay y el QR de cada una (PNG, SVG o PDF) |
-| **Meseros** (`/panel/meseros/`) | Cómo se toman los pedidos (autoservicio, meseros o ambos) y las cuentas de los meseros |
+| **Códigos QR** (`/panel/mesas-y-qr/`) | Cuántas mesas hay, el QR de cada una (PNG, SVG o PDF) y el interruptor de los pedidos por QR |
+| **Meseros** (`/panel/meseros/`) | Cómo se toman los pedidos (los interruptores de pedidos por QR y app de meseros) y las cuentas de los meseros |
 | **Configuración** (`/panel/configuracion/`) | Mesas, importación de la carta y el sitio web conectado (con su llave) |
 
-Con el plan **Menú digital** el panel muestra solo lo del menú (Inicio, Mi menú,
-Personalizar, Códigos QR): ese plan no recibe pedidos.
+Todos los restaurantes tienen el panel completo: no hay planes. Lo que cambia de uno a
+otro es cómo toma los pedidos (siguiente sección), y eso lo decide su administrador.
 
 ### Mesas y cuentas
 
@@ -186,15 +186,16 @@ No hay turno de caja ni reservas: **los pedidos entran a cualquier hora**.
 
 ### Cloudin Meseros
 
-Cada restaurante elige en **Meseros** cómo se toman los pedidos:
+Cómo se toman los pedidos son dos interruptores independientes, que el administrador
+del restaurante cambia en su panel (`Tenant.pedidos_qr` y `Tenant.app_meseros`):
 
-| Modo | QR del cliente | App de meseros |
-|---|---|---|
-| Autoservicio (por defecto) | recibe pedidos | apagada |
-| Meseros | responde 403 «los pedidos los toma el mesero» (`solo_meseros`) | encendida |
-| Ambos | recibe pedidos | encendida |
+| Interruptor | Dónde | Encendido | Apagado |
+|---|---|---|---|
+| **Pedidos desde el QR de la mesa** (encendido al crear el restaurante) | Inicio, Códigos QR y Meseros | El menú digital deja pedir | El menú queda para mirar: `recibe_pedidos: false` y los envíos responden `403 sin_pedidos` |
+| **App de meseros** (apagada al crear el restaurante) | Meseros | Los meseros entran a la app y toman pedidos | La app responde que el servicio de meseros no está activo |
 
-Con el plan «Menú digital» el QR no recibe pedidos en ningún modo (`403 sin_pedidos`).
+Con los dos encendidos, los pedidos del QR y de los meseros van a la misma cuenta de la
+mesa. Cualquier miembro del equipo ve cómo están; solo el administrador los cambia.
 
 La app vive en `/mesero/<slug>/` y es una PWA: se abre en la tablet, se agrega a la
 pantalla de inicio y queda como app. Tres pantallas: mesas → mesa (tomar pedido /

@@ -232,7 +232,7 @@ Las piezas que lo sostienen, en `apps/tenants/`:
 
 | Archivo | Qué hace |
 |---|---|
-| `models.py` | `Tenant` (slug, api_key, `plan`, `modo_servicio`, `site_url`, `menu_page`, `allowed_origins`, `menu_fuente`, activo; `origenes_permitidos`, `recibe_pedidos_del_menu`) y `TenantMembership` (usuario ↔ restaurante, con rol y `password_cifrada`) |
+| `models.py` | `Tenant` (slug, api_key, `pedidos_qr`, `app_meseros`, `site_url`, `menu_page`, `allowed_origins`, `menu_fuente`, activo; `origenes_permitidos`) y `TenantMembership` (usuario ↔ restaurante, con rol y `password_cifrada`) |
 | `middleware.py` | Resuelve el restaurante de cada petición |
 | `context.py` | Restaurante activo por hilo; `tenant_context` |
 | `db.py` | Alta en caliente de la conexión de un restaurante |
@@ -286,7 +286,7 @@ Las piezas que lo sostienen, en `apps/tenants/`:
 
 | Archivo | Pantallas |
 |---|---|
-| `views.py` | Decorador `panel_view` (plan, legal, soporte), Inicio, mesas, detalle de mesa, cocina, mensajes, configuración, QR de mesas e impresiones (comanda y precuenta) |
+| `views.py` | Decorador `panel_view` (acceso, legal, soporte), Inicio, mesas, detalle de mesa, cocina, mensajes, configuración, QR de mesas e impresiones (comanda y precuenta) |
 | `duenio.py` | Las pantallas del dueño: Inicio del menú, bienvenida, Mi menú, producto, Personalizar, Códigos QR («Mesas y QR») y Cuenta |
 | `menu.py` | Producto nuevo, editar, eliminar e importar la carta del sitio |
 | `meseros.py` | Modo de servicio, cuentas de mesero y ver la clave de un mesero |
@@ -416,10 +416,13 @@ Reglas:
     aparte (Cloudflare Pages). Su dirección va en `Tenant.menu_page`: con ella se
     arman los QR (`menu_page?mesa=<token>`) y se autoriza por CORS, junto con
     `site_url` y `allowed_origins`. Guía: `GUIA-MENU-DIGITAL.md`.
-22. **Solo el plan «Cloudin completo» recibe pedidos del menú digital.** Con el plan
-    «Menú digital» el QR responde `403 sin_pedidos` y el estado de la mesa trae
-    `recibe_pedidos: false` (lo mismo en modo «solo meseros», `403 solo_meseros`).
-    La regla vive en `Tenant.recibe_pedidos_del_menu`.
+22. **Todos los restaurantes tienen Cloudin completo; no hay planes** (lo decidió el
+    dueño el 27 de septiembre de 2026). Cómo se toman los pedidos son dos
+    interruptores que cambia el administrador del restaurante en su panel:
+    `Tenant.pedidos_qr` (Inicio, Códigos QR y Meseros; `panel:pedidos-qr`) y
+    `Tenant.app_meseros` (Meseros). Con `pedidos_qr` apagado el estado de la mesa trae
+    `recibe_pedidos: false` y los envíos responden `403 sin_pedidos`
+    (`apps/api/views.py`, `pedidos_del_menu_apagados`).
 23. **Las apps retiradas no se tocan** (4.8): no les agregues código ni las borres
     sin migrar antes todas las bases.
 
@@ -504,7 +507,7 @@ C:\Users\<usuario>\.venvs\cloudin\Scripts\ruff check .
   Edge; si no está, usan el Chromium de la variable `CLOUDIN_CHROMIUM`; si no hay
   ninguno, se saltan.
 - `tests/test_pedidos_menu_digital.py` cubre el menú digital: carta pública,
-  carrito compartido, pedido directo, CORS, plan y modo de servicio, y el comando
+  carrito compartido, pedido directo, CORS, pedidos por QR apagados, y el comando
   de QR.
 - Antes de subir: `python manage.py makemigrations --check --dry-run` (no debe
   quedar ninguna migración sin crear).
