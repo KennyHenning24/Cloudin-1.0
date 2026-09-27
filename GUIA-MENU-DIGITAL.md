@@ -10,6 +10,9 @@
 > y un recorrido real en el navegador). La implementación de referencia está en
 > `client/example/`: `index.html` (la carta) y `carrito.js` (el carrito y el pedido).
 >
+> **¿Eres Claude Code creando un menú?** Lee **`CLAUDE-MENU-DIGITAL.md`**: es la versión
+> completa y ordenada para ti (incluye cargar la carta con `menu.seed.json`).
+>
 > **¿Primera vez?** El paso a paso, con los nombres exactos de cada pantalla, desde
 > registrar el restaurante hasta el pedido de prueba, y la plantilla mínima
 > (`client/plantilla/index.html`) están en **`PASO-A-PASO-NUEVO-RESTAURANTE.md`**.

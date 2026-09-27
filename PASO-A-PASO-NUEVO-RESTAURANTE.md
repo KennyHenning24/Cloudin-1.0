@@ -13,6 +13,9 @@
 >   del pedido. Se copia tal cual.
 > - `GUIA-MENU-DIGITAL.md`: la referencia larga (la API, los errores, la seguridad). Para
 >   seguir esta guía no hace falta.
+> - `CLAUDE-MENU-DIGITAL.md`: si el menú lo va a construir Claude Code, dale este archivo
+>   (cópialo al repositorio del menú como `CLAUDE.md`). Incluye cómo cargar la carta
+>   completa de una vez con `menu.seed.json`.
 >
 > Todo lo que sigue está comprobado en el código y en un navegador: la plantilla pinta la
 > carta, el pedido llega a la cocina, y los nombres de pantallas y botones son los del

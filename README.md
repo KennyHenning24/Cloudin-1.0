@@ -220,6 +220,10 @@ Lo mismo con un producto que ya se vendió: se elimina de la carta pero se conse
 
 ## El menú digital y los sitios conectados
 
+- **[CLAUDE-MENU-DIGITAL.md](CLAUDE-MENU-DIGITAL.md)** — las instrucciones para Claude
+  Code cuando crea un menú digital: pintar la carta, pedidos de la mesa, cargar y cambiar
+  la carta (panel e importación de `menu.seed.json`), vista previa, publicar, probar y
+  diagnosticar. Se copia al repositorio del menú como `CLAUDE.md`.
 - **[PASO-A-PASO-NUEVO-RESTAURANTE.md](PASO-A-PASO-NUEVO-RESTAURANTE.md)** — el
   recorrido completo para un cliente nuevo: registrarlo en el panel maestro, cargar su
   carta, armar su menú con `client/plantilla/index.html` (qué atributos lleva el HTML),
