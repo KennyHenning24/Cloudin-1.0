@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% load static cloudin %}
-{% block title %}{% if paso < final %}Paso {{ paso }} de {{ pasos|length }}{% else %}¡Tu menú está listo!{% endif %} · Cloudin{% endblock %}
+{% block title %}{% if paso < final %}Paso {{ paso }} de {{ pasos|length }}{% elif enlace %}¡Tu menú está listo!{% else %}¡Tu carta está lista!{% endif %} · Cloudin{% endblock %}
 
 {% block layout %}
 <div class="bienvenida">
@@ -119,8 +119,13 @@
     <div class="final-grid">
       <div class="final-texto">
         <span class="chip disponible chip-grande">{% icono "check" %}Todo listo</span>
+        {% if enlace %}
         <h1 class="titulo-final">¡Tu menú está listo!</h1>
         <p class="dim">Imprime este código y ponlo en tus mesas. Tus clientes verán el menú al escanearlo, y los cambios que hagas aquí aparecen en menos de un minuto.</p>
+        {% else %}
+        <h1 class="titulo-final">¡Tu carta está lista!</h1>
+        <p class="dim">Tus productos, precios y colores ya quedaron guardados. Falta publicar la página de tu menú: cuando esté en línea, aquí verás cómo queda y el código QR para tus mesas.</p>
+        {% endif %}
         <div class="card final-qr">
           {% if enlace %}<img src="{% url 'api:qr-menu' 'png' %}" alt="Código QR de tu menú" width="170" height="170">{% endif %}
           <div class="stack-sm">
@@ -139,8 +144,8 @@
         </div>
       </div>
       <div class="final-vista">
-        <div class="telefono"><iframe title="Tu menú" src="{{ vista_previa }}" loading="lazy"></iframe></div>
-        <p class="dim small centro">Tu menú, con tus colores</p>
+        {% include "components/vista_previa.html" %}
+        {% if vista_previa %}<p class="dim small centro">Tu menú, con tus colores</p>{% endif %}
       </div>
     </div>
     {% endif %}

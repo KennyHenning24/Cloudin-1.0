@@ -155,7 +155,15 @@ def test_el_asistente_completo_deja_el_menu_listo(client, menu_digital, en_resta
     r = client.post(url, {"paso": 4, "name": "Taco dorado", "price": "$ 8.000", "category": str(tacos.uuid),
                           "foto": _foto_jpg()})
     assert r.url == f"{url}?paso=5"
-    assert "¡Tu menú está listo!" in client.get(r.url).content.decode()
+    # Sin página publicada no se promete un QR ni se muestra un teléfono en blanco.
+    final = client.get(r.url).content.decode()
+    assert "¡Tu carta está lista!" in final and "Tu menú todavía no está publicado" in final
+    assert "<iframe" not in final
+    menu_digital.tenant.menu_page = "https://birria-lucho.pages.dev/"
+    menu_digital.tenant.save(update_fields=["menu_page"])
+    final = client.get(r.url).content.decode()
+    assert "¡Tu menú está listo!" in final
+    assert 'src="https://birria-lucho.pages.dev/?cloudin-preview=1"' in final
     with en_restaurante(menu_digital.tenant):
         ajustes = RestaurantSettings.load()
         assert ajustes.onboarding_done_at is not None and ajustes.color_primary == "#B3261E"

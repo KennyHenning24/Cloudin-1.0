@@ -402,6 +402,8 @@ a.card:hover,.card.flota:hover{transform:translateY(-3px);box-shadow:var(--shado
 .tabla-wrap>table{min-width:660px}
 table{width:100%;border-collapse:separate;border-spacing:0;font-size:14.5px}
 td code,th code{white-space:nowrap}
+.codigo-menu{margin:6px 0 0;padding:12px 14px;background:var(--surface-2);border:1px solid var(--line);border-radius:var(--r);
+  font:12.5px/1.55 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;white-space:pre;overflow-x:auto;color:var(--text)}
 th{
   text-align:left;font-size:11.5px;letter-spacing:.07em;text-transform:uppercase;
   color:var(--text-3);font-weight:700;padding:0 12px 10px;white-space:nowrap;
@@ -1091,6 +1093,8 @@ body.vista-abierta::after{content:"";position:fixed;inset:0;background:var(--ove
   box-shadow:0 20px 50px rgba(19,21,28,.25);aspect-ratio:9/17;max-height:680px;width:100%;margin:0 auto}
 .editor-vista.abierta .telefono{aspect-ratio:auto;max-width:400px}
 .telefono iframe{width:100%;height:100%;border:0;display:block}
+/* Sin página publicada: el aviso, con los colores del panel (no un recuadro blanco vacío). */
+.telefono.sin-pagina{display:grid;place-items:center;background:var(--surface-2)}
 
 /* ---------- Personalizar ---------- */
 .personalizar{display:grid;gap:var(--space-5);grid-template-columns:minmax(0,1fr)}
