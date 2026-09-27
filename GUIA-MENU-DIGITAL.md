@@ -211,8 +211,11 @@ inmediato.
 
 ### 4.4 Registrar la página en Cloudin
 
-En `https://<servidor-cloudin>/admin/` → **Restaurantes** → el restaurante →
-sección **«Sitio web y menú»**:
+En el panel maestro (`https://<servidor-cloudin>/master/`) → el restaurante → tarjeta
+**«Menú digital»**: «Página del menú (QR)» y «Otras direcciones autorizadas» (una por
+línea). Esa tarjeta dice además si algún menú ya pidió la carta y trae el bloque
+`CLOUDIN_CONFIG` listo para copiar. Lo mismo está en `https://<servidor-cloudin>/admin/` →
+**Restaurantes** → el restaurante → sección **«Sitio web y menú»**:
 
 | Campo | Qué poner | Para qué |
 |---|---|---|

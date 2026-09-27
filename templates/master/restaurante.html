@@ -1,4 +1,5 @@
 {% extends "master/_base.html" %}
+{% load cloudin %}
 {% block title %}{{ t.name }} — Cloudin{% endblock %}
 {% block titulo %}{{ t.name }}{% endblock %}
 {% block subtitulo %}
@@ -59,6 +60,66 @@ Al entrar por primera vez, cambien la contraseña.</textarea>
 {% endif %}
 
 <div class="stack">
+
+  <div class="card" id="menu-digital">
+    <div class="card-head">
+      <div>
+        <h2>Menú digital</h2>
+        <p>La página que abren los clientes con el QR. Se diseña y se publica aparte (Cloudflare Pages);
+          Cloudin le da la carta y recibe sus pedidos.</p>
+      </div>
+    </div>
+
+    {% if not t.menu_page %}
+      <div class="aviso alerta" style="margin-bottom:var(--sp-3)">
+        Sin página registrada: todavía no hay QR y el menú no puede enviar pedidos. Cuando esté
+        publicado, pega aquí su dirección.
+      </div>
+    {% endif %}
+    <p class="small" style="margin-bottom:var(--sp-3)">
+      {% if menu_visto %}<span class="pill ok"><i class="dot"></i>Conectado</span>
+        Un menú pidió la carta de {{ t.name }} {{ menu_visto|hace }}.
+      {% else %}<span class="pill neutro"><i class="dot"></i>Sin conexión todavía</span>
+        Ningún menú ha pedido la carta desde que el servidor arrancó. Si ya está publicado, ábrelo una vez y
+        recarga esta página: si sigue así, al menú le falta el código de abajo o apunta a otro servidor.
+      {% endif %}
+    </p>
+
+    <form method="post" action="{% url 'master:restaurante-menu' t.slug %}">
+      {% csrf_token %}
+      <div class="form-row">
+        {% include "master/_campo.html" with campo=menu_form.pagina %}
+        {% include "master/_campo.html" with campo=menu_form.otros %}
+      </div>
+      <button class="btn" type="submit">Guardar</button>
+    </form>
+
+    <div class="sep"></div>
+    <label>Código que va en el menú (antes de <code>&lt;/body&gt;</code>)</label>
+    <pre class="codigo-menu" id="codigo-menu">&lt;script&gt;
+  window.CLOUDIN_CONFIG = {
+    restaurant: "{{ t.slug }}",
+    api: "{{ carta }}",
+    hideSoldOut: false,
+    cacheTtl: 60,
+    apiKey: "{% if not t.es_plan_menu %}{{ t.api_key }}{% endif %}"
+  };
+&lt;/script&gt;
+&lt;script src="{{ servidor }}/static/cloudin-menu.v1.js" defer&gt;&lt;/script&gt;
+&lt;script src="carrito.js" defer&gt;&lt;/script&gt;</pre>
+    <div class="row" style="margin-top:var(--sp-2)">
+      <button class="btn quiet sm" type="button"
+              onclick="copiar(document.getElementById('codigo-menu').textContent, this)">Copiar código</button>
+      <a class="btn quiet sm" href="{{ carta }}" target="_blank" rel="noopener">Ver la carta que recibe el menú</a>
+    </div>
+    <p class="dim small" style="margin-top:var(--sp-2)">
+      Reemplaza cualquier otro <code>CLOUDIN_CONFIG</code> que tenga la página. <code>carrito.js</code> se copia
+      de <code>client/example/carrito.js</code> junto al <code>index.html</code>. El HTML de la carta lleva los
+      atributos <code>data-cloudin</code>: <code>PASO-A-PASO-NUEVO-RESTAURANTE.md</code>, parte 3.
+      {% if t.es_plan_menu %}Con el plan «Menú digital» la carta es solo para mirar: por eso
+      <code>apiKey</code> va vacía.{% endif %}
+    </p>
+  </div>
 
   <div class="stack">
     <div class="card">
@@ -181,7 +242,8 @@ Al entrar por primera vez, cambien la contraseña.</textarea>
         <dt>Base de datos</dt><dd class="dim small">{{ t.db_name }}</dd>
         <dt>Aprovisionada</dt><dd class="dim small">{{ t.provisioned_at|date:"d/m/Y H:i"|default:"—" }}</dd>
         <dt>Subdominio</dt><dd class="dim small">{{ t.domain }}</dd>
-        <dt>Sitio web</dt><dd class="dim small">{{ t.site_origin|default:"— sin registrar —" }}</dd>
+        <dt>Página del menú</dt><dd class="dim small">{{ t.menu_page|default:"— sin registrar —" }}</dd>
+        {% if t.site_url %}<dt>Sitio web (tablet)</dt><dd class="dim small">{{ t.site_origin }}</dd>{% endif %}
         {% if t.nit %}<dt>NIT</dt><dd class="muted">{{ t.nit }}</dd>{% endif %}
       </dl>
       <div class="sep"></div>

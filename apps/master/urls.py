@@ -13,6 +13,7 @@ urlpatterns = [
     path("r/<slug:slug>/usuarios/<int:user_id>/eliminar/", views.empleado_eliminar, name="empleado-eliminar"),
     path("r/<slug:slug>/activo/", views.restaurante_activo, name="restaurante-activo"),
     path("r/<slug:slug>/api-key/", views.restaurante_api_key, name="restaurante-api-key"),
+    path("r/<slug:slug>/menu/", views.restaurante_menu, name="restaurante-menu"),
     path("tokens/", views.tokens, name="tokens"),
     path("tokens/<int:token_id>/revocar/", views.token_revocar, name="token-revocar"),
 ]

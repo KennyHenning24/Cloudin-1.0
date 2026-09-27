@@ -49,7 +49,7 @@ Parte 1. Registrar el restaurante ........ panel maestro   https://<servidor-clo
 Parte 2. Cargar su carta y sus datos ..... su panel        https://<servidor-cloudin>/panel/
 Parte 3. Armar el menú (HTML) ............ tu computador   client/plantilla/index.html
 Parte 4. Publicarlo ...................... Cloudflare Pages
-Parte 5. Conectarlo para pedir ........... https://<servidor-cloudin>/admin/
+Parte 5. Registrar su dirección .......... panel maestro   el restaurante → «Menú digital»
 Parte 6. Imprimir los QR y probar ........ su panel → Códigos QR
 ```
 
@@ -70,7 +70,7 @@ Parte 6. Imprimir los QR y probar ........ su panel → Códigos QR
    | **Identificador (subdominio)** | `la-casa` | Obligatorio y único. Solo minúsculas, números y guiones: sin espacios ni tildes. No se permiten `www`, `api`, `admin`, `app`, `master`, `panel` ni `static`. Va dentro de la dirección de la carta y es el nombre de su base de datos: **no lo cambies después** |
    | **Plan** | **Cloudin completo** | Para recibir pedidos por el QR. Con **Menú digital** la carta queda solo para mirar: no hay pedidos, y su panel no tiene Mesas, Mensajes, Cocina ni Meseros |
    | **Ciudad**, **Teléfono**, **Dirección** | Los del local | Opcionales. La primera vez que se abre **Personalizar** pasan a «Contacto y WhatsApp»; desde ahí se cambian allá |
-   | **Link del sitio web** | **Déjalo vacío** | Es para otra conexión (una tablet o un sitio propio que manda pedidos por número de mesa: `INTEGRACION-SITIO-WEB.md`). El menú digital se registra en la Parte 5 |
+   | **Página del menú digital** | Vacía por ahora | La dirección del menú publicado (`https://la-casa-menu.pages.dev/`). Como todavía no está publicado, se pone en la Parte 5 |
    | **Razón social**, **NIT** | Si los tienes | Opcionales |
    | **Usuario del administrador** | Deja `admin` | El usuario queda `<slug>.admin`, p. ej. `la-casa.admin` |
    | **Nombre de la persona** | `Ana Gómez` | Opcional |
@@ -84,7 +84,9 @@ Parte 6. Imprimir los QR y probar ........ su panel → Códigos QR
    **Copiar mensaje para enviar** copia los tres en un mensaje listo para mandarle por
    WhatsApp al restaurante. Esa tarjeta sale una sola vez; si la pierdes, la contraseña
    queda en la tabla **Usuarios** de esa misma página, columna Contraseña → **Ver**.
-6. En la tarjeta **Acceso**, junto a **API key (para su sitio web)** → **Copiar**. Empieza
+6. En la tarjeta **Acceso**, junto a **API key (para su sitio web)** → **Copiar**. (No
+   hace falta copiarla a mano: la tarjeta **Menú digital** de esta misma página trae el
+   código del menú ya armado con ella, Parte 3.1.) Empieza
    por `ck_`: guárdala para la Parte 3. No es secreta: queda dentro de la página del menú y
    cualquiera puede verla. Los pedidos los protegen el token de cada mesa (va en su QR), la
    dirección autorizada (Parte 5), los topes de Cloudin y que el precio lo pone siempre
@@ -236,6 +238,10 @@ datos de Cloudin cada vez que alguien la abre.
    | `<servidor-cloudin>` | La dirección de Cloudin, sin `https://`: `cloudin-abcd.onrender.com` | En `api` y en el `src` de `cloudin-menu.v1.js` |
    | `<slug>` | El identificador: `la-casa` | En `restaurant` y en `api` |
    | `apiKey: ""` | `apiKey: "ck_…"` con la API key de la Parte 1 (déjala `""` si el restaurante no recibe pedidos por QR) | En `apiKey` |
+
+   **Más fácil:** en el panel maestro → el restaurante → tarjeta **Menú digital** →
+   **Copiar código** copia este bloque ya lleno con la dirección del servidor, el
+   identificador y la API key. Pégalo en lugar del que trae la plantilla.
 
    Queda así:
 
@@ -541,24 +547,30 @@ igual que en 4.1 (subir el archivo nuevo → **Commit changes**). Los cambios de
 
 ---
 
-## Parte 5. Conectar el menú para que pueda pedir
+## Parte 5. Registrar la dirección del menú en Cloudin
 
-Hasta aquí el menú ya **muestra** la carta. Para que pueda **mandar pedidos** falta
-decirle a Cloudin cuál es su dirección:
+Hasta aquí el menú ya **muestra** la carta. Cloudin no busca el menú por su cuenta: hay
+que decirle cuál es su dirección. Sin eso no hay QR, el panel dice «Tu menú todavía no está
+publicado» y el menú no puede mandar pedidos.
 
-1. Abre `https://<servidor-cloudin>/admin/` (entras con el superusuario; desde el panel
-   maestro es **Datos en crudo**).
-2. **Restaurantes (panel maestro)** → **Restaurantes** → el restaurante.
-3. En la sección **«Sitio web y menú»**:
+1. Abre `https://<servidor-cloudin>/master/` → **Restaurantes** → el restaurante.
+2. En la tarjeta **Menú digital**:
 
    | Campo | Qué poner | Ejemplo |
    |---|---|---|
    | **Página del menú (QR)** | La dirección de la Parte 4, **exacta**: con `https://`, con la `/` final y sin `?mesa` | `https://la-casa-menu.pages.dev/` |
-   | **Otros sitios autorizados** | Déjalo en `[]`. Solo si el menú también se abre desde otra dirección (dominio propio), una lista en JSON, con comillas dobles | `["https://menu.lacasa.com"]` |
-   | **Cómo se toman los pedidos** | **Autoservicio: el cliente pide desde el QR**, o **Ambos: QR y meseros a la vez** (es lo mismo que la Parte 2.5) | |
-   | Sitio web del restaurante, Página de pedidos en mesa, Archivo de la carta | **No los toques** | |
+   | **Otras direcciones autorizadas** | Vacío. Solo si el mismo menú también se abre desde otra dirección (su dominio propio), una por línea | `https://menu.lacasa.com` |
 
-4. **Guardar**.
+3. **Guardar**. Arriba sale «Menú de La Casa registrado: los QR ya apuntan a …».
+4. Abre el menú una vez en el navegador y recarga la ficha: la tarjeta pasa de **Sin
+   conexión todavía** a **Conectado** («Un menú pidió la carta de La Casa hace un
+   momento»). Si sigue sin conexión, al menú le falta el código de la Parte 3 o apunta a
+   otro servidor.
+
+(Lo mismo se puede hacer en `https://<servidor-cloudin>/admin/` → **Restaurantes (panel
+maestro)** → **Restaurantes** → el restaurante → sección «Sitio web y menú»: «Página del
+menú (QR)» y «Otros sitios autorizados», este último como lista JSON:
+`["https://menu.lacasa.com"]`.)
 
 Qué hace «Página del menú (QR)»:
 
@@ -621,7 +633,9 @@ Para ver los errores del menú en el computador: abre la página → clic derech
 | **Agregar** falta en un solo plato | Está agotado o no tiene precio | Mi menú → el plato → Precio y Disponible |
 | En la consola: «blocked by CORS policy» | La dirección desde la que abriste el menú no coincide **exactamente** con «Página del menú (QR)» (`http` o `https`, `www`, otra dirección de Pages) | Corrige la Parte 5. Abre el menú con `https://<proyecto>.pages.dev`, no con la dirección de un despliegue (la que tiene letras y números antes del nombre del proyecto) |
 | Dice «Enviaste muchos pedidos seguidos…» | Más de 20 envíos (o 240 cambios al carrito) en 10 minutos desde la misma conexión; el wifi del local cuenta como una sola | Esperar unos minutos (`GUIA-MENU-DIGITAL.md` §8) |
-| En Códigos QR: «Su QR aparece cuando tu menú digital esté publicado.» | «Página del menú (QR)» está vacía | Parte 5 |
+| En Códigos QR: «Su QR aparece cuando tu menú digital esté publicado.», o en el panel «Tu menú todavía no está publicado» | «Página del menú (QR)» está vacía: Cloudin no detecta el menú solo | Parte 5 |
+| La ficha dice **Sin conexión todavía** aunque el menú está publicado | El menú no tiene el código de la Parte 3, o su `api` apunta a otro servidor o a otro identificador | Parte 3.1: **Copiar código** en la tarjeta Menú digital y pégalo en el menú; publícalo otra vez |
+| El enlace del panel sale como `https://<slug>.localhost/panel/login/` | El servidor todavía no tiene el arreglo que usa la dirección de Render | El enlace correcto es `https://<servidor-cloudin>/panel/login/`. Para que el panel maestro lo muestre bien: en Render → el servicio → **Environment** → agrega `CLOUDIN_PUBLIC_URL` = `https://<servidor-cloudin>` → guardar |
 | La ventana del carrito sale oscura con letra oscura | Falta `--fondo` en tu CSS | Parte 3.2, paso 8 |
 | Un cambio de diseño no se ve | No se subió a `main`, o el navegador tiene la página vieja | Revisa en Pages → el proyecto → **Deployments**; recarga la página |
 | Un cambio de precio no se ve | La carta guardada en el teléfono (hasta `cacheTtl` segundos sin QR) | Espera un minuto y recarga |
@@ -632,7 +646,7 @@ Para ver los errores del menú en el computador: abre la página → clic derech
 ## Parte 8. Checklist por restaurante
 
 ```
-[ ] 1. /master/ → Nuevo restaurante, plan «Cloudin completo», «Link del sitio web» vacío
+[ ] 1. /master/ → Nuevo restaurante, plan «Cloudin completo»
 [ ] 1. Copiados: usuario, contraseña, enlace del panel y API key (ck_…)
 [ ] 2. Términos aceptados en su panel
 [ ] 2. Mesas creadas (Códigos QR → ¿Cuántas mesas tienes?)
@@ -640,9 +654,10 @@ Para ver los errores del menú en el computador: abre la página → clic derech
 [ ] 2. Logo, colores, contacto, WhatsApp y horario (Personalizar)
 [ ] 2. Meseros → «Autoservicio» o «Ambos»
 [ ] 2. https://<servidor-cloudin>/api/public/<slug>/menu/ muestra la carta
-[ ] 3. index.html con <servidor-cloudin>, <slug> y apiKey cambiados; carrito.js al lado
+[ ] 3. index.html con el código de «Menú digital» → Copiar código; carrito.js al lado
 [ ] 4. Publicado en Pages; https://<proyecto>.pages.dev muestra la carta
-[ ] 5. /admin/ → «Página del menú (QR)» = https://<proyecto>.pages.dev/ → Guardar
+[ ] 5. Ficha → «Menú digital» → Página del menú (QR) = https://<proyecto>.pages.dev/ → Guardar
+[ ] 5. La ficha dice «Conectado» después de abrir el menú
 [ ] 6. Pedido de prueba desde el QR de la Mesa 1 → llegó a Mensajes y Cocina
 [ ] 6. QR impresos (PDF con todas las mesas)
 [ ] 6. Mensaje con el acceso enviado al restaurante (Copiar mensaje para enviar)

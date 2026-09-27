@@ -4,10 +4,15 @@ Solo para el superusuario (Juan). Cada alta deja al restaurante con su base de
 datos creada, migrada y con credenciales listas para entregar.
 """
 
+from datetime import datetime
+
+from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import user_passes_test
+from django.core.cache import cache
 from django.db.models import Count
 from django.shortcuts import get_object_or_404, redirect, render
+from django.utils import timezone
 from django.views.decorators.http import require_POST
 
 from apps.tenants.crypto import hay_llave
@@ -20,7 +25,7 @@ from apps.tenants.services import (
     enlace_panel,
 )
 
-from .forms import EmpleadoForm, RestauranteForm
+from .forms import EmpleadoForm, MenuDigitalForm, RestauranteForm
 
 solo_superusuario = user_passes_test(lambda u: u.is_superuser, login_url="/admin/login/")
 
@@ -51,7 +56,7 @@ def restaurante_nuevo(request):
                 nombre=form.cleaned_data["name"],
                 slug=form.cleaned_data["slug"],
                 plan=form.cleaned_data["plan"],
-                site_url=form.cleaned_data["site_url"],
+                menu_page=form.cleaned_data["menu_page"],
                 legal_name=form.cleaned_data["legal_name"],
                 nit=form.cleaned_data["nit"],
                 address=form.cleaned_data["address"],
@@ -84,6 +89,20 @@ def restaurante_nuevo(request):
     return render(request, "master/restaurante_nuevo.html", {"form": form, "seccion": "nuevo"})
 
 
+def _menu_digital(request, tenant) -> dict:
+    """Lo de la tarjeta «Menú digital»: la página registrada, cuándo se pidió la carta
+    por última vez y los datos que lleva el código del menú."""
+    servidor = settings.CLOUDIN_PUBLIC_URL or request.build_absolute_uri("/").rstrip("/")
+    visto = cache.get(f"menu_visto:{tenant.slug}")
+    return {
+        "menu_form": MenuDigitalForm(initial={
+            "pagina": tenant.menu_page, "otros": "\n".join(tenant.allowed_origins or [])}),
+        "servidor": servidor,
+        "carta": f"{servidor}/api/public/{tenant.slug}/menu/",
+        "menu_visto": datetime.fromtimestamp(visto, tz=timezone.get_current_timezone()) if visto else None,
+    }
+
+
 @solo_superusuario
 def restaurante(request, slug):
     tenant = get_object_or_404(Tenant, slug=slug)
@@ -98,8 +117,30 @@ def restaurante(request, slug):
             "credencial": request.session.pop("credencial", None),
             "hay_llave": hay_llave(),
             "seccion": "restaurantes",
+            **_menu_digital(request, tenant),
         },
     )
+
+
+@solo_superusuario
+@require_POST
+def restaurante_menu(request, slug):
+    """Registra la página del menú digital: de ahí salen los QR y es la que puede pedir."""
+    tenant = get_object_or_404(Tenant, slug=slug)
+    form = MenuDigitalForm(request.POST)
+    if not form.is_valid():
+        for errores in form.errors.values():
+            messages.warning(request, errores[0])
+        return redirect("master:restaurante", slug=tenant.slug)
+    tenant.menu_page = form.cleaned_data["pagina"]
+    tenant.allowed_origins = form.cleaned_data["otros"]
+    tenant.save(update_fields=["menu_page", "allowed_origins"])
+    if tenant.menu_page:
+        messages.success(request, f"Menú de {tenant.name} registrado: los QR ya apuntan a "
+                                  f"{tenant.menu_page} y esa página puede enviar pedidos.")
+    else:
+        messages.warning(request, f"{tenant.name} quedó sin página del menú: no hay QR ni pedidos.")
+    return redirect("master:restaurante", slug=tenant.slug)
 
 
 @solo_superusuario
@@ -134,6 +175,7 @@ def empleado_nuevo(request, slug):
             "credencial": None,
             "hay_llave": hay_llave(),
             "seccion": "restaurantes",
+            **_menu_digital(request, tenant),
         },
     )
 
@@ -215,8 +257,6 @@ def tokens(request):
 @solo_superusuario
 @require_POST
 def token_revocar(request, token_id):
-    from django.utils import timezone
-
     registro = get_object_or_404(ApiToken, pk=token_id, revoked_at__isnull=True)
     registro.revoked_at = timezone.now()
     registro.save(update_fields=["revoked_at"])
