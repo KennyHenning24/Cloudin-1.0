@@ -17,10 +17,12 @@
 |---|---|
 | **Este archivo** | Montaje, mapa del código, reglas y recetas de cambio |
 | `README.md` | Documentación técnica del producto, pantalla por pantalla |
+| `CLAUDE-MENU-DIGITAL.md` | Instrucciones para Claude Code al crear un menú digital: carta, pedidos, importación de la carta, publicar y probar (se copia al repo del menú como `CLAUDE.md`) |
+| `PASO-A-PASO-NUEVO-RESTAURANTE.md` | Registrar un restaurante y conectar su menú, paso a paso, con la plantilla `client/plantilla/index.html` |
 | `GUIA-MENU-DIGITAL.md` | Cómo construir el menú digital de un cliente en Cloudflare Pages y cómo lee la carta y manda pedidos |
 | `CONECTAR-MENU-A-CLOUDIN.md` | Cómo el sitio web de un restaurante le entrega su carta al panel |
 | `INTEGRACION-SITIO-WEB.md` | API para la tablet o el sitio del restaurante (pedidos por número de mesa) |
-| `DESPLIEGUE-GRATIS.md` | Cómo ponerlo en internet gratis y sin tarjeta: Render + Neon (`render.yaml`) |
+| `DESPLIEGUE-GRATIS.md` | Cómo ponerlo en internet sin pagar: Render + Neon + R2 para las fotos (`render.yaml`) |
 | `DESPLIEGUE-CLOUDFLARE.md` | Cómo corre en Cloudflare (Containers, Postgres, R2), por qué no en Pages y el día a día del despliegue |
 | `..\Cloudin-para-restaurantes.md` | Qué problema resuelve el producto (material de venta; describe módulos que ya se quitaron) |
 | `..\cloudin-arquitectura.md` | Plan original por fases |
@@ -574,10 +576,11 @@ montaje para Cloudflare Containers.
 
 1. **Desplegar el panel en un servidor público.** Cloudflare Pages no sirve para
    Django. El código quedó listo para dos servidores con el mismo `Dockerfile`:
-   **Render gratis** (`render.yaml`, fotos en la base: `DESPLIEGUE-GRATIS.md`), que es
-   el camino mientras no haya presupuesto, y **Cloudflare Containers** con el plan pago
-   (Worker + contenedor, fotos en R2: `DESPLIEGUE-CLOUDFLARE.md`). Falta crear las
-   cuentas y cargar los secretos.
+   **Render gratis** (`render.yaml`, fotos en R2 o en la base:
+   `DESPLIEGUE-GRATIS.md`), que es el camino mientras no haya presupuesto, y
+   **Cloudflare Containers** con el plan pago (Worker + contenedor, fotos en R2:
+   `DESPLIEGUE-CLOUDFLARE.md`). Falta crear las cuentas y cargar los secretos. El
+   bucket `cloudin-fotos` de R2 ya existe.
 2. **El primer menú digital en Cloudflare Pages** con pedidos por QR:
    `GUIA-MENU-DIGITAL.md`.
 3. **Actualizar los textos legales** (todavía describen los módulos retirados) con

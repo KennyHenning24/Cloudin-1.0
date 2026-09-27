@@ -9,7 +9,9 @@ Backend único multi-tenant para restaurantes. Sirve para dos cosas:
    queda ocupada sola, el pedido llega a Mensajes y Cocina, y los meseros (Cloudin
    Meseros) trabajan sobre las mismas mesas.
 
-Cómo construir y conectar un menú digital: **[GUIA-MENU-DIGITAL.md](GUIA-MENU-DIGITAL.md)**.
+Registrar un restaurante y conectar su menú, paso a paso:
+**[PASO-A-PASO-NUEVO-RESTAURANTE.md](PASO-A-PASO-NUEVO-RESTAURANTE.md)**. La referencia
+completa del menú digital: **[GUIA-MENU-DIGITAL.md](GUIA-MENU-DIGITAL.md)**.
 La facturación electrónica (Factus), el turno de caja, el inventario, las reservas,
 los empleados, las propinas, Cloudin Control y la analítica de ventas **se quitaron**
 (ver «Módulos retirados»).
@@ -218,6 +220,14 @@ Lo mismo con un producto que ya se vendió: se elimina de la carta pero se conse
 
 ## El menú digital y los sitios conectados
 
+- **[CLAUDE-MENU-DIGITAL.md](CLAUDE-MENU-DIGITAL.md)** — las instrucciones para Claude
+  Code cuando crea un menú digital: pintar la carta, pedidos de la mesa, cargar y cambiar
+  la carta (panel e importación de `menu.seed.json`), vista previa, publicar, probar y
+  diagnosticar. Se copia al repositorio del menú como `CLAUDE.md`.
+- **[PASO-A-PASO-NUEVO-RESTAURANTE.md](PASO-A-PASO-NUEVO-RESTAURANTE.md)** — el
+  recorrido completo para un cliente nuevo: registrarlo en el panel maestro, cargar su
+  carta, armar su menú con `client/plantilla/index.html` (qué atributos lleva el HTML),
+  publicarlo en Pages, conectarlo para pedir, imprimir los QR y probar.
 - **[GUIA-MENU-DIGITAL.md](GUIA-MENU-DIGITAL.md)** — la guía para construir el menú
   digital de un cliente: tecnologías, Cloudflare Pages paso a paso, la carta pública,
   el carrito compartido de la mesa, errores, seguridad y un checklist. La implementación
@@ -292,8 +302,9 @@ gunicorn) con la base de control y las de cada restaurante en Postgres (`DATABAS
 Neon). Dos formas, con el mismo `Dockerfile`; en las dos cada push a `main` se
 despliega solo:
 
-- **Gratis, sin tarjeta: Render + Neon** (`render.yaml`). Se duerme tras 15 minutos
-  sin visitas y las fotos se guardan en la base (`FOTOS_EN_LA_BASE`, `apps/archivos`).
+- **Sin pagar: Render + Neon + R2** (`render.yaml`). Se duerme tras 15 minutos sin
+  visitas. Las fotos van a Cloudflare R2 (capa gratis; pide tarjeta, cobra $0); sin R2
+  se guardan en la base (`FOTOS_EN_LA_BASE`, `apps/archivos`).
   Paso a paso: **[DESPLIEGUE-GRATIS.md](DESPLIEGUE-GRATIS.md)**.
 - **Cloudflare Containers** (Workers Paid, 5 USD/mes): un Worker
   (`cloudflare/worker.js`) delante del contenedor y las fotos en Cloudflare R2. Pasos,

@@ -1,3 +1,5 @@
+from urllib.parse import urlsplit
+
 from django import forms
 from django.contrib.auth.models import User
 from django.utils.text import slugify
@@ -29,12 +31,12 @@ class RestauranteForm(forms.ModelForm):
 
     class Meta:
         model = Tenant
-        fields = ["name", "slug", "plan", "site_url", "legal_name", "nit", "address", "city", "phone"]
+        fields = ["name", "slug", "plan", "menu_page", "legal_name", "nit", "address", "city", "phone"]
         labels = {
             "plan": "Plan",
             "name": "Nombre del restaurante",
             "slug": "Identificador (subdominio)",
-            "site_url": "Link del sitio web",
+            "menu_page": "Página del menú digital",
             "legal_name": "Razón social",
             "nit": "NIT",
             "address": "Dirección",
@@ -45,14 +47,15 @@ class RestauranteForm(forms.ModelForm):
             "plan": "Menú digital: carta, fotos, personalización y QR. Completo: además recibe los "
             "pedidos del menú digital, ve sus mesas y usa la app de meseros.",
             "slug": "Solo minúsculas, números y guiones. Es su subdominio y el nombre de su base de datos.",
-            "site_url": "La página desde la que el restaurante enviará los pedidos. "
-            "Si todavía no existe, se puede registrar después desde su panel.",
+            "menu_page": "Donde está publicado su menú (Cloudflare Pages). Con ella salen los QR de "
+            "las mesas y ese menú puede enviar pedidos. Si todavía no está publicado, déjala vacía: "
+            "se pone después en la ficha del restaurante.",
             "nit": "Dato del negocio. Puede quedar vacío.",
         }
         widgets = {
             "name": forms.TextInput(attrs={"placeholder": "Ej. Cultura Brisket", "autofocus": True}),
             "slug": forms.TextInput(attrs={"placeholder": "culturabrisket"}),
-            "site_url": forms.URLInput(attrs={"placeholder": "https://pedidos.mirestaurante.com"}),
+            "menu_page": forms.URLInput(attrs={"placeholder": "https://culturabrisket.pages.dev/"}),
         }
 
     def clean_slug(self):
@@ -96,3 +99,38 @@ class EmpleadoForm(forms.Form):
         if User.objects.filter(username=username).exists():
             raise forms.ValidationError(f"El usuario '{username}' ya existe.")
         return usuario
+
+
+def origen(url: str) -> str:
+    """https://menu.lacasa.com/carta.html -> https://menu.lacasa.com ("" si no es http/https)."""
+    partes = urlsplit((url or "").strip())
+    return f"{partes.scheme}://{partes.netloc}" if partes.scheme in ("http", "https") and partes.netloc else ""
+
+
+class MenuDigitalForm(forms.Form):
+    """La página del menú digital de un restaurante: con ella salen los QR y queda
+    autorizada para pedir (Tenant.origenes_permitidos)."""
+
+    pagina = forms.URLField(
+        label="Página del menú (QR)", required=False, max_length=500,
+        widget=forms.URLInput(attrs={"placeholder": "https://culturabrisket.pages.dev/"}),
+        help_text="La dirección exacta del menú publicado, sin ?mesa. Vacía: no hay QR ni pedidos.",
+    )
+    otros = forms.CharField(
+        label="Otras direcciones autorizadas", required=False,
+        widget=forms.Textarea(attrs={"rows": 2, "placeholder": "https://menu.culturabrisket.com"}),
+        help_text="Una por línea, solo si el mismo menú también se abre desde otra dirección "
+        "(p. ej. su dominio propio).",
+    )
+
+    def clean_otros(self):
+        salida = []
+        for linea in (self.cleaned_data.get("otros") or "").splitlines():
+            if not linea.strip():
+                continue
+            o = origen(linea)
+            if not o:
+                raise forms.ValidationError(f"«{linea.strip()[:80]}» no es una dirección: debe empezar por https://")
+            if o not in salida:
+                salida.append(o)
+        return salida
