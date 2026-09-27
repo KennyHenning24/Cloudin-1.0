@@ -15,7 +15,7 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
-from config.entorno import es_postgres, lista, postgres_desde_url
+from config.entorno import direccion_publica, es_postgres, lista, postgres_desde_url
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -47,8 +47,11 @@ ALLOWED_HOSTS = [h.strip() for h in os.getenv("ALLOWED_HOSTS", "*").split(",") i
 TENANT_BASE_DOMAIN = os.getenv("TENANT_BASE_DOMAIN", "localhost")
 
 # Dirección pública de este servidor (sin / al final). Con ella se arman los enlaces
-# absolutos del menú público (fotos, API, runtime). Vacía: se usa la de la petición.
-CLOUDIN_PUBLIC_URL = os.getenv("CLOUDIN_PUBLIC_URL", "").rstrip("/")
+# absolutos del menú público (fotos, API, runtime) y el enlace del panel que entrega el
+# panel maestro. En Render, si no se pone, es la del servicio (…onrender.com). Vacía: se
+# usa la de la petición.
+CLOUDIN_PUBLIC_URL = direccion_publica(
+    os.getenv("CLOUDIN_PUBLIC_URL", ""), os.getenv("RENDER_EXTERNAL_HOSTNAME", ""))
 
 INSTALLED_APPS = [
     "django.contrib.admin",

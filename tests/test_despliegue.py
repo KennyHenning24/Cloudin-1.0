@@ -5,7 +5,7 @@ from types import SimpleNamespace
 import pytest
 
 from apps.tenants.db import tenant_db_settings
-from config.entorno import es_postgres, lista, postgres_desde_url
+from config.entorno import direccion_publica, es_postgres, lista, postgres_desde_url
 
 
 def test_database_url_de_neon():
@@ -52,6 +52,18 @@ def test_base_de_restaurante_en_postgres_lleva_ssl(settings):
     # Cada restaurante recibe su propia copia: cambiarla no toca la configuración global.
     cfg["OPTIONS"]["sslmode"] = "disable"
     assert settings.TENANT_PG["OPTIONS"]["sslmode"] == "require"
+
+
+def test_direccion_publica_en_render(settings):
+    """En Render, sin CLOUDIN_PUBLIC_URL, el enlace del panel que entrega el panel maestro
+    sale con la dirección del servicio y no con <slug>.localhost."""
+    from apps.tenants.services import enlace_panel
+
+    assert direccion_publica("", "cloudin-abcd.onrender.com") == "https://cloudin-abcd.onrender.com"
+    assert direccion_publica("https://app.cloudin.co/", "cloudin-abcd.onrender.com") == "https://app.cloudin.co"
+    assert direccion_publica("", "") == ""
+    settings.CLOUDIN_PUBLIC_URL = direccion_publica("", "cloudin-abcd.onrender.com")
+    assert enlace_panel(SimpleNamespace(slug="la-casa")) == "https://cloudin-abcd.onrender.com/panel/login/"
 
 
 def test_ip_del_cliente_detras_de_cloudflare_y_render():

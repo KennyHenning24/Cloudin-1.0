@@ -37,3 +37,15 @@ def postgres_desde_url(url: str) -> dict:
 def lista(valor: str) -> list[str]:
     """«a, b,,c» -> ["a", "b", "c"]"""
     return [v.strip() for v in (valor or "").split(",") if v.strip()]
+
+
+def direccion_publica(cloudin_public_url: str, render_hostname: str = "") -> str:
+    """La dirección pública del servidor, sin / al final.
+
+    Es CLOUDIN_PUBLIC_URL. Si no se puso y el servidor corre en Render, la que Render le
+    da al servicio: Render define RENDER_EXTERNAL_HOSTNAME (p. ej. cloudin-abcd.onrender.com)
+    al arrancar. Sin ninguna de las dos queda vacía y cada enlace sale de la petición."""
+    if (cloudin_public_url or "").strip():
+        return cloudin_public_url.strip().rstrip("/")
+    host = (render_hostname or "").strip().strip("/")
+    return f"https://{host}" if host else ""
