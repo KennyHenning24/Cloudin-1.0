@@ -1,7 +1,7 @@
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
-from django.urls import include, path
+from django.urls import include, path, re_path
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 
 from apps.importer.views import import_menu
@@ -57,5 +57,10 @@ urlpatterns = [
     path("legal/r/<slug:slug>/datos/", legal.datos_restaurante, name="legal-datos"),
 ]
 
-if settings.DEBUG:
+if settings.FOTOS_EN_LA_BASE:
+    # Plan gratis: las fotos viven en la base de datos (apps/archivos).
+    from apps.archivos.views import servir
+
+    urlpatterns += [re_path(r"^media/(?P<nombre>.+)$", servir, name="archivo")]
+elif settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

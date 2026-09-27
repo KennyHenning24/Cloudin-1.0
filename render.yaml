@@ -1,0 +1,41 @@
+# Cloudin en Render, plan gratis (sin tarjeta): un web service con el Dockerfile y la
+# base de datos en Neon (también gratis). Paso a paso: DESPLIEGUE-GRATIS.md
+#
+# En Render: New → Blueprint → este repositorio. Pide solo lo marcado «sync: false»;
+# SECRET_KEY y CREDENTIAL_KEY las genera Render (base64 de 256 bits: sirven tal cual).
+services:
+  - type: web
+    name: cloudin
+    runtime: docker
+    plan: free
+    # Cerca de la base: Django hace decenas de consultas por página. Neon en AWS us-east-1.
+    region: virginia
+    dockerfilePath: ./Dockerfile
+    envVars:
+      - key: DEBUG
+        value: "0"
+      - key: ALLOWED_HOSTS
+        value: ".onrender.com,localhost"
+      - key: CSRF_TRUSTED_ORIGINS
+        value: "https://*.onrender.com"
+      - key: DB_CONN_MAX_AGE
+        value: "60"
+      - key: DJANGO_LOG_LEVEL
+        value: INFO
+      # El disco de Render gratis se borra al dormirse: las fotos van a la base (Neon).
+      - key: FOTOS_EN_LA_BASE
+        value: "1"
+      - key: SECRET_KEY
+        generateValue: true
+      # Cifra las contraseñas que el panel maestro puede mostrar. No la cambies después:
+      # las guardadas quedarían ilegibles.
+      - key: CREDENTIAL_KEY
+        generateValue: true
+      # La de Neon, conexión directa (sin «-pooler»).
+      - key: DATABASE_URL
+        sync: false
+      # El superusuario del panel maestro: se crea al primer arranque.
+      - key: DJANGO_SUPERUSER_USERNAME
+        sync: false
+      - key: DJANGO_SUPERUSER_PASSWORD
+        sync: false

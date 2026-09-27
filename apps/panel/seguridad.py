@@ -33,7 +33,16 @@ SOPORTE_MAXIMO = 8 * 60 * 60        # y nunca dura más de ocho horas seguidas
 
 
 def ip_de(request) -> str:
-    # Detrás de un proxy de confianza (producción) la IP real viene en X-Forwarded-For.
+    """La IP del cliente, para los topes de intentos y de pedidos.
+
+    Detrás de Cloudflare (el Worker de Cloudflare Containers, y Render, que también
+    pasa por Cloudflare) llega en CF-Connecting-IP: la pone Cloudflare y el cliente no
+    la puede falsear. Si no está, la primera de X-Forwarded-For (un proxy que la
+    reescribe, como el Worker) o REMOTE_ADDR. Render solo *agrega* a X-Forwarded-For,
+    así que ahí la primera la podría inventar el cliente."""
+    cloudflare = request.META.get("HTTP_CF_CONNECTING_IP", "").strip()
+    if cloudflare:
+        return cloudflare
     reenviada = request.META.get("HTTP_X_FORWARDED_FOR", "")
     return (reenviada.split(",")[0].strip() if reenviada else "") or request.META.get("REMOTE_ADDR", "")
 

@@ -15,8 +15,10 @@
 ## 0. En 30 segundos
 
 1. **Cloudin** (Django) es el backend: guarda la carta, las fotos, las mesas y los
-   pedidos, y tiene el panel del restaurante y la app de meseros. Corre en Cloudflare
-   Containers (ver `DESPLIEGUE-CLOUDFLARE.md`).
+   pedidos, y tiene el panel del restaurante y la app de meseros. Corre en un servidor
+   con Docker: gratis en Render (`DESPLIEGUE-GRATIS.md`) o en Cloudflare Containers con
+   el plan pago (`DESPLIEGUE-CLOUDFLARE.md`). En esta guía su dirección es
+   `https://<servidor-cloudin>`.
 2. **El menú digital** de cada cliente es un sitio **estático** (HTML, CSS y JavaScript)
    publicado en **Cloudflare Pages**. No tiene base de datos ni servidor propio: lee y
    escribe en Cloudin por HTTP.
@@ -35,14 +37,14 @@
 ## 1. Cómo encaja todo
 
 ```
- Teléfono del cliente                              Cloudflare
+ Teléfono del cliente                              Internet
  ┌───────────────────────────┐   HTML, CSS, JS   ┌──────────────────────────────────┐
- │ Escanea el QR de la mesa ─┼──────────────────▶│ Pages: el menú de ESTE cliente    │
- │ menu.html?mesa=<token>    │                   │ (estático, un proyecto por cliente)│
+ │ Escanea el QR de la mesa ─┼──────────────────▶│ Cloudflare Pages: el menú de ESTE │
+ │ menu.html?mesa=<token>    │                   │ cliente (estático, gratis)        │
  │                           │                   ├──────────────────────────────────┤
- │ cloudin-menu.v1.js ───────┼── carta (JSON) ──▶│ Worker + Container: Cloudin       │
- │ carrito.js ───────────────┼── carrito/pedido ▶│ (Django) ── Postgres (Neon)       │
- └───────────────────────────┘                   │          └─ fotos (R2)            │
+ │ cloudin-menu.v1.js ───────┼── carta (JSON) ──▶│ Servidor de Cloudin (Django):     │
+ │ carrito.js ───────────────┼── carrito/pedido ▶│ Render gratis o Cloudflare        │
+ └───────────────────────────┘                   │ Containers ── Postgres (Neon)     │
                                                   └──────────────────────────────────┘
  Panel del restaurante (/panel/) y app de meseros (/mesero/<slug>/) ──▶ el mismo Cloudin
 ```
@@ -73,7 +75,7 @@ a publicar cuando cambias el diseño.
 | Carrito y pedido | **`client/example/carrito.js`** tal cual o adaptado | Ya resuelve el carrito compartido, tamaños y adiciones, conflictos entre teléfonos y el envío. |
 | Backend | **Cloudin** (Django + Django REST Framework), el que ya existe | Ver 2.2. |
 | Hosting del menú | **Cloudflare Pages** | Gratis para archivos estáticos, HTTPS y CDN incluidos, se publica solo con cada `git push`. |
-| Hosting del backend | **Cloudflare Containers** (ya configurado) | Pages no ejecuta Python. |
+| Hosting del backend | **Render** gratis (`render.yaml`) o **Cloudflare Containers** pago (`wrangler.jsonc`) | Pages no ejecuta Python. Los dos usan el mismo `Dockerfile`. |
 
 ### 2.2 ¿Django o FastAPI para la API?
 
@@ -105,7 +107,7 @@ corre en Cloudflare:
 
 | Dato | Dónde se ve | Ejemplo |
 |---|---|---|
-| Dirección del servidor Cloudin | La del Worker (`DESPLIEGUE-CLOUDFLARE.md`) | `https://cloudin-1-0.<tu-cuenta>.workers.dev` |
+| Dirección del servidor Cloudin (`<servidor-cloudin>`) | Render: arriba en la página del servicio (`DESPLIEGUE-GRATIS.md`). Cloudflare: la del Worker (`DESPLIEGUE-CLOUDFLARE.md`) | `https://cloudin.onrender.com` o `https://cloudin-1-0.<tu-cuenta>.workers.dev` |
 | Identificador (slug) | Panel maestro `/master/` | `culturabrisket` |
 | Llave de conexión (`ck_…`) | Panel maestro → el restaurante → **API key** (o su panel → Configuración → Sitio web) | `ck_Xa3…` |
 | Plan | Panel maestro | **Cloudin completo** para recibir pedidos |
@@ -151,7 +153,7 @@ Al final de `index.html`, en este orden:
 <script>
   window.CLOUDIN_CONFIG = {
     restaurant: "culturabrisket",                    // el slug
-    api: "https://cloudin-1-0.<tu-cuenta>.workers.dev/api/public/culturabrisket/menu/",
+    api: "https://<servidor-cloudin>/api/public/culturabrisket/menu/",
     contract: 1,
     locale: "es-CO",
     currency: "COP",
@@ -160,7 +162,7 @@ Al final de `index.html`, en este orden:
     apiKey: "ck_…"        // solo si el restaurante recibe pedidos por el QR (sección 3)
   };
 </script>
-<script src="https://cloudin-1-0.<tu-cuenta>.workers.dev/static/cloudin-menu.v1.js" defer></script>
+<script src="https://<servidor-cloudin>/static/cloudin-menu.v1.js" defer></script>
 <script src="carrito.js" defer></script>
 ```
 
@@ -203,7 +205,7 @@ inmediato.
 
 ### 4.4 Registrar la página en Cloudin
 
-En `https://cloudin-1-0.<tu-cuenta>.workers.dev/admin/` → **Restaurantes** → el restaurante →
+En `https://<servidor-cloudin>/admin/` → **Restaurantes** → el restaurante →
 sección **«Sitio web y menú»**:
 
 | Campo | Qué poner | Para qué |
@@ -251,7 +253,7 @@ Un archivo `_headers` en la raíz de lo que se publica:
   X-Content-Type-Options: nosniff
   Referrer-Policy: strict-origin-when-cross-origin
   Permissions-Policy: camera=(), microphone=(), geolocation=()
-  Content-Security-Policy: frame-ancestors 'self' https://cloudin-1-0.<tu-cuenta>.workers.dev
+  Content-Security-Policy: frame-ancestors 'self' https://<servidor-cloudin>
 ```
 
 - **No pongas `X-Frame-Options: DENY`**: el panel del restaurante (Personalizar) muestra
@@ -276,8 +278,8 @@ terminar.
 ### 5.1 La petición
 
 ```
-GET https://cloudin-1-0.<tu-cuenta>.workers.dev/api/public/<slug>/menu/
-GET https://cloudin-1-0.<tu-cuenta>.workers.dev/api/public/<slug>/menu/?table=<token>
+GET https://<servidor-cloudin>/api/public/<slug>/menu/
+GET https://<servidor-cloudin>/api/public/<slug>/menu/?table=<token>
 ```
 
 | | |
@@ -299,7 +301,7 @@ GET https://cloudin-1-0.<tu-cuenta>.workers.dev/api/public/<slug>/menu/?table=<t
     "name": "La Casa",
     "tagline": "Comida casera",
     "description": null,
-    "logo": "https://cloudin-1-0.<tu-cuenta>.workers.dev/media/…/logo.webp",
+    "logo": "https://<servidor-cloudin>/media/…/logo.webp",
     "cover": null,
     "brand": { "primary": "#B3261E", "secondary": "#F2C14E", "background": "#1A1110", "text": null },
     "contact": { "whatsapp": null, "phone": "+573001234567", "email": null,
@@ -323,7 +325,7 @@ GET https://cloudin-1-0.<tu-cuenta>.workers.dev/api/public/<slug>/menu/?table=<t
               "id": "6f1c2a90-…", "key": "hamburguesa", "name": "Hamburguesa",
               "description": "Carne de res, queso y papas.",
               "price": 24000,
-              "image": "https://cloudin-1-0.<tu-cuenta>.workers.dev/media/…/hamburguesa.webp",
+              "image": "https://<servidor-cloudin>/media/…/hamburguesa.webp",
               "available": true, "featured": false, "tags": ["recomendado"], "tax": null,
               "variants": [
                 { "id": "9a2e41c7-…", "key": "doble-carne", "name": "Doble carne", "price": 32000 }
@@ -406,7 +408,7 @@ La referencia viva de plantillas, CSS mínimo y animaciones es `client/example/i
 ### 5.5 Sin el runtime (tu propio JavaScript)
 
 ```js
-const CARTA = "https://cloudin-1-0.<tu-cuenta>.workers.dev/api/public/culturabrisket/menu/";
+const CARTA = "https://<servidor-cloudin>/api/public/culturabrisket/menu/";
 
 async function cargarCarta() {
   let guardada = null;
@@ -441,7 +443,7 @@ Escapa **todo** texto que venga de la carta antes de meterlo con `innerHTML` (o 
 - Cada petición de pedido lleva la cabecera **`X-API-Key: ck_…`** (dice de qué restaurante
   es) y el token va en la ruta (dice qué mesa). El cliente no se registra.
 - Todas las rutas de esta sección cuelgan de
-  `https://cloudin-1-0.<tu-cuenta>.workers.dev/api/v1/mesa/<token>/`.
+  `https://<servidor-cloudin>/api/v1/mesa/<token>/`.
 
 ### 6.2 El recorrido
 
@@ -791,7 +793,7 @@ Para usarlo en otro diseño:
 ### 11.2 Con `curl` contra el servidor
 
 ```bash
-S=https://cloudin-1-0.<tu-cuenta>.workers.dev
+S=https://<servidor-cloudin>
 K=ck_...          # la llave del restaurante
 T=td8vIrnwaZPF    # el token de una mesa (lo que va después de ?mesa= en su QR)
 

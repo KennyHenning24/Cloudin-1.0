@@ -17,6 +17,8 @@ from django.utils.http import url_has_allowed_host_and_scheme
 
 from apps.tenants.models import AceptacionLegal, Tenant
 
+from .seguridad import ip_de
+
 
 def _datos_legales():
     return {
@@ -92,8 +94,7 @@ def aceptar(request):
             )
             return redirect("panel:login")
         if request.POST.get("terminos") and request.POST.get("privacidad"):
-            ip = (request.META.get("HTTP_X_FORWARDED_FOR", "").split(",")[0].strip()
-                  or request.META.get("REMOTE_ADDR"))
+            ip = ip_de(request)
             AceptacionLegal.objects.get_or_create(
                 user=request.user, version=settings.LEGAL_VERSION,
                 defaults={"ip": ip or None, "navegador": request.META.get("HTTP_USER_AGENT", "")[:300]},

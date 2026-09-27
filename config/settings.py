@@ -62,6 +62,7 @@ INSTALLED_APPS = [
     "drf_spectacular",
     "simple_history",
     "apps.common",
+    "apps.archivos",
     "apps.tenants",
     "apps.business",
     "apps.catalog",
@@ -247,6 +248,13 @@ if R2_BUCKET:
     }
     if R2_PUBLIC_DOMAIN:
         MEDIA_URL = f"https://{R2_PUBLIC_DOMAIN}/"
+
+# Plan gratis sin R2 (Render): el disco del servidor se borra al dormirse, así que las
+# fotos se guardan en la base de datos (apps/archivos) y se sirven en /media/.
+# Con R2 configurado no se usa. Ver DESPLIEGUE-GRATIS.md.
+FOTOS_EN_LA_BASE = os.getenv("FOTOS_EN_LA_BASE", "0") == "1" and not R2_BUCKET
+if FOTOS_EN_LA_BASE:
+    STORAGES["default"] = {"BACKEND": "apps.archivos.almacen.AlmacenEnLaBase"}
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 

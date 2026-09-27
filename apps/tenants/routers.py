@@ -11,6 +11,7 @@ SHARED_APPS = {
     "messages",
     "staticfiles",
     "tenants",
+    "archivos",  # fotos guardadas en la base (plan gratis): se sirven sin saber el restaurante
 }
 
 # Apps cuyos datos son privados de cada restaurante.

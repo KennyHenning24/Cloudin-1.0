@@ -29,6 +29,7 @@ from django.views.decorators.http import require_GET, require_POST
 from apps.catalog.models import Category, Product
 from apps.dining.models import Table
 from apps.orders.models import Order, TableSession
+from apps.panel.seguridad import ip_de
 from apps.tenants.context import set_current_tenant
 from apps.tenants.models import Tenant
 
@@ -102,11 +103,6 @@ def app_mesero(api=False):
     return decorador
 
 
-def _ip(request) -> str:
-    return (request.META.get("HTTP_X_FORWARDED_FOR", "").split(",")[0].strip()
-            or request.META.get("REMOTE_ADDR", ""))
-
-
 # =============================================================== pantallas
 
 
@@ -120,7 +116,7 @@ def entrar(request, slug):
 
     error = ""
     usuario = ""
-    clave_bloqueo = f"mesero:intentos:{tenant.slug}:{_ip(request)}"
+    clave_bloqueo = f"mesero:intentos:{tenant.slug}:{ip_de(request)}"
     if request.method == "POST":
         usuario = (request.POST.get("usuario") or "").strip().lower()
         clave = request.POST.get("clave") or ""

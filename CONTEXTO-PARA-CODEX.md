@@ -20,6 +20,7 @@
 | `GUIA-MENU-DIGITAL.md` | Cómo construir el menú digital de un cliente en Cloudflare Pages y cómo lee la carta y manda pedidos |
 | `CONECTAR-MENU-A-CLOUDIN.md` | Cómo el sitio web de un restaurante le entrega su carta al panel |
 | `INTEGRACION-SITIO-WEB.md` | API para la tablet o el sitio del restaurante (pedidos por número de mesa) |
+| `DESPLIEGUE-GRATIS.md` | Cómo ponerlo en internet gratis y sin tarjeta: Render + Neon (`render.yaml`) |
 | `DESPLIEGUE-CLOUDFLARE.md` | Cómo corre en Cloudflare (Containers, Postgres, R2), por qué no en Pages y el día a día del despliegue |
 | `..\Cloudin-para-restaurantes.md` | Qué problema resuelve el producto (material de venta; describe módulos que ya se quitaron) |
 | `..\cloudin-arquitectura.md` | Plan original por fases |
@@ -220,6 +221,7 @@ Las piezas que lo sostienen, en `apps/tenants/`:
 | `config/entorno.py` | Lee `DATABASE_URL` (Postgres) para la base de control y las de restaurante |
 | `Dockerfile`, `.dockerignore` | La imagen del servidor (Django + gunicorn) |
 | `wrangler.jsonc`, `cloudflare/worker.js`, `package.json` | Cloudflare: el Worker que pasa las visitas al contenedor. Guía: `DESPLIEGUE-CLOUDFLARE.md` |
+| `render.yaml` | Render, plan gratis: el web service con el `Dockerfile`, las variables y las llaves que genera Render. Guía: `DESPLIEGUE-GRATIS.md` |
 | `static/cloudin-menu.v1.js` | Runtime de los menús digitales (se genera desde `static/src/` con `build_runtime`) |
 | `client/example/` | Menú digital de ejemplo: `index.html` (plantillas del runtime) y `carrito.js` (pedido a la mesa) |
 | `tests/`, `conftest.py` | La suite de pytest (§7) |
@@ -263,6 +265,7 @@ Las piezas que lo sostienen, en `apps/tenants/`:
 | `waiters` | `models.py` | `Mesero` (clave en hash + copia Fernet `clave_cifrada`) |
 | `waiters` | `views.py` | La app de la tablet: login propio, `api_mesas`, `api_menu`, `api_pedido` |
 | `tenants` | `models.py` → `AceptacionLegal` | Constancia de que un usuario aceptó términos y privacidad (por versión) |
+| `archivos` | `almacen.py`, `views.py` | Con `FOTOS_EN_LA_BASE=1` (plan gratis sin R2), las fotos subidas se guardan en la base de control (`Archivo`) y se sirven en `/media/` con caché de un año. Es app compartida (`SHARED_APPS`) |
 
 ### 4.4 `apps/api` — la API REST (`/api/v1/`)
 
@@ -536,8 +539,12 @@ reales del restaurante del dueño.
 - **`DATABASE_URL` en la terminal apunta a producción.** Si existe, Django deja
   SQLite y usa ese Postgres (base de control y restaurantes). Úsala solo a
   propósito para correr un comando en el servidor, y cierra la terminal después.
-- **El disco del servidor se borra** cada vez que el contenedor se duerme: nada
-  que deba durar se guarda en archivos locales (fotos → R2, datos → Postgres).
+- **El disco del servidor se borra** cada vez que el contenedor se duerme (en Render
+  y en Cloudflare): nada que deba durar se guarda en archivos locales. Datos →
+  Postgres; fotos → R2, o la base con `FOTOS_EN_LA_BASE=1` (plan gratis).
+- **La IP del cliente sale de `ip_de`** (`apps/panel/seguridad.py`): primero
+  `CF-Connecting-IP`, que el cliente no puede falsear. No leas `X-Forwarded-For` a
+  mano: Render solo le agrega al final, y la primera la puede escribir cualquiera.
 - **La caché de Django vive en la memoria del único contenedor** (topes de login y
   de pedidos, llaves anti-duplicado del mesero, carta pública armada). No subas
   `max_instances` ni los `--workers` de gunicorn sin mover antes esa caché a algo
@@ -566,10 +573,11 @@ montaje para Cloudflare Containers.
 **Lo que falta, en orden de importancia:**
 
 1. **Desplegar el panel en un servidor público.** Cloudflare Pages no sirve para
-   Django; el código ya quedó listo para **Cloudflare Containers** (Worker +
-   contenedor, Postgres por restaurante con `DATABASE_URL`, fotos en R2, WhiteNoise,
-   `preparar_servidor` al arrancar). Falta crear las cuentas y cargar los secretos:
-   `DESPLIEGUE-CLOUDFLARE.md`.
+   Django. El código quedó listo para dos servidores con el mismo `Dockerfile`:
+   **Render gratis** (`render.yaml`, fotos en la base: `DESPLIEGUE-GRATIS.md`), que es
+   el camino mientras no haya presupuesto, y **Cloudflare Containers** con el plan pago
+   (Worker + contenedor, fotos en R2: `DESPLIEGUE-CLOUDFLARE.md`). Falta crear las
+   cuentas y cargar los secretos.
 2. **El primer menú digital en Cloudflare Pages** con pedidos por QR:
    `GUIA-MENU-DIGITAL.md`.
 3. **Actualizar los textos legales** (todavía describen los módulos retirados) con

@@ -49,6 +49,8 @@ generan sus credenciales.
 - `api` — endpoints REST: menú digital (QR), sitio del restaurante y panel.
 - `waiters` — Cloudin Meseros: cuentas de mesero y la app de la tablet (`/mesero/<slug>/`).
 - `panel` — pantallas del restaurante (menú, mesas, mensajes, cocina, tirillas).
+- `archivos` — fotos guardadas en la base de datos, para el plan gratis sin R2
+  (`FOTOS_EN_LA_BASE`).
 - `billing`, `staffing`, `shifts`, `inventory`, `reservas`, `control` — **retiradas**:
   solo quedan sus migraciones (ver «Módulos retirados»).
 
@@ -285,11 +287,17 @@ necesitará un agente en la red local del restaurante.
 
 ## Pasar a producción
 
-Montado para **Cloudflare Containers** (Pages no ejecuta Django): un Worker
-(`cloudflare/worker.js`) delante de un contenedor con Django + gunicorn
-(`Dockerfile`), la base de control y las de cada restaurante en Postgres
-(`DATABASE_URL`) y las fotos en Cloudflare R2. Cada push a `main` se despliega solo.
-Pasos, secretos y complicaciones: **[DESPLIEGUE-CLOUDFLARE.md](DESPLIEGUE-CLOUDFLARE.md)**.
+Pages no ejecuta Django: Cloudin corre en un contenedor Docker (`Dockerfile`, Django +
+gunicorn) con la base de control y las de cada restaurante en Postgres (`DATABASE_URL`,
+Neon). Dos formas, con el mismo `Dockerfile`; en las dos cada push a `main` se
+despliega solo:
+
+- **Gratis, sin tarjeta: Render + Neon** (`render.yaml`). Se duerme tras 15 minutos
+  sin visitas y las fotos se guardan en la base (`FOTOS_EN_LA_BASE`, `apps/archivos`).
+  Paso a paso: **[DESPLIEGUE-GRATIS.md](DESPLIEGUE-GRATIS.md)**.
+- **Cloudflare Containers** (Workers Paid, 5 USD/mes): un Worker
+  (`cloudflare/worker.js`) delante del contenedor y las fotos en Cloudflare R2. Pasos,
+  secretos y complicaciones: **[DESPLIEGUE-CLOUDFLARE.md](DESPLIEGUE-CLOUDFLARE.md)**.
 
 - Con `DATABASE_URL` de Postgres, `TENANT_DB_ENGINE` pasa a `postgres` y
   `TENANT_PG_*` salen de esa misma URL; `provision_tenant` hace el
@@ -314,9 +322,9 @@ dependencias de migración que apuntan a ellas). Mientras tanto, no les agregues
 
 ## Lo que sigue
 
-- **Desplegar el panel en un host público.** El código ya está listo para
-  Cloudflare Containers; faltan la cuenta (Workers Paid, Neon, R2) y los secretos:
-  ver DESPLIEGUE-CLOUDFLARE.md.
+- **Desplegar el panel en un host público.** El código ya está listo: gratis en
+  Render + Neon (DESPLIEGUE-GRATIS.md) o en Cloudflare Containers con el plan pago
+  (DESPLIEGUE-CLOUDFLARE.md). Faltan las cuentas y los secretos.
 - **El primer menú digital en Cloudflare Pages** con pedidos por QR, siguiendo
   GUIA-MENU-DIGITAL.md.
 - **Pausar pedidos**: un interruptor para que el menú deje de recibir pedidos fuera de

@@ -2,6 +2,10 @@
 
 > Escrito el 26 de septiembre de 2026. Qué se puede y qué no se puede poner en
 > Cloudflare, cómo quedó montado y los pasos para verlo funcionando.
+>
+> **¿Sin presupuesto?** Cloudflare Containers exige el plan Workers Paid. La opción
+> gratis y sin tarjeta (Render + Neon, con el mismo `Dockerfile`) está en
+> **`DESPLIEGUE-GRATIS.md`**.
 
 ## 1. La respuesta corta
 

@@ -1,5 +1,6 @@
-# Imagen de Cloudin: Django + gunicorn. La usa Cloudflare Containers (wrangler.jsonc)
-# y sirve igual en cualquier servidor con Docker. Guía: DESPLIEGUE-CLOUDFLARE.md
+# Imagen de Cloudin: Django + gunicorn. La usan Render (render.yaml, plan gratis:
+# DESPLIEGUE-GRATIS.md) y Cloudflare Containers (wrangler.jsonc: DESPLIEGUE-CLOUDFLARE.md),
+# y sirve igual en cualquier servidor con Docker.
 FROM python:3.12-slim
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
@@ -30,4 +31,5 @@ EXPOSE 8000
 
 # Al arrancar: migraciones (control y restaurantes) y superusuario inicial; luego
 # gunicorn. Un proceso con hilos: la caché de Django vive en su memoria y debe ser una.
-CMD ["sh", "-c", "python manage.py preparar_servidor && exec gunicorn config.wsgi --bind 0.0.0.0:8000 --workers 1 --threads 8 --timeout 120 --forwarded-allow-ips='*' --access-logfile - --error-logfile -"]
+# El puerto: el que diga PORT (Render pone 10000) o 8000 (Cloudflare no lo define).
+CMD ["sh", "-c", "python manage.py preparar_servidor && exec gunicorn config.wsgi --bind 0.0.0.0:${PORT:-8000} --workers 1 --threads 8 --timeout 120 --forwarded-allow-ips='*' --access-logfile - --error-logfile -"]

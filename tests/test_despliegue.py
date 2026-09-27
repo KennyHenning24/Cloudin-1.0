@@ -52,3 +52,30 @@ def test_base_de_restaurante_en_postgres_lleva_ssl(settings):
     # Cada restaurante recibe su propia copia: cambiarla no toca la configuración global.
     cfg["OPTIONS"]["sslmode"] = "disable"
     assert settings.TENANT_PG["OPTIONS"]["sslmode"] == "require"
+
+
+def test_ip_del_cliente_detras_de_cloudflare_y_render():
+    """Los topes por IP (pedidos, logins) no se esquivan inventando X-Forwarded-For."""
+    from django.test import RequestFactory
+
+    from apps.panel.seguridad import ip_de
+
+    rf = RequestFactory()
+    # Render solo agrega a X-Forwarded-For: la primera la puede escribir el cliente.
+    # Cloudflare pone CF-Connecting-IP con la IP real y esa es la que vale.
+    falsa = rf.get("/", HTTP_X_FORWARDED_FOR="1.2.3.4, 181.50.60.70", HTTP_CF_CONNECTING_IP="181.50.60.70")
+    assert ip_de(falsa) == "181.50.60.70"
+    # El Worker de Cloudflare Containers reescribe X-Forwarded-For con la IP real.
+    assert ip_de(rf.get("/", HTTP_X_FORWARDED_FOR="181.50.60.70")) == "181.50.60.70"
+    # Sin proxy (en local): la del socket.
+    assert ip_de(rf.get("/", REMOTE_ADDR="127.0.0.1")) == "127.0.0.1"
+
+
+def test_el_contenedor_escucha_en_el_puerto_que_pide_el_servidor():
+    """Render asigna el puerto en PORT (10000); Cloudflare no lo define y usa 8000."""
+    from pathlib import Path
+
+    from django.conf import settings
+
+    dockerfile = (Path(settings.BASE_DIR) / "Dockerfile").read_text()
+    assert "--bind 0.0.0.0:${PORT:-8000}" in dockerfile
