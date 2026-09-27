@@ -22,9 +22,21 @@ services:
         value: "60"
       - key: DJANGO_LOG_LEVEL
         value: INFO
-      # El disco de Render gratis se borra al dormirse: las fotos van a la base (Neon).
+      # Fotos: el disco de Render gratis se borra al dormirse. Con las R2_* llenas van a
+      # Cloudflare R2 (capa gratis de 10 GB); si quedan vacías, a la base (Neon).
       - key: FOTOS_EN_LA_BASE
         value: "1"
+      - key: R2_BUCKET
+        sync: false
+      - key: R2_ACCOUNT_ID
+        sync: false
+      - key: R2_ACCESS_KEY_ID
+        sync: false
+      - key: R2_SECRET_ACCESS_KEY
+        sync: false
+      # La dirección pública del bucket (Public Development URL): https://pub-….r2.dev
+      - key: R2_PUBLIC_DOMAIN
+        sync: false
       - key: SECRET_KEY
         generateValue: true
       # Cifra las contraseñas que el panel maestro puede mostrar. No la cambies después:

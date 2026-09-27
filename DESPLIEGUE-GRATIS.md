@@ -1,17 +1,19 @@
-# Cloudin gratis en internet: Render + Neon
+# Cloudin en internet sin pagar: Render + Neon + R2
 
-> Para ver Cloudin funcionando en un servidor **sin pagar y sin tarjeta**. Usa el
-> mismo `Dockerfile` que la opción de Cloudflare (`DESPLIEGUE-CLOUDFLARE.md`), así que
-> cuando haya presupuesto se cambia de servidor sin tocar el código.
+> Para ver Cloudin funcionando en un servidor **sin pagar**. Render y Neon no piden
+> tarjeta; R2 (las fotos) pide una tarjeta registrada pero cobra **$0** dentro de su capa
+> gratis. Usa el mismo `Dockerfile` que la opción de Cloudflare
+> (`DESPLIEGUE-CLOUDFLARE.md`), así que cuando haya presupuesto se cambia de servidor sin
+> tocar el código.
 
 ## 1. Cómo queda
 
 ```
  navegador ──► Render (web service gratis, Docker): Django + gunicorn
                   │   (render.yaml en la raíz del repositorio)
-                  ▼
-            Neon (Postgres gratis, AWS us-east-1)
-            cloudin_control + una base cloudin_<slug> por restaurante + las fotos
+                  ├──► Neon (Postgres gratis, AWS us-east-1):
+                  │       cloudin_control + una base cloudin_<slug> por restaurante
+                  └──► Cloudflare R2 (capa gratis): las fotos, bucket cloudin-fotos
 
  menús digitales ──► Cloudflare Pages (gratis) ──► leen la carta y mandan pedidos a Render
 ```
@@ -20,19 +22,18 @@
 |---|---|---|
 | **Render** (web service) | 512 MB de RAM, 750 horas al mes, **sin tarjeta**. Se duerme tras 15 minutos sin visitas y tarda cerca de un minuto en despertar | La primera visita después de un rato tarda. Para probar y mostrar sirve; para atender un restaurante de verdad conviene un plan pago (sección 6) |
 | **Neon** (Postgres) | 0,5 GB por proyecto, 100 horas de cómputo al mes; se duerme a los 5 minutos | Alcanza para probar y para varios restaurantes pequeños. No vence (el Postgres gratis de Render sí: 30 días) |
+| **Cloudflare R2** (fotos) | 10 GB, 1 millón de escrituras y 10 millones de lecturas al mes; descargas gratis. Pide tarjeta para activarse | Las fotos que se suben al panel. Llegan convertidas a WebP de pocos cientos de KB: en 10 GB caben decenas de miles |
 | **Cloudflare Pages** | Gratis | Los menús digitales de cada cliente (`GUIA-MENU-DIGITAL.md`) |
 
-**Las fotos.** El disco de Render se borra cada vez que el servicio se duerme o se
-despliega, y R2 (las fotos en Cloudflare) pide tarjeta. Por eso aquí las fotos que se
-suben al panel se guardan **en la base de Neon** (`FOTOS_EN_LA_BASE=1`, `apps/archivos`)
-y Cloudin las sirve en `/media/`. Llegan convertidas a WebP de pocos cientos de KB: en
-0,5 GB caben miles.
+**Por qué R2 para las fotos:** el disco de Render se borra cada vez que el servicio se
+duerme o se despliega; una foto guardada ahí desaparecería. **Si no usas R2** (dejas
+vacías las variables `R2_*`), las fotos se guardan en la base de Neon
+(`FOTOS_EN_LA_BASE=1`, `apps/archivos`) y cuentan en sus 0,5 GB.
 
 ## 2. Antes de empezar
 
-1. **Fusiona el PR** del repositorio en `main`. En GitHub, abre el PR →
-   baja hasta el final → **Merge pull request** → **Confirm merge**. Render despliega
-   la rama `main`.
+1. **Fusiona el PR** del repositorio en `main`. En GitHub, abre el PR → baja hasta el
+   final → **Merge pull request** → **Confirm merge**. Render despliega la rama `main`.
 2. Ten a mano tu cuenta de GitHub: Render y Neon se abren con ella.
 
 ## 3. Paso a paso
@@ -40,37 +41,59 @@ y Cloudin las sirve en `/media/`. Llegan convertidas a WebP de pocos cientos de 
 ### 3.1 La base de datos (Neon)
 
 1. Entra a **neon.tech** con tu cuenta de GitHub o Google.
-2. Crea un proyecto: nombre `cloudin`, región **AWS US East 1 (N. Virginia)** (queda
-   junto a Render en Virginia).
+2. Crea un proyecto: nombre `cloudin`, región **AWS US East 1 (N. Virginia)**.
 3. Abre el proyecto: en su **Project Dashboard**, el botón **Connect** está arriba a la
    derecha. Deja la rama, la base (`neondb`) y el rol que trae, **apaga *Connection
-   pooling*** y copia la dirección. Empieza con `postgresql://…` y trae la contraseña:
-   no la compartas. Si en el servidor aparece `-pooler`, bórrale ese `-pooler`.
+   pooling*** y copia la dirección (`postgresql://…`). Trae la contraseña: no la
+   compartas. Si en el servidor aparece `-pooler`, bórrale ese `-pooler`.
 
-### 3.2 El servidor (Render)
+### 3.2 Las fotos (Cloudflare R2)
+
+R2 ya está activado en tu cuenta y el bucket **`cloudin-fotos`** ya está creado (en
+Norteamérica Este, cerca de Render y Neon). Falta:
+
+1. **Dirección pública.** Cloudflare → **R2** → `cloudin-fotos` → **Settings** →
+   **Public Development URL** → **Enable** → escribe `allow` → **Allow**. Copia la
+   dirección que aparece (`https://pub-….r2.dev`): es `R2_PUBLIC_DOMAIN`.
+2. **Llaves.** En la página principal de **R2**, en **Account Details**, **Manage** junto
+   a **API Tokens** → **Create Account API token** → permiso **Object Read & Write** →
+   solo el bucket `cloudin-fotos` → crear. Copia **Access Key ID** (`R2_ACCESS_KEY_ID`) y
+   **Secret Access Key** (`R2_SECRET_ACCESS_KEY`). La secreta se muestra una sola vez: si
+   se pierde, se crea otro token.
+3. En esa misma sección **Account Details** está el **Account ID** (`R2_ACCOUNT_ID`).
+
+### 3.3 El servidor (Render)
 
 1. Entra a **render.com** → **Get Started** y regístrate con GitHub (no pide tarjeta).
 2. En el panel de Render: **New** → **Blueprint**. Conecta tu GitHub si lo pide y elige
    el repositorio `KennyHenning24/Cloudin-1.0`.
 3. Render lee `render.yaml` y muestra el servicio **cloudin** (Docker, plan *Free*,
-   región Virginia). Te pide solo tres valores:
+   región Virginia). Te pide estos valores:
 
    | Variable | Qué poner |
    |---|---|
-   | `DATABASE_URL` | La dirección de Neon del paso 3.1 |
+   | `DATABASE_URL` | La dirección de Neon (3.1) |
    | `DJANGO_SUPERUSER_USERNAME` | Tu usuario del panel maestro, p. ej. `juan` |
    | `DJANGO_SUPERUSER_PASSWORD` | Una contraseña nueva y larga (no la vieja del `.rar`) |
+   | `R2_BUCKET` | `cloudin-fotos` |
+   | `R2_ACCOUNT_ID` | El Account ID (3.2) |
+   | `R2_ACCESS_KEY_ID` | El Access Key ID (3.2) |
+   | `R2_SECRET_ACCESS_KEY` | El Secret Access Key (3.2) |
+   | `R2_PUBLIC_DOMAIN` | La dirección `https://pub-….r2.dev` (3.2) |
 
    `SECRET_KEY` y `CREDENTIAL_KEY` las genera Render solo. Lo demás ya viene en
-   `render.yaml`.
+   `render.yaml`. Si el servicio ya existía sin las `R2_*` (se creó con una versión
+   anterior de `render.yaml`), agrégalas a mano: servicio → **Environment** → agregar
+   cada variable → guardar. Render lo reinicia y desde ahí las fotos van a R2.
 4. **Deploy Blueprint** (o **Apply**). La primera vez construye la imagen: tarda varios
    minutos. En el servicio → **Logs** vas viendo el avance; cuando aparece
-   `Servidor listo.` y después `Listening at`, ya está arriba.
+   `Servidor listo.` y después `Listening at`, ya está arriba. Si falta una llave de R2,
+   el registro lo dice (`Con R2_BUCKET hacen falta…`).
 5. La dirección sale arriba en la página del servicio: algo como
    `https://cloudin.onrender.com` (si ese nombre está tomado, Render le agrega letras:
    `https://cloudin-abcd.onrender.com`).
 
-### 3.3 Apagar el Worker de Cloudflare
+### 3.4 Apagar el Worker de Cloudflare
 
 Sin el plan pago de Cloudflare el Worker `cloudin-1-0` no puede correr contenedores, y
 seguiría intentando compilar en cada cambio de `main` (con avisos de error). En Cloudflare
@@ -78,14 +101,15 @@ seguiría intentando compilar en cada cambio de `main` (con avisos de error). En
 repositorio, o borra el Worker. Los archivos de Cloudflare del repositorio se quedan
 para cuando haya presupuesto.
 
-### 3.4 Entrar y crear el primer restaurante
+### 3.5 Entrar y crear el primer restaurante
 
 1. Abre `https://<tu-servicio>.onrender.com/master/` y entra con el superusuario. Si el
    servicio estaba dormido, la primera carga tarda un minuto.
 2. **Nuevo restaurante**, con el plan **«Cloudin completo»** si va a recibir pedidos. El
    panel maestro muestra una sola vez el usuario y la contraseña del restaurante.
 3. Entra a `https://<tu-servicio>.onrender.com/panel/login/` con esos datos: **Códigos
-   QR** para crear las mesas y **Mi menú** para la carta y las fotos.
+   QR** para crear las mesas y **Mi menú** para la carta y las fotos. Al subir una foto,
+   su dirección empieza con `https://pub-….r2.dev/`: así sabes que quedó en R2.
 4. El menú digital del cliente, en Cloudflare Pages, apunta a esta dirección:
    `GUIA-MENU-DIGITAL.md`, sección 4.
 
@@ -102,8 +126,8 @@ para cuando haya presupuesto.
   maestro quedarían ilegibles.
 - **Correr un comando de `manage.py`:** Render gratis no trae consola. Se corre desde tu
   PC apuntando a Neon, igual que en `DESPLIEGUE-CLOUDFLARE.md` §5: `DATABASE_URL` la de
-  Neon y `CREDENTIAL_KEY` la misma del servidor (se copia en **Environment**). Para que
-  las fotos que suba el comando lleguen a la base, agrega `FOTOS_EN_LA_BASE=1`.
+  Neon, `CREDENTIAL_KEY` la misma del servidor (se copia en **Environment**) y las `R2_*`
+  si el comando sube fotos.
 
 ## 5. Lo que hay que saber del plan gratis
 
@@ -111,10 +135,13 @@ para cuando haya presupuesto.
   (más el despertar de Neon). El menú digital igual se ve, porque vive en Pages y trae
   la carta pre-cargada, pero un pedido o el panel esperan a que despierte.
 - **750 horas al mes** por cuenta de Render: con un solo servicio no se acaban.
-- **Las fotos cuentan en los 0,5 GB de Neon.** Si algún día no alcanza, el paso natural
-  es R2 (`DESPLIEGUE-CLOUDFLARE.md` §4.3). Ojo: con R2 configurado Cloudin deja de leer
-  fotos de la base, así que las que ya estaban hay que volver a subirlas o copiarlas al
-  bucket (hoy no hay un comando para eso).
+- **La dirección `r2.dev` es de desarrollo.** Cloudflare le pone un tope de velocidad y
+  la recomienda solo para pruebas. Cuando haya un dominio propio en Cloudflare, se
+  conecta al bucket (**Settings** → **Custom Domains**) y se cambia `R2_PUBLIC_DOMAIN`.
+  Las fotos no se mueven: siguen en el mismo bucket.
+- **Sin R2** (variables `R2_*` vacías), las fotos van a la base de Neon. Si después se
+  configura R2, Cloudin deja de leer las fotos de la base: las que ya estaban hay que
+  volver a subirlas (hoy no hay un comando para moverlas).
 - **La IP de cada cliente** (para los topes de pedidos y de intentos de login) se toma
   de `CF-Connecting-IP`, que Render recibe de Cloudflare. Si Render dejara de mandarla,
   un cliente podría esquivar esos topes inventando `X-Forwarded-For`
@@ -127,4 +154,5 @@ para cuando haya presupuesto.
 - **Quedarse en Render** con una instancia paga: no se duerme. Cambia el plan del
   servicio en Render; no hay que tocar el código.
 - **Pasarse a Cloudflare Containers** (Workers Paid): `DESPLIEGUE-CLOUDFLARE.md`. La
-  misma base de Neon sirve: solo cambia dónde corre el contenedor. Para las fotos, R2.
+  misma base de Neon y el mismo bucket de R2 sirven: solo cambia dónde corre el
+  contenedor.

@@ -210,13 +210,16 @@ completo Worker → contenedor → Django funciona (redirecciones, login con CSR
    base `cloudin_<slug>` por restaurante.
 
 ### 4.3 Fotos (R2)
-1. Dashboard de Cloudflare → **R2** → activar R2.
-2. **Create bucket** → `cloudin-fotos`.
-3. En el bucket → **Settings → Public access → R2.dev subdomain → Allow**. Copiar
-   el dominio `pub-….r2.dev` (sin `https://`): es `R2_PUBLIC_DOMAIN`.
-4. R2 → **Manage API tokens → Create API token** → permiso *Object Read & Write*
-   solo para `cloudin-fotos`. Da `R2_ACCESS_KEY_ID` y `R2_SECRET_ACCESS_KEY`.
-   `R2_ACCOUNT_ID` es el ID de la cuenta (aparece en la misma página).
+1. Dashboard de Cloudflare → **R2** → activar R2 (pide tarjeta; la capa gratis cobra $0).
+2. **Create bucket** → `cloudin-fotos` (ya está creado en tu cuenta).
+3. En el bucket → **Settings → Public Development URL → Enable** → escribir `allow` →
+   **Allow**. Copiar la dirección `https://pub-….r2.dev`: es `R2_PUBLIC_DOMAIN` (con o
+   sin `https://`, Cloudin la limpia). Es una dirección de desarrollo, con tope de
+   velocidad: con dominio propio, se conecta en **Settings → Custom Domains**.
+4. R2 → en **Account Details**, **Manage** junto a **API Tokens** → **Create Account API
+   token** → permiso *Object Read & Write* solo para `cloudin-fotos`. Da
+   `R2_ACCESS_KEY_ID` y `R2_SECRET_ACCESS_KEY` (la secreta se ve una sola vez).
+   `R2_ACCOUNT_ID` es el **Account ID** de esa misma sección.
 
 ### 4.4 El Worker con el contenedor
 1. Cambiar la cuenta a **Workers Paid** (Workers & Pages → Plans).

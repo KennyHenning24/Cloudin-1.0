@@ -292,8 +292,9 @@ gunicorn) con la base de control y las de cada restaurante en Postgres (`DATABAS
 Neon). Dos formas, con el mismo `Dockerfile`; en las dos cada push a `main` se
 despliega solo:
 
-- **Gratis, sin tarjeta: Render + Neon** (`render.yaml`). Se duerme tras 15 minutos
-  sin visitas y las fotos se guardan en la base (`FOTOS_EN_LA_BASE`, `apps/archivos`).
+- **Sin pagar: Render + Neon + R2** (`render.yaml`). Se duerme tras 15 minutos sin
+  visitas. Las fotos van a Cloudflare R2 (capa gratis; pide tarjeta, cobra $0); sin R2
+  se guardan en la base (`FOTOS_EN_LA_BASE`, `apps/archivos`).
   Paso a paso: **[DESPLIEGUE-GRATIS.md](DESPLIEGUE-GRATIS.md)**.
 - **Cloudflare Containers** (Workers Paid, 5 USD/mes): un Worker
   (`cloudflare/worker.js`) delante del contenedor y las fotos en Cloudflare R2. Pasos,
