@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Antes de empezar — Cloudin{% endblock %}
+{% block head %}
+<style>
+  .acepta{min-height:100vh;display:grid;place-items:center;padding:24px;
+    background:radial-gradient(900px 500px at 10% -10%,var(--brand-soft),transparent 60%),
+               radial-gradient(700px 500px at 110% 110%,var(--lavanda-bg),transparent 60%),var(--bg)}
+  .acepta .caja{width:min(560px,100%);background:var(--surface);border:1px solid var(--line);border-radius:var(--r-xl);
+    padding:clamp(24px,5vw,40px);box-shadow:var(--shadow-lg);animation:pop .5s var(--ease-rebote)}
+  .acepta .logo{display:flex;align-items:center;gap:10px;margin-bottom:22px}
+  .acepta .logo img.mark{width:34px}
+  .acepta .logo img.marca-texto{height:20px}
+  .acepta h1{font-size:26px;font-weight:800;letter-spacing:-.02em;line-height:1.2}
+  .acepta .intro{color:var(--text-2);margin:10px 0 22px;font-size:15.5px}
+  .puntos{display:grid;gap:12px;margin-bottom:22px}
+  .punto-l{display:flex;gap:12px;align-items:flex-start}
+  .punto-l p{font-size:14.5px;color:var(--text-2)}
+  .punto-l strong{color:var(--text);display:block;font-size:15px}
+  .casilla{display:flex;gap:12px;align-items:flex-start;padding:14px 16px;border:1.5px solid var(--line);border-radius:16px;
+    cursor:pointer;margin-bottom:10px;transition:border-color .2s,background .2s}
+  .casilla:hover{border-color:var(--brand-line)}
+  .casilla:has(input:checked){border-color:var(--brand);background:var(--brand-soft)}
+  .casilla input{width:22px;height:22px;margin-top:1px;flex:none}
+  .casilla span{font-size:14.5px;color:var(--text)}
+  .casilla a{color:var(--brand);font-weight:700}
+  .acciones-l{display:flex;gap:10px;margin-top:18px;flex-wrap:wrap}
+  .acciones-l .btn{flex:1}
+  .error-l{color:var(--danger);font-weight:600;font-size:14px;margin-top:8px}
+</style>
+{% endblock %}
+{% block layout %}
+<main class="acepta">
+  <form class="caja" method="post">
+    {% csrf_token %}
+    <input type="hidden" name="next" value="{{ next }}">
+    <div class="logo">
+      <img class="mark" src="{% static 'img/cloudin-marca.png' %}" alt="">
+      <img class="marca-texto wm-oscuro" src="{% static 'img/cloudin-texto.png' %}" alt="Cloudin"><img class="marca-texto wm-claro" src="{% static 'img/cloudin-texto-claro.png' %}" alt="" aria-hidden="true">
+    </div>
+    <h1>Hola, {{ user.first_name|default:user.username }}. Antes de empezar…</h1>
+    <p class="intro">Lee y acepta los términos de uso y la política de privacidad. Solo te lo pedimos esta vez.</p>
+
+    <div class="puntos">
+      <div class="punto-l"><span class="chip-ico sm menta"><svg class="ico" viewBox="0 0 24 24"><path d="M12 3l8 3v6c0 4.5-3.4 8.2-8 9-4.6-.8-8-4.5-8-9V6z"/></svg></span>
+        <p><strong>Tus datos son tuyos</strong>Cada restaurante tiene su propia base de datos y nadie más la ve.</p></div>
+      <div class="punto-l"><span class="chip-ico sm cielo"><svg class="ico" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></span>
+        <p><strong>Protegidos</strong>Contraseñas cifradas y sin cookies de publicidad.</p></div>
+      <div class="punto-l"><span class="chip-ico sm lavanda"><svg class="ico" viewBox="0 0 24 24"><path d="M6 2h9l5 5v13a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z"/><path d="M14 2v6h6"/></svg></span>
+        <p><strong>Tus obligaciones</strong>Tú respondes por lo que registras y por tus facturas ante la DIAN.</p></div>
+    </div>
+
+    <label class="casilla"><input type="checkbox" name="terminos" value="1" required>
+      <span>Leí y acepto los <a href="{% url 'legal-terminos' %}" target="_blank" rel="noopener">términos y condiciones</a> de Cloudin.</span></label>
+    <label class="casilla"><input type="checkbox" name="privacidad" value="1" required>
+      <span>Leí y acepto la <a href="{% url 'legal-privacidad' %}" target="_blank" rel="noopener">política de privacidad y tratamiento de datos</a>.</span></label>
+    {% if error %}<p class="error-l">{{ error }}</p>{% endif %}
+
+    <div class="acciones-l">
+      <button class="btn ghost lg" type="submit" name="accion" value="rechazar" formnovalidate>No acepto</button>
+      <button class="btn lg" type="submit" name="accion" value="aceptar">Acepto y continúo</button>
+    </div>
+    <p class="dim small" style="margin-top:14px">Versión {{ legal.version }}. Si no aceptas, se cierra la sesión y no podrás usar la plataforma.</p>
+  </form>
+</main>
+{% endblock %}

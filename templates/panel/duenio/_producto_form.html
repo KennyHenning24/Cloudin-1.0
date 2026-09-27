@@ -1,0 +1,150 @@
+{% load cloudin %}{# Editor de producto. Se usa en su propia página y, en la tablet, dentro del cajón lateral de Mi menú (?fragmento=1). #}
+<div class="editor-raiz" data-editor-raiz data-cajon="{{ fragmento|yesno:'1,0' }}">
+{{ config|json_script:"editor-config" }}
+<form class="editor-producto" data-editor-producto novalidate autocomplete="off">
+  {% if fragmento %}
+  <div class="cajon-cab">
+    <h2>{% if p %}Editar producto{% else %}Nuevo producto{% endif %}</h2>
+    <button type="button" class="btn secundario sm" data-abrir-vista>{% icono "ojo" %}Vista previa</button>
+    <button type="button" class="btn fantasma icono sm" data-cerrar aria-label="Cerrar el editor">{% icono "x" %}</button>
+  </div>
+  {% endif %}
+  <div class="editor-cuerpo">
+    <div class="editor-form">
+      <section class="card editor-basico" aria-labelledby="t-basico">
+        <h2 class="h-card" id="t-basico">Lo básico</h2>
+        <div class="basico-grid">
+          <div class="basico-foto">
+            {% include "components/subir_foto.html" with foto=p.foto proporcion=1 lado=1200 titulo="Toma o elige una foto" %}
+            <button type="button" class="btn fantasma sm texto-peligro" data-quitar-foto{% if not p.foto %} hidden{% endif %}>{% icono "papelera" %}Quitar foto</button>
+          </div>
+          <div class="basico-campos">
+            <div class="campo">
+              <label for="e-nombre">Nombre <span aria-hidden="true">*</span></label>
+              <input id="e-nombre" name="name" value="{{ p.name|default:'' }}" maxlength="120" required placeholder="Ej. Hamburguesa clásica" aria-describedby="e-nombre-error">
+              <div class="error" id="e-nombre-error" hidden>{% icono "alerta" "ico sm" %}<span>Escribe el nombre del producto.</span></div>
+            </div>
+            <div class="form-row">
+              <div class="campo precio">
+                <label for="e-precio">Precio</label>
+                <input id="e-precio" name="price" type="text" data-precio value="{% if p.price is not None %}{{ p.price|floatformat:0 }}{% endif %}" placeholder="$ 0" aria-describedby="e-precio-ayuda">
+                <div class="ayuda" id="e-precio-ayuda">Sin precio, el producto se muestra como no disponible.</div>
+              </div>
+              <div class="campo">
+                <label for="e-categoria">Categoría</label>
+                <select id="e-categoria" name="category">
+                  {% regroup categorias by menu as por_menu %}
+                  {% for grupo in por_menu %}<optgroup label="{{ grupo.grouper.name }}">{% for c in grupo.list %}<option value="{{ c.uuid }}"{% if c.pk == categoria.pk %} selected{% endif %}>{{ c.name }}</option>{% endfor %}</optgroup>{% endfor %}
+                </select>
+              </div>
+            </div>
+            {% with largo=p.description|default:''|length %}
+            <div class="campo">
+              <label for="e-descripcion">Descripción <span class="contador" data-contador-de="e-descripcion">{{ largo }}/{% if largo > 140 %}{{ largo }}{% else %}140{% endif %}</span></label>
+              <textarea id="e-descripcion" name="description" rows="3" maxlength="{% if largo > 140 %}{{ largo }}{% else %}140{% endif %}" placeholder="Ingredientes o cómo se sirve. Corto: se lee en el celular.">{{ p.description|default:'' }}</textarea>
+            </div>
+            {% endwith %}
+            <div class="interruptores">
+              <label class="switch disponible"><input type="checkbox" role="switch" name="is_available"{% if not p or p.is_available %} checked{% endif %}><span>Disponible</span></label>
+              <label class="switch"><input type="checkbox" role="switch" name="is_featured"{% if p.is_featured %} checked{% endif %}><span>Destacar en el menú</span></label>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <details class="card avanzadas"{% if p.variants.all or p.modifier_links.all %} open{% endif %}>
+        <summary>
+          <span><strong>Opciones avanzadas</strong><span class="dim small">Tamaños, adiciones, etiquetas, impuesto, código y tiempo de preparación</span></span>
+          {% icono "abajo" "ico chevron" %}
+        </summary>
+        <div class="avanzadas-grid">
+          <section aria-labelledby="t-tamanos">
+            <h3 id="t-tamanos">Tamaños o presentaciones</h3>
+            <p class="dim small">Cada uno con su propio precio. En el menú sale «Desde» el más barato.</p>
+            <div class="campo" style="margin-top:8px">
+              <label for="e-base">Nombre de la presentación base <span class="dim">(opcional)</span></label>
+              <input id="e-base" name="base_label" value="{{ p.base_label|default:'' }}" maxlength="40" placeholder="Ej. Personal">
+            </div>
+            <div class="lista-variantes" data-variantes></div>
+            <button type="button" class="btn fantasma sm" data-agregar-variante>{% icono "mas" %}Agregar tamaño</button>
+          </section>
+
+          <section aria-labelledby="t-adiciones">
+            <h3 id="t-adiciones">Adiciones</h3>
+            <p class="dim small">Grupos que el cliente elige: salsas, término de la carne, extras…</p>
+            <ul class="lista-grupos" data-grupos></ul>
+            <div class="agregar-grupo">
+              <label class="sr-only" for="e-grupo">Usar un grupo existente</label>
+              <select id="e-grupo" data-elegir-grupo><option value="">Usar un grupo existente…</option></select>
+              <button type="button" class="btn secundario sm" data-crear-grupo>{% icono "mas" %}Crear grupo</button>
+            </div>
+          </section>
+
+          <section aria-labelledby="t-etiquetas">
+            <h3 id="t-etiquetas">Etiquetas</h3>
+            <div class="etiquetas" role="group" aria-labelledby="t-etiquetas">
+              {% for t in etiquetas %}<button type="button" class="chip" data-etiqueta="{{ t.key }}" aria-pressed="{% if t.key in marcadas %}true{% else %}false{% endif %}">{{ t.name }}</button>{% empty %}<span class="dim small">Aún no hay etiquetas.</span>{% endfor %}
+            </div>
+          </section>
+
+          <section aria-labelledby="t-impuesto">
+            <h3 id="t-impuesto">Impuesto</h3>
+            <div class="segmento" role="radiogroup" aria-labelledby="t-impuesto">
+              {% for valor, nombre in impuestos %}<label><input type="radio" name="tax_type" value="{{ valor }}"{% if p.tax_type == valor %} checked{% endif %}><span>{{ nombre|cut:" (impoconsumo)" }}</span></label>{% endfor %}
+              <label><input type="radio" name="tax_type" value=""{% if not p.tax_type %} checked{% endif %}><span>No sé</span></label>
+            </div>
+          </section>
+
+          <section class="form-row" aria-label="Datos internos">
+            <div class="campo">
+              <label for="e-sku">Código interno</label>
+              <input id="e-sku" name="sku" value="{{ p.sku|default:'' }}" maxlength="40" placeholder="Opcional">
+            </div>
+            <div class="campo">
+              <label for="e-prep">Tiempo de preparación (min)</label>
+              <input id="e-prep" name="prep_minutes" type="number" inputmode="numeric" min="0" max="600" value="{{ p.prep_minutes|default_if_none:'' }}" placeholder="Ej. 15">
+            </div>
+          </section>
+
+          <section>
+            <label class="switch"><input type="checkbox" role="switch" name="permite_observacion"{% if not p or p.permite_observacion %} checked{% endif %}><span>El cliente puede escribir una nota («sin cebolla»)</span></label>
+          </section>
+        </div>
+      </details>
+    </div>
+
+    <aside class="editor-vista" aria-label="Vista previa" data-vista>
+      <div class="vista-cab">
+        <strong>Así se ve en tu menú</strong>
+        <button type="button" class="btn fantasma icono sm cerrar-vista" data-cerrar-vista aria-label="Cerrar la vista previa">{% icono "x" %}</button>
+      </div>
+      {% include "components/vista_previa.html" %}
+      {% if vista_previa %}<label class="switch"><input type="checkbox" role="switch" data-ver-agotado><span>Ver como agotado</span></label>{% endif %}
+    </aside>
+  </div>
+
+  <div class="guardar-barra">
+    <span class="estado-guardado" data-estado-guardado aria-live="polite">{% if p %}Sin cambios{% else %}Nuevo producto{% endif %}</span>
+    <span class="fin"></span>
+    <button type="button" class="btn danger" data-eliminar{% if not p %} hidden{% endif %}>{% icono "papelera" %}<span class="solo-ancho">Eliminar</span></button>
+    {% if not fragmento %}<a class="btn fantasma solo-ancho" href="{{ config.volver }}">Cancelar</a>{% endif %}
+    <button type="submit" class="btn" data-guardar>{% icono "check" %}{% if p %}Guardar cambios{% else %}Guardar producto{% endif %} <kbd class="atajo solo-pc">Ctrl S</kbd></button>
+  </div>
+</form>
+
+<dialog class="dialogo-grupo" data-dialogo-grupo aria-labelledby="t-nuevo-grupo">
+  <form method="dialog" data-formulario-grupo novalidate>
+    <h2 id="t-nuevo-grupo">Nuevo grupo de adiciones</h2>
+    <div class="campo"><label for="g-nombre">Nombre del grupo</label><input id="g-nombre" name="nombre" maxlength="60" required placeholder="Ej. Elige tu salsa"></div>
+    <div class="form-row">
+      <label class="switch"><input type="checkbox" role="switch" name="obligatorio"><span>Obligatorio</span></label>
+      <div class="campo"><label for="g-maximo">¿Cuántas puede elegir?</label>
+        <select id="g-maximo" name="maximo"><option value="1">Solo una</option><option value="2">Hasta 2</option><option value="3">Hasta 3</option><option value="5">Hasta 5</option><option value="">Las que quiera</option></select></div>
+    </div>
+    <p class="small" style="font-weight:700;margin:4px 0 8px">Opciones</p>
+    <div class="lista-opciones" data-opciones></div>
+    <button type="button" class="btn fantasma sm" data-agregar-opcion>{% icono "mas" %}Agregar opción</button>
+    <div class="acciones-dialogo"><button type="button" class="btn fantasma" data-cerrar>Cancelar</button><button class="btn" type="submit">Crear grupo</button></div>
+  </form>
+</dialog>
+</div>

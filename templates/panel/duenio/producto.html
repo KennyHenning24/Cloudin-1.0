@@ -1,0 +1,18 @@
+{% extends "panel/_base.html" %}
+{% load cloudin static %}
+{% block title %}{% if p %}{{ p.name }}{% else %}Nuevo producto{% endif %} · Cloudin{% endblock %}
+{% block app_clase %}sin-barra{% endblock %}
+{% block topbar_inicio %}<a class="icon-btn volver" href="{{ config.volver }}" aria-label="Volver a Mi menú">{% icono "atras" %}</a>{% endblock %}
+{% block titulo %}{% if p %}{{ p.name }}{% else %}Nuevo producto{% endif %}{% endblock %}
+{% block subtitulo %}<nav class="sub migas" aria-label="Ruta"><a href="{{ config.volver }}">Mi menú</a> › {{ categoria.name }}</nav>{% endblock %}
+{% block acciones %}<button type="button" class="btn secundario siempre sin-pc" data-abrir-vista>{% icono "ojo" %}<span class="solo-ancho">Vista previa</span></button>{% endblock %}
+
+{% block content %}
+{% include "panel/duenio/_producto_form.html" %}
+{% endblock %}
+
+{% block scripts %}
+<script src="{% static 'panel/js/subir-foto.js' %}"></script>
+<script src="{% static 'panel/js/vista-previa.js' %}"></script>
+<script src="{% static 'panel/js/editor-producto.js' %}"></script>
+{% endblock %}

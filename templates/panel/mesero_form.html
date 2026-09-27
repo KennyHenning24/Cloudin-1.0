@@ -1,0 +1,41 @@
+{% extends "panel/_form_page.html" %}
+{% block title %}{% if es_nuevo %}Nuevo mesero{% else %}{{ mesero.nombre }}{% endif %} — Cloudin{% endblock %}
+{% block titulo %}{% if es_nuevo %}Agregar mesero{% else %}Editar a {{ mesero.nombre }}{% endif %}{% endblock %}
+{% block subtitulo %}<p class="sub dim small">Cloudin Meseros</p>{% endblock %}
+
+{% block seccion_nombre %}Cloudin Meseros{% endblock %}
+{% block encabezado %}{% if es_nuevo %}¿Quién va a tomar pedidos?{% else %}{{ mesero.nombre }}{% endif %}{% endblock %}
+{% block bajada %}
+  Con este usuario y contraseña el mesero entra a la app en la tablet o el celular. No le da
+  acceso al panel del administrador, y cada pedido que envíe llega a la cocina con su nombre.
+{% endblock %}
+{% block volver %}{% url 'panel:meseros' %}{% endblock %}
+{% block boton %}{% if es_nuevo %}Crear mesero{% else %}Guardar cambios{% endif %}{% endblock %}
+
+{% block campos %}
+  <div class="eyebrow" style="margin-bottom:var(--sp-3)">Quién es</div>
+  <div class="form-row">
+    {% include "master/_campo.html" with campo=form.nombre %}
+    {% include "master/_campo.html" with campo=form.usuario %}
+  </div>
+
+  <div class="sep"></div>
+  <div class="eyebrow" style="margin-bottom:var(--sp-3)">{% if es_nuevo %}Contraseña{% else %}Cambiar contraseña{% endif %}</div>
+  <div class="form-row">
+    {% include "master/_campo.html" with campo=form.clave %}
+    {% include "master/_campo.html" with campo=form.clave2 %}
+  </div>
+
+  <div class="sep"></div>
+  <div class="eyebrow" style="margin-bottom:var(--sp-3)">Cloudin Employees (opcional)</div>
+  <div class="form-row">
+  </div>
+{% endblock %}
+
+{% block despues %}
+{% if not es_nuevo %}
+<p class="nota-pie">
+  Si cambias la contraseña, la sesión que tenga abierta en la tablet se cierra sola.
+</p>
+{% endif %}
+{% endblock %}

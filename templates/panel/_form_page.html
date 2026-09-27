@@ -1,0 +1,59 @@
+{% extends "panel/_base.html" %}
+{% load static %}
+
+{% comment %}
+Shell de las pantallas de alta y edición. Una tarjeta centrada, el logo de
+marca, los campos y dos botones. Las pantallas de lista solo llevan un botón
+que trae aquí, para no mezclar «ver» con «llenar campos».
+
+Las páginas que la usan definen: titulo, encabezado, bajada, campos, boton.
+{% endcomment %}
+
+{% block head %}
+{{ block.super }}
+<style>
+  .hoja{max-width:720px;margin:0 auto}
+  .hoja .tope{position:relative;overflow:hidden;border-radius:var(--r-xl) var(--r-xl) 0 0;
+    padding:var(--sp-5) var(--sp-5) var(--sp-4);
+    background:linear-gradient(125deg,rgba(239,112,38,.15),transparent 62%),var(--surface-2);
+    border:1px solid var(--line);border-bottom:0}
+  .hoja .tope .marca-agua{position:absolute;right:18px;bottom:-26px;height:126px;opacity:.07}
+  .hoja .tope .dentro{position:relative;z-index:1}
+  .hoja .tope h2{font-size:19px;font-weight:690;letter-spacing:-.01em}
+  .hoja .tope p{font-size:13px;color:var(--text-3);margin-top:5px;max-width:62ch;line-height:1.6}
+  .hoja .cuerpo{border-radius:0 0 var(--r-xl) var(--r-xl);padding:var(--sp-5);
+    background:var(--surface);border:1px solid var(--line);box-shadow:var(--shadow)}
+  .hoja .pie{display:flex;gap:var(--sp-2);align-items:center;margin-top:var(--sp-4);
+    padding-top:var(--sp-4);border-top:1px solid var(--line);flex-wrap:wrap}
+  .hoja .pie .fin{margin-left:auto}
+  .nota-pie{font-size:12.5px;color:var(--text-3);margin-top:var(--sp-3);line-height:1.6}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="hoja">
+  <div class="tope">
+    <img class="marca-agua" src="{% static 'img/cloudin-marca.png' %}" alt="">
+    <div class="dentro">
+      <div class="eyebrow">{% block seccion_nombre %}Cloudin{% endblock %}</div>
+      <h2>{% block encabezado %}{% endblock %}</h2>
+      <p>{% block bajada %}{% endblock %}</p>
+    </div>
+  </div>
+  <div class="cuerpo">
+    <form method="post" novalidate {% block form_attrs %}{% endblock %}>
+      {% csrf_token %}
+      {% if form.non_field_errors %}
+        {% for e in form.non_field_errors %}<div class="aviso malo">{{ e }}</div>{% endfor %}
+      {% endif %}
+      {% block campos %}{% endblock %}
+      <div class="pie">
+        <button class="btn" type="submit">{% block boton %}Guardar{% endblock %}</button>
+        <a class="btn quiet" href="{% block volver %}{% url 'panel:inicio' %}{% endblock %}">Cancelar</a>
+        <span class="fin">{% block pie_extra %}{% endblock %}</span>
+      </div>
+    </form>
+    {% block despues %}{% endblock %}
+  </div>
+</div>
+{% endblock %}

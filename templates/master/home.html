@@ -1,0 +1,67 @@
+{% extends "master/_base.html" %}
+{% block title %}Restaurantes — Cloudin{% endblock %}
+{% block titulo %}Restaurantes{% endblock %}
+{% block subtitulo %}<p class="sub">{{ restaurantes|length }} en el sistema</p>{% endblock %}
+{% block acciones %}
+  <a class="btn" href="{% url 'master:restaurante-nuevo' %}">
+    <svg class="ico" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+    Nuevo restaurante
+  </a>
+{% endblock %}
+
+{% block content %}
+{% if restaurantes %}
+<div class="card">
+  <div class="tabla-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Restaurante</th>
+          <th>Identificador</th>
+          <th>Plan</th>
+          <th>Base de datos</th>
+          <th>Usuarios</th>
+          <th>Estado</th>
+          <th class="fin"></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in restaurantes %}
+        <tr>
+          <td>
+            <a href="{% url 'master:restaurante' r.slug %}" style="font-weight:600">{{ r.name }}</a>
+            <div class="dim small">alta el {{ r.created_at|date:"d/m/Y" }}</div>
+          </td>
+          <td><code>{{ r.slug }}</code></td>
+          <td><span class="pill {% if r.plan == 'completo' %}ok{% endif %}">{{ r.get_plan_display }}</span></td>
+          <td class="dim small">
+            {{ r.db_name }}
+            {% if not r.provisioned_at %}<span class="pill off">sin aprovisionar</span>{% endif %}
+          </td>
+          <td>{{ r.empleados }}</td>
+          <td>
+            <span class="pill {% if r.is_active %}ok{% else %}off{% endif %}">
+              <i class="dot"></i>{% if r.is_active %}Activo{% else %}Inactivo{% endif %}
+            </span>
+          </td>
+          <td class="fin">
+            <a class="btn ghost sm" href="{% url 'master:restaurante' r.slug %}">Abrir</a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% else %}
+<div class="card" style="text-align:center;padding:var(--sp-6)">
+  <div style="font-size:34px">🍽️</div>
+  <h2 style="margin:var(--sp-3) 0 var(--sp-1);font-size:18px">Todavía no hay restaurantes</h2>
+  <p class="muted" style="max-width:440px;margin:0 auto var(--sp-4)">
+    Al crear el primero, el sistema genera su base de datos, la migra y te entrega
+    el usuario, la contraseña y el enlace para que entre a su panel.
+  </p>
+  <a class="btn" href="{% url 'master:restaurante-nuevo' %}">Crear el primero</a>
+</div>
+{% endif %}
+{% endblock %}

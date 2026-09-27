@@ -1,0 +1,218 @@
+{% extends "panel/_base.html" %}
+{% block title %}Mensajes — Cloudin{% endblock %}
+{% block titulo %}Mensajes{% endblock %}
+{% block subtitulo %}<p class="sub dim small">Pedidos que llegan del sitio, en orden de llegada</p>{% endblock %}
+{% block acciones %}
+  <label class="switch" title="Suena cuando entra un pedido nuevo">
+    <input type="checkbox" id="sonido" checked> Sonido
+  </label>
+  <label class="switch" title="Manda la comanda a la impresora apenas entra el pedido">
+    <input type="checkbox" id="autoimprimir"> Imprimir solo
+  </label>
+  <span class="pill neutro" id="reloj">—</span>
+{% endblock %}
+
+{% block head %}
+{{ block.super }}
+<style>
+  /* Los pedidos por atender se tocan para avanzarlos; los servidos, no. */
+  .msg{padding:var(--sp-3) var(--sp-4);border-radius:var(--r-lg);border:1px solid var(--line);
+       background:var(--surface);box-shadow:var(--shadow)}
+  .msg.activo{cursor:pointer;transition:border-color .15s,transform .06s,background .15s}
+  .msg.activo:hover{border-color:var(--brand-line);background:var(--surface-2)}
+  .msg.activo:active{transform:translateY(1px)}
+  .msg.nuevo{border-color:var(--brand-line)}
+  .msg .avanzar{color:var(--text-3);font-size:12px}
+  .msg.activo:hover .avanzar{color:var(--brand)}
+
+  /* Servido: todo el mensaje en verde y sin nada que tocar. */
+  .msg.servido{background:var(--ok-soft);border-color:rgba(62,207,142,.32);box-shadow:none;color:var(--ok-text)}
+  .msg.servido .dim,.msg.servido .muted{color:var(--ok-text);opacity:.8}
+  .msg.servido strong{color:var(--ok-text)}
+
+  .corte{display:flex;align-items:center;gap:var(--sp-3);margin:var(--sp-5) 0 var(--sp-2)}
+  .corte::before,.corte::after{content:"";height:1px;background:var(--line);flex:1}
+  .corte span{font-size:11.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--text-3);
+              font-weight:650;white-space:nowrap}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="stack-sm" id="lista"></div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const lista = document.getElementById("lista");
+const ESTADOS = {pending: "Pendiente", preparing: "En preparación", served: "Servido", cancelled: "Anulado"};
+let conocidos = new Set();
+let impresos = new Set();
+let primeraCarga = true;
+
+/* --- preferencias de este equipo (la impresora es de esta caja, no del tenant) --- */
+const pref = {
+  get sonido() { return localStorage.getItem("cloudin-sonido") !== "0"; },
+  set sonido(v) { localStorage.setItem("cloudin-sonido", v ? "1" : "0"); },
+  get auto() { return localStorage.getItem("cloudin-autoimprimir") === "1"; },
+  set auto(v) { localStorage.setItem("cloudin-autoimprimir", v ? "1" : "0"); }
+};
+const chkSonido = document.getElementById("sonido");
+const chkAuto = document.getElementById("autoimprimir");
+chkSonido.checked = pref.sonido;
+chkAuto.checked = pref.auto;
+chkSonido.addEventListener("change", () => { pref.sonido = chkSonido.checked; });
+chkAuto.addEventListener("change", () => {
+  pref.auto = chkAuto.checked;
+  if (chkAuto.checked) aviso("Las comandas nuevas se imprimirán solas en este equipo.");
+});
+
+function hace(iso) {
+  const min = Math.floor((Date.now() - new Date(iso)) / 60000);
+  if (min < 1) return "ahora";
+  if (min < 60) return `hace ${min} min`;
+  return new Date(iso).toLocaleTimeString("es-CO", {hour: "2-digit", minute: "2-digit"});
+}
+
+/* Campanita de dos notas (do–mi–sol, un acorde mayor arpegiado) en vez del
+   pitido plano: suena a aviso, no a alarma, y se distingue del ruido del local.
+   Ondas senoidales con caída suave para que no "chasquee". */
+function pitido() {
+  if (!chkSonido.checked) return;
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const notas = [
+      {hz: 587.33, en: 0.00},   // re5
+      {hz: 880.00, en: 0.09},   // la5
+      {hz: 1174.66, en: 0.18},  // re6
+    ];
+    notas.forEach(({hz, en}) => {
+      const osc = ctx.createOscillator();
+      const vol = ctx.createGain();
+      osc.type = "sine";
+      osc.frequency.value = hz;
+      const t0 = ctx.currentTime + en;
+      vol.gain.setValueAtTime(0.0001, t0);
+      vol.gain.exponentialRampToValueAtTime(0.16, t0 + 0.02);   // ataque suave
+      vol.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.55); // cola larga
+      osc.connect(vol).connect(ctx.destination);
+      osc.start(t0);
+      osc.stop(t0 + 0.6);
+    });
+    setTimeout(() => ctx.close(), 1200);
+  } catch (e) { /* sin sonido si el navegador no deja */ }
+}
+
+/* Imprime sin abrir ventanas nuevas: carga la tirilla en un iframe oculto.
+   Así el navegador no lo bloquea como si fuera un pop-up. */
+
+function aviso(texto) {
+  const el = document.createElement("div");
+  el.className = "aviso exito fade-in";
+  el.textContent = texto;
+  lista.parentNode.insertBefore(el, lista);
+  setTimeout(() => el.remove(), 4000);
+}
+
+// Qué pasa al tocar un pedido por atender: avanza un paso.
+const SIGUIENTE = {pending: "preparing", preparing: "served"};
+
+function tarjeta(m) {
+  const servido = m.status === "served";
+  const nuevo = !m.seen_at && !servido;
+  const clases = ["msg", servido ? "servido" : "activo", nuevo ? "nuevo fade-in" : ""].join(" ");
+  const alTocar = servido ? "" : `onclick="avanzar(${m.id}, '${m.status}')"`;
+
+  return `<article class="${clases}" ${alTocar}>
+    <div class="spread" style="margin-bottom:var(--sp-2)">
+      ${nuevo ? '<span class="pill warn">NUEVO</span>' : ""}
+      <strong style="font-size:16px">Mesa ${m.table_number}</strong>
+      ${m.customer_name ? `<span style="color:${servido ? "var(--ok-text)" : "var(--brand)"};font-weight:600">${escHTML(m.customer_name)}</span>` : ""}
+      <span class="pill ${servido ? "ok" : (m.mesero_nombre ? "info" : "neutro")}">${m.mesero_nombre ? "Mesero · " + escHTML(m.mesero_nombre) : (m.source === "qr" ? "cliente (QR)" : "panel")}</span>
+      <span class="fin dim small">${hace(m.created_at)}</span>
+    </div>
+    <div style="display:grid;gap:3px;margin-bottom:var(--sp-2)">
+      ${m.items.map(i => `<div class="spread" style="font-size:14.5px">
+          <span>${i.quantity} × ${escHTML(i.product_name)}${i.note ? ` <span class="dim">(${escHTML(i.note)})</span>` : ""}</span>
+          <span class="fin dim">${money(i.line_total)}</span></div>`).join("")}
+    </div>
+    ${m.note ? `<div class="dim small" style="margin-bottom:var(--sp-2)">Nota: ${escHTML(m.note)}</div>` : ""}
+    <div class="spread">
+      <strong>${money(m.total)}</strong>
+      <span class="pill ${servido ? "ok" : m.status === "preparing" ? "warn" : "neutro"}">
+        ${ESTADOS[m.status]}</span>
+      <span class="fin row" style="gap:var(--sp-2)">
+        ${servido ? "" : `
+          ${m.status === "pending" ? `<button class="btn ghost sm"
+              onclick="event.stopPropagation(); marcar(${m.id},'preparing')">En preparación</button>` : ""}
+          <button class="btn ok sm"
+              onclick="event.stopPropagation(); marcar(${m.id},'served')">Servido</button>`}
+        ${botonImprimir(m, (servido ? "quiet" : "ghost") + " sm")}
+      </span>
+    </div>
+  </article>`;
+}
+
+function grupos(mensajes) {
+  const activos = mensajes.filter(m => m.status !== "served");
+  const servidos = mensajes.filter(m => m.status === "served");
+  let html = activos.map(tarjeta).join("");
+  if (!activos.length && servidos.length) {
+    html += '<div class="card vacio">Todo servido. No queda nada pendiente.</div>';
+  }
+  if (servidos.length) {
+    html += `<div class="corte"><span>Servidos · ${servidos.length}</span></div>`
+          + servidos.map(tarjeta).join("");
+  }
+  return html;
+}
+
+async function refrescar() {
+  try {
+    // Con la bandeja a la vista, lo que llega cuenta como revisado: el contador
+    // de la barra lateral vuelve a cero.
+    const leer = document.visibilityState === "visible" ? "?leer=1" : "";
+    const datos = await api("/api/v1/staff/messages/" + leer);
+    if (leer) ponerContador("badge-mensajes", 0);
+    const {mensajes} = datos;
+    const nuevos = mensajes.filter(m => !conocidos.has(m.id));
+    if (nuevos.length && !primeraCarga) {
+      pitido();
+      if (chkAuto.checked) {
+        nuevos.filter(m => !impresos.has(m.id)).forEach(m => { impresos.add(m.id); imprimir(m.id); });
+      }
+    }
+    if (primeraCarga) mensajes.forEach(m => impresos.add(m.id));
+    conocidos = new Set(mensajes.map(m => m.id));
+    primeraCarga = false;
+
+    // Solo las mesas abiertas: al cerrar la cuenta de una mesa, sus pedidos salen de aquí.
+    const vacio = `<div class="card vacio">No hay pedidos de mesas abiertas.
+         Cuando el menú digital, un mesero o el panel envíe uno, aparece aquí.</div>`;
+    pintarSiCambia(lista, mensajes.length ? grupos(mensajes) : vacio);
+    document.getElementById("reloj").textContent = new Date().toLocaleTimeString("es-CO");
+  } catch (e) { console.error(e); }
+}
+
+// Los botones llevan el pedido directo al estado que se elija.
+async function marcar(id, estado) {
+  await api(`/api/v1/staff/orders/${id}/status/`, {
+    method: "PATCH", body: JSON.stringify({status: estado})
+  });
+  await api(`/api/v1/staff/orders/${id}/visto/`, {method: "POST"});
+  refrescar();
+}
+
+// Tocar la tarjeta hace lo mismo, un paso a la vez.
+async function avanzar(id, actual) {
+  const siguiente = SIGUIENTE[actual] || "served";
+  await api(`/api/v1/staff/orders/${id}/status/`, {
+    method: "PATCH", body: JSON.stringify({status: siguiente})
+  });
+  await api(`/api/v1/staff/orders/${id}/visto/`, {method: "POST"});
+  refrescar();
+}
+
+refrescar();
+setInterval(refrescar, 5000);
+</script>
+{% endblock %}

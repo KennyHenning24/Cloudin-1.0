@@ -1,0 +1,155 @@
+{% extends "base.html" %}
+{% load static cloudin %}
+{% block title %}{% if paso < final %}Paso {{ paso }} de {{ pasos|length }}{% else %}¡Tu menú está listo!{% endif %} · Cloudin{% endblock %}
+
+{% block layout %}
+<div class="bienvenida">
+  <header class="bienvenida-cab">
+    <a class="marca-cloudin" href="{% url 'panel:inicio' %}" aria-label="Cloudin">
+      <img class="mark" src="{% static 'img/cloudin-marca.png' %}" alt="" width="30" height="30">
+      <img class="wordmark wm-oscuro" src="{% static 'img/cloudin-texto.png' %}" alt=""><img class="wordmark wm-claro" src="{% static 'img/cloudin-texto-claro.png' %}" alt="">
+    </a>
+    {% if paso < final %}
+    <form method="post">{% csrf_token %}<input type="hidden" name="accion" value="saltar">
+      <button class="btn fantasma sm" type="submit">Saltar por ahora</button></form>
+    {% endif %}
+  </header>
+
+  <main class="bienvenida-cuerpo{% if paso == final %} es-final{% endif %}">
+    {% if messages %}{% for m in messages %}<div class="aviso {% if m.level_tag == 'warning' %}alerta{% else %}exito{% endif %}" role="alert">{{ m }}</div>{% endfor %}{% endif %}
+
+    {% if paso < final %}
+    <div class="card bienvenida-tarjeta">
+      <div class="pasos-cab"><strong>Paso {{ paso }} de {{ pasos|length }}</strong><span class="dim">{{ titulo_paso }}</span></div>
+      <div class="pasos-barra" aria-hidden="true">{% for p in pasos %}<i class="{% if forloop.counter <= paso %}on{% endif %}"></i>{% endfor %}</div>
+
+      <form method="post" enctype="multipart/form-data" id="form-paso" novalidate autocomplete="off">
+        {% csrf_token %}
+        <input type="hidden" name="paso" value="{{ paso }}">
+
+        {% if paso == 1 %}
+        <h1 class="titulo-paso">Empecemos por tu marca</h1>
+        <p class="dim">Sube tu logo y elige los colores de tu menú. Puedes cambiarlos cuando quieras.</p>
+        <div class="logo-circulo">
+          {% url 'api:ajustes-logo' as url_logo %}
+          {% include "components/subir_foto.html" with url=url_logo foto=logo_url proporcion=1 lado=512 titulo="Subir logo" id="subir-logo" sin_camara=True %}
+        </div>
+        <div class="sugeridos" data-sugeridos hidden>
+          <h2 class="h-card">Colores sugeridos de tu logo</h2>
+          <div class="paletas" data-paletas role="group" aria-label="Combinaciones sugeridas"></div>
+        </div>
+        <details class="elegir-otros"{% if not logo_url %} open{% endif %}>
+          <summary class="enlace">Elegir los colores a mano</summary>
+          <div class="colores">
+            {% include "components/color.html" with nombre="color_primary" etiqueta="Principal" valor=ajustes.color_primary|default:"#C2410C" %}
+            {% include "components/color.html" with nombre="color_secondary" etiqueta="Secundario" valor=ajustes.color_secondary|default:"#F59E0B" %}
+            {% include "components/color.html" with nombre="color_background" etiqueta="Fondo" valor=ajustes.color_background|default:"#FFFFFF" %}
+            {% include "components/color.html" with nombre="color_text" etiqueta="Texto" valor=ajustes.color_text|default:"#1D2029" %}
+          </div>
+        </details>
+        <div class="cabecera-muestra" data-muestra>
+          <span class="muestra-logo" aria-hidden="true">{% if logo_url %}<img src="{{ logo_url }}" alt="">{% else %}{{ tenant.name|slice:":1"|upper }}{% endif %}</span>
+          <span><strong>{{ tenant.name }}</strong><small>Así se verá la cabecera de tu menú</small></span>
+          <span class="muestra-boton">Pedir por WhatsApp</span>
+        </div>
+        <p class="contraste" data-contraste="texto" aria-live="polite"></p>
+
+        {% elif paso == 2 %}
+        <h1 class="titulo-paso">Datos de tu negocio</h1>
+        <p class="dim">Lo que tus clientes necesitan para encontrarte y escribirte.</p>
+        {% include "components/campo.html" with nombre="tagline" etiqueta="Frase corta" valor=ajustes.tagline maximo=120 marcador="Ej. Hamburguesas al carbón desde 2015" %}
+        <div class="form-row">
+          {% include "components/campo.html" with nombre="whatsapp" etiqueta="WhatsApp" tipo="tel" modo="tel" valor=ajustes.whatsapp|telefono marcador="300 123 4567" ayuda="El botón «Pedir por WhatsApp» de tu menú." %}
+          {% include "components/campo.html" with nombre="city" etiqueta="Ciudad" valor=ajustes.city maximo=80 %}
+        </div>
+        {% include "components/campo.html" with nombre="address" etiqueta="Dirección" valor=ajustes.address maximo=200 marcador="Cra 00 # 00-00" %}
+        <fieldset class="opciones-chip dias-chip"><legend>¿Qué días abres?</legend>
+          {% for d in dias %}<label class="chip-opcion"><input type="checkbox" name="dias" value="{{ d.n }}"{% if d.tramos or not hay_horario %} checked{% endif %}><span>{{ d.corto }}</span></label>{% endfor %}
+        </fieldset>
+        <div class="form-row horas">
+          <div class="campo"><label for="c-abre">Abres a las</label><input id="c-abre" name="abre" type="time" value="{{ abre }}"></div>
+          <div class="campo"><label for="c-cierra">Cierras a las</label><input id="c-cierra" name="cierra" type="time" value="{{ cierra }}"></div>
+        </div>
+        <p class="dim small">¿Horario partido o distinto el fin de semana? Lo ajustas después en Personalizar → Horario.</p>
+
+        {% elif paso == 3 %}
+        <h1 class="titulo-paso">Tu primera categoría</h1>
+        <p class="dim">Agrupa tus productos. Empieza por una; las demás las creas en «Mi menú».</p>
+        {% include "components/campo.html" with nombre="categoria" etiqueta="Nombre de la categoría" maximo=80 requerido=True marcador="Ej. Platos fuertes" %}
+        <div class="sugerencias" role="group" aria-label="Ideas">
+          {% for s in sugerencias %}<button type="button" class="chip" data-sugerencia="{{ s }}">{{ s }}</button>{% endfor %}
+        </div>
+        {% if categorias %}<p class="dim small">Ya tienes: {% for c in categorias %}{{ c.name }}{% if not forloop.last %}, {% endif %}{% endfor %}. Si escribes una de esas, la usamos.</p>{% endif %}
+
+        {% elif paso == 4 %}
+        <h1 class="titulo-paso">Agrega tu primer producto</h1>
+        <p class="dim">Con foto, nombre y precio basta. Lo demás lo completas después.</p>
+        <div class="basico-grid">
+          <div class="basico-foto">
+            {% include "components/subir_foto.html" with proporcion=1 lado=1200 titulo="Foto del plato" id="foto-plato" %}
+            <input type="file" name="foto" id="foto-archivo" accept="image/*" hidden>
+          </div>
+          <div class="basico-campos">
+            {% include "components/campo.html" with nombre="name" etiqueta="Nombre" maximo=120 requerido=True marcador="Ej. Hamburguesa clásica" %}
+            <div class="campo precio"><label for="c-precio">Precio</label><input id="c-precio" name="price" type="text" data-precio placeholder="$ 0"></div>
+          </div>
+        </div>
+        <div class="campo">
+          <label for="c-categoria-producto">Categoría</label>
+          {% if categorias %}
+          <select id="c-categoria-producto" name="category">
+            {% for c in categorias %}<option value="{{ c.uuid }}"{% if c.uuid|stringformat:"s" == categoria_elegida %} selected{% endif %}>{{ c.name }}</option>{% endfor %}
+          </select>
+          {% if creada_en_paso_3 %}<div class="ayuda">{% icono "check" "ico sm" %} La que creaste en el paso 3.</div>{% endif %}
+          {% else %}
+          <input id="c-categoria-producto" name="nueva_categoria" value="Platos" maxlength="80">
+          {% endif %}
+        </div>
+        {% endif %}
+
+        <div class="bienvenida-acciones">
+          {% if paso > 1 %}<a class="btn fantasma" href="?paso={{ paso|add:-1 }}">Atrás</a>{% endif %}
+          <button class="btn grad lg" type="submit">{% if paso == 4 %}Terminar{% else %}Continuar{% endif %} {% icono "derecha" %}</button>
+        </div>
+      </form>
+    </div>
+    <p class="dim small centro">Si sales ahora, retomas desde el Inicio donde ibas.</p>
+
+    {% else %}
+    <div class="final-grid">
+      <div class="final-texto">
+        <span class="chip disponible chip-grande">{% icono "check" %}Todo listo</span>
+        <h1 class="titulo-final">¡Tu menú está listo!</h1>
+        <p class="dim">Imprime este código y ponlo en tus mesas. Tus clientes verán el menú al escanearlo, y los cambios que hagas aquí aparecen en menos de un minuto.</p>
+        <div class="card final-qr">
+          {% if enlace %}<img src="{% url 'api:qr-menu' 'png' %}" alt="Código QR de tu menú" width="170" height="170">{% endif %}
+          <div class="stack-sm">
+            {% if enlace %}
+            <a class="enlace enlace-menu" href="{{ enlace }}" target="_blank" rel="noopener">{{ enlace }}</a>
+            <a class="btn grad block" href="{{ enlace }}" target="_blank" rel="noopener">{% icono "enlace-externo" %}Ver mi menú</a>
+            <div class="row">
+              <a class="btn secundario" href="{% url 'api:qr-menu' 'png' %}" download>{% icono "descargar" %}Descargar QR</a>
+              <a class="btn secundario" href="{% url 'panel:qr' %}">{% icono "imprimir" %}Imprimir</a>
+            </div>
+            {% else %}
+            <p class="dim small">Cuando la página de tu menú digital esté publicada, aquí aparece su código QR.</p>
+            {% endif %}
+            <a class="btn fantasma block" href="{% url 'panel:inicio' %}">Ir a mi panel {% icono "derecha" %}</a>
+          </div>
+        </div>
+      </div>
+      <div class="final-vista">
+        <div class="telefono"><iframe title="Tu menú" src="{{ vista_previa }}" loading="lazy"></iframe></div>
+        <p class="dim small centro">Tu menú, con tus colores</p>
+      </div>
+    </div>
+    {% endif %}
+  </main>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{% static 'panel/js/subir-foto.js' %}"></script>
+<script src="{% static 'panel/js/colores.js' %}"></script>
+<script src="{% static 'panel/js/bienvenida.js' %}"></script>
+{% endblock %}

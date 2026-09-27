@@ -1,0 +1,140 @@
+{
+  "schema": "cloudin.menu/v1",
+  "business": {
+    "slug": "restaurante-ejemplo",
+    "name": "Restaurante Ejemplo",
+    "legal_name": null,
+    "nit": null,
+    "tagline": "Comida casera, en Cali",
+    "description": null,
+    "logo": "assets/brand/logo.svg",
+    "cover": null,
+    "brand": { "primary": "#B3261E", "secondary": "#F2C14E", "background": "#1A1110", "text": "#FFF6EC" },
+    "contact": {
+      "whatsapp": "+573001234567",
+      "phone": "+573001234567",
+      "email": null,
+      "address": "Cra 00 # 00-00",
+      "city": "Cali",
+      "maps_url": null
+    },
+    "social": { "instagram": "https://instagram.com/restauranteejemplo", "facebook": null, "tiktok": null },
+    "hours": [
+      { "day": "mon", "closed": true },
+      { "day": "tue", "open": "12:00", "close": "21:00" },
+      { "day": "wed", "open": "12:00", "close": "21:00" },
+      { "day": "thu", "open": "12:00", "close": "21:00" },
+      { "day": "fri", "open": "12:00", "close": "22:00" },
+      { "day": "sat", "open": "12:00", "close": "15:00" },
+      { "day": "sat", "open": "18:00", "close": "22:00" },
+      { "day": "sun", "open": "12:00", "close": "17:00" }
+    ],
+    "services": { "dine_in": true, "takeaway": true, "delivery": false },
+    "payment_methods": ["efectivo", "nequi", "tarjeta"],
+    "owner": { "name": "Nombre Dueño", "email": "dueno@correo.com", "phone": "+573001234567" }
+  },
+  "menus": [
+    {
+      "key": "carta",
+      "name": "Carta",
+      "description": null,
+      "categories": [
+        {
+          "key": "hamburguesas",
+          "name": "Hamburguesas",
+          "description": "Todas con papas a la francesa.",
+          "image": null,
+          "products": [
+            {
+              "key": "hamburguesa-clasica",
+              "name": "Hamburguesa clásica",
+              "description": "Carne de res, queso, lechuga, tomate y papas a la francesa.",
+              "price": 24000,
+              "image": null,
+              "available": true,
+              "featured": true,
+              "tags": ["recomendado"],
+              "tax": null,
+              "variants": [
+                { "key": "doble", "name": "Doble carne", "price": 32000 }
+              ],
+              "modifier_groups": [
+                {
+                  "key": "salsa",
+                  "name": "Elige tu salsa",
+                  "min": 1,
+                  "max": 1,
+                  "options": [
+                    { "key": "verde", "name": "Verde", "price": 0 },
+                    { "key": "roja-picante", "name": "Roja picante", "price": 0 }
+                  ]
+                }
+              ],
+              "source": "cliente"
+            },
+            {
+              "key": "hamburguesa-vegetariana",
+              "name": "Hamburguesa vegetariana",
+              "description": null,
+              "price": 26000,
+              "image": null,
+              "available": false,
+              "featured": false,
+              "tags": ["vegetariano"],
+              "tax": null,
+              "variants": [],
+              "modifier_groups": [],
+              "source": "cliente"
+            }
+          ]
+        },
+        {
+          "key": "bebidas",
+          "name": "Bebidas",
+          "description": null,
+          "image": null,
+          "products": [
+            {
+              "key": "limonada-de-coco",
+              "name": "Limonada de coco",
+              "description": null,
+              "price": 8500,
+              "image": null,
+              "available": true,
+              "featured": false,
+              "tags": ["nuevo"],
+              "tax": null,
+              "variants": [],
+              "modifier_groups": [],
+              "source": "cliente"
+            },
+            {
+              "key": "jugo-natural",
+              "name": "Jugo natural",
+              "description": "En agua o en leche.",
+              "price": null,
+              "image": null,
+              "available": true,
+              "featured": false,
+              "tags": [],
+              "tax": null,
+              "variants": [],
+              "modifier_groups": [],
+              "source": "cliente"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "tables": { "count": 6 },
+  "meta": {
+    "built_with": "10k-websites",
+    "site_url": "http://localhost:4431",
+    "menu_page": "http://localhost:4431/index.html",
+    "generated_at": "2026-09-26T10:00:00-05:00",
+    "missing": ["business.nit", "products[jugo-natural].price", "products[hamburguesa-clasica].tax",
+                "products[hamburguesa-vegetariana].tax", "products[limonada-de-coco].tax",
+                "products[jugo-natural].tax"]
+  }
+}

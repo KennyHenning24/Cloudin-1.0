@@ -1,0 +1,31 @@
+{% load static cloudin %}{# Barra lateral del plan «Menú digital»: fija en PC (≥ 1024 px), riel de íconos en tablet. #}
+<aside class="side side-menu" id="menu-lateral" aria-label="Menú principal">
+  <a class="side-brand" href="{% url 'panel:inicio' %}" title="Ir al inicio">
+    <img class="mark" src="{% static 'img/cloudin-marca.png' %}" alt="">
+    <img class="wordmark" src="{% static 'img/cloudin-texto.png' %}" alt="Cloudin">
+  </a>
+  <div class="side-rest">
+    <span class="side-rest-logo" aria-hidden="true">{{ tenant.name|slice:":1"|upper }}</span>
+    <span class="side-rest-texto"><strong>{{ tenant.name }}</strong><small>Menú digital</small></span>
+  </div>
+  <nav class="side-secciones">
+    {% include "panel/_nav_menu_items.html" %}
+  </nav>
+  <div class="side-foot">
+    <div class="tema" role="group" aria-label="Color del panel">
+      <button type="button" data-tema="oscuro" aria-pressed="false">{% icono "luna" %}<span>Oscuro</span></button>
+      <button type="button" data-tema="claro" aria-pressed="false">{% icono "sol" %}<span>Claro</span></button>
+    </div>
+    <a class="side-who" href="{% url 'panel:cuenta' %}">
+      <span class="avatar sm" aria-hidden="true">{{ user.first_name|default:user.username|slice:":1"|upper }}</span>
+      <span><span class="quien">{{ user.first_name|default:user.username }}</span>
+      <span class="rol">{% if user.is_superuser %}Soporte{% elif user.tenant_membership.es_dueno %}Dueño{% elif user.tenant_membership.es_admin %}Administrador{% else %}Equipo{% endif %}</span></span>
+    </a>
+    <form method="post" action="{% url 'panel:logout' %}">
+      {% csrf_token %}
+      <button class="btn fantasma block salir" type="submit">{% icono "salir" %}<span>Cerrar sesión</span></button>
+    </form>
+  </div>
+  <button type="button" class="riel-alternar" data-riel aria-expanded="false" aria-controls="menu-lateral" aria-label="Mostrar el menú completo">{% icono "derecha" %}</button>
+</aside>
+<div class="velo-riel" data-riel></div>

@@ -1,0 +1,8 @@
+{% comment %}
+Switch. Para disponibilidad: disponible=True pinta verde y dice «Disponible» / «Agotado»
+(color + texto: nunca solo color). role=switch para los lectores de pantalla.
+{% include "components/interruptor.html" with nombre="is_available" encendido=p.is_available disponible=True etiqueta=p.name %}
+{% endcomment %}<label class="switch{% if disponible %} disponible{% endif %}">
+  <input type="checkbox" role="switch" name="{{ nombre }}"{% if id %} id="{{ id }}"{% endif %}{% if encendido %} checked{% endif %}{% if deshabilitado %} disabled{% endif %}{% if disponible %} aria-label="{{ etiqueta }}: disponible" data-interruptor-disponible{% endif %}>
+  {% if disponible %}<span class="estado" aria-hidden="true">{% if encendido %}Disponible{% else %}Agotado{% endif %}</span>{% else %}<span>{{ etiqueta }}</span>{% endif %}
+</label>

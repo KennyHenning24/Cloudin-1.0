@@ -1,0 +1,41 @@
+{% extends "admin/base.html" %}
+{% load static %}
+
+{% comment %}
+El Django Admin también lleva la marca: ícono de pestaña, logo en el
+encabezado y los colores de Cloudin.
+{% endcomment %}
+
+{% block title %}{% if subtitle %}{{ subtitle }} | {% endif %}{{ title }} | Cloudin{% endblock %}
+
+{% block extrahead %}
+{{ block.super }}
+<link rel="icon" href="{% static 'img/favicon.ico' %}" sizes="any">
+<link rel="icon" type="image/png" sizes="32x32" href="{% static 'img/favicon-32.png' %}">
+<link rel="apple-touch-icon" href="{% static 'img/apple-touch-icon.png' %}">
+<meta name="theme-color" content="#13151c">
+<style>
+  :root{
+    --primary:#13151c; --secondary:#13151c;
+    --accent:#f77a27; --link-fg:#e36225; --link-hover-color:#f77a27;
+    --header-bg:#13151c; --header-color:#e9ecf3; --header-branding-color:#f77a27;
+    --header-link-color:#e9ecf3;
+    --button-bg:#ef7026; --button-hover-bg:#e36225;
+    --default-button-bg:#ef7026; --default-button-hover-bg:#e36225;
+    --breadcrumbs-bg:#1a1d25; --breadcrumbs-fg:#a9b1c2; --breadcrumbs-link-fg:#f77a27;
+  }
+  #branding h1{display:flex;align-items:center;gap:10px;margin:0}
+  #branding h1 img{height:26px;width:auto}
+  #branding h1 a:link,#branding h1 a:visited{color:#e9ecf3}
+  .module h2, .module caption{background:#1a1d25}
+</style>
+{% endblock %}
+
+{% block branding %}
+<h1 id="site-name">
+  <img src="{% static 'img/cloudin-marca.png' %}" alt="">
+  <a href="{% url 'admin:index' %}">Cloudin · datos en crudo</a>
+</h1>
+{% endblock %}
+
+{% block nav-global %}{% endblock %}

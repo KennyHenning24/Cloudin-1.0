@@ -1,0 +1,153 @@
+{% extends "panel/_base.html" %}
+{% load cloudin static %}
+{% block title %}Personalizar · Cloudin{% endblock %}
+{% block titulo %}Personalizar{% endblock %}
+{% block subtitulo %}<div class="sub">Cómo se ve tu menú y los datos de tu negocio</div>{% endblock %}
+{% block acciones %}
+  <button type="button" class="btn secundario siempre sin-pc" data-abrir-vista>{% icono "ojo" %}<span class="solo-ancho">Vista previa</span></button>
+{% endblock %}
+
+{% block content %}
+<div class="personalizar">
+  <nav class="indice-ajustes" aria-label="Secciones">
+    <a href="#marca">Logo y colores</a>
+    <a href="#portada">Portada</a>
+    <a href="#negocio">Datos del negocio</a>
+    <a href="#contacto">Contacto y WhatsApp</a>
+    <a href="#horario">Horario</a>
+    <a href="#redes">Redes sociales</a>
+    <a href="#pagos">Servicios y pagos</a>
+  </nav>
+
+  <form class="form-ajustes stack" id="form-ajustes" novalidate autocomplete="off" data-avisar-cambios>
+    <details class="card seccion-ajustes" id="marca" open>
+      <summary><h2>Logo y colores</h2>{% icono "abajo" "ico chevron" %}</summary>
+      <div class="seccion-cuerpo">
+        <div class="logo-fila">
+          {% url 'api:ajustes-logo' as url_logo %}
+          {% include "components/subir_foto.html" with url=url_logo foto=logo_url proporcion=1 lado=512 titulo="Sube tu logo" id="subir-logo" sin_camara=True %}
+          <div class="stack-sm">
+            <p class="dim small">PNG sin fondo, JPG o WebP. Se ve redondo en la cabecera del menú.</p>
+            <button type="button" class="btn fantasma sm texto-peligro" data-quitar-imagen="logo"{% if not ajustes.logo %} hidden{% endif %}>{% icono "papelera" %}Quitar logo</button>
+          </div>
+        </div>
+        <div class="colores">
+          {% include "components/color.html" with nombre="color_primary" etiqueta="Principal" ayuda="Botones y precios" valor=ajustes.color_primary %}
+          {% include "components/color.html" with nombre="color_secondary" etiqueta="Secundario" ayuda="Detalles y destacados" valor=ajustes.color_secondary %}
+          {% include "components/color.html" with nombre="color_background" etiqueta="Fondo" ayuda="El fondo del menú" valor=ajustes.color_background %}
+          {% include "components/color.html" with nombre="color_text" etiqueta="Texto" ayuda="Nombres y descripciones" valor=ajustes.color_text %}
+        </div>
+        <div class="contrastes">
+          <span class="contraste" data-contraste="texto"></span>
+          <span class="contraste" data-contraste="boton"></span>
+        </div>
+        <button type="button" class="btn fantasma sm" data-sugerir-colores>{% icono "varita" %}Sugerir colores desde mi logo</button>
+        <p class="dim small">Estos colores son los de tu menú. El panel siempre conserva los de Cloudin.</p>
+      </div>
+    </details>
+
+    <details class="card seccion-ajustes" id="portada">
+      <summary><h2>Portada</h2>{% icono "abajo" "ico chevron" %}</summary>
+      <div class="seccion-cuerpo">
+        {% url 'api:ajustes-portada' as url_portada %}
+        {% include "components/subir_foto.html" with url=url_portada foto=portada_url proporcion=2 lado=1600 titulo="Una foto horizontal de tu local o tus platos" id="subir-portada" %}
+        <button type="button" class="btn fantasma sm texto-peligro" data-quitar-imagen="cover"{% if not ajustes.cover %} hidden{% endif %}>{% icono "papelera" %}Quitar portada</button>
+      </div>
+    </details>
+
+    <details class="card seccion-ajustes" id="negocio">
+      <summary><h2>Datos del negocio</h2>{% icono "abajo" "ico chevron" %}</summary>
+      <div class="seccion-cuerpo">
+        {% include "components/campo.html" with nombre="tagline" etiqueta="Frase corta" valor=ajustes.tagline maximo=120 marcador="Ej. Hamburguesas al carbón desde 2015" %}
+        {% include "components/campo.html" with nombre="description" etiqueta="Descripción" tipo="textarea" valor=ajustes.description maximo=500 marcador="Qué hace especial a tu restaurante." %}
+        {% include "components/campo.html" with nombre="welcome_message" etiqueta="Mensaje de bienvenida" valor=ajustes.welcome_message maximo=200 marcador="Ej. ¡Bienvenido! Pide desde tu mesa." %}
+      </div>
+    </details>
+
+    <details class="card seccion-ajustes" id="contacto">
+      <summary><h2>Contacto y WhatsApp</h2>{% icono "abajo" "ico chevron" %}</summary>
+      <div class="seccion-cuerpo">
+        <div class="form-row">
+          {% include "components/campo.html" with nombre="whatsapp" etiqueta="WhatsApp" tipo="tel" valor=ajustes.whatsapp|telefono modo="tel" marcador="300 123 4567" autocompletar="tel" %}
+          {% include "components/campo.html" with nombre="phone" etiqueta="Teléfono" tipo="tel" valor=ajustes.phone|telefono modo="tel" marcador="300 123 4567" %}
+          {% include "components/campo.html" with nombre="email" etiqueta="Correo" tipo="email" valor=ajustes.email marcador="hola@turestaurante.com" %}
+          {% include "components/campo.html" with nombre="address" etiqueta="Dirección" valor=ajustes.address maximo=200 marcador="Cra 00 # 00-00" %}
+          {% include "components/campo.html" with nombre="city" etiqueta="Ciudad" valor=ajustes.city maximo=80 %}
+          {% include "components/campo.html" with nombre="maps_url" etiqueta="Enlace de Google Maps" tipo="url" valor=ajustes.maps_url marcador="https://maps.app.goo.gl/…" %}
+        </div>
+        <p class="dim small">Cambia en toda tu web: el botón de WhatsApp, el pie de página y la ubicación.</p>
+      </div>
+    </details>
+
+    <details class="card seccion-ajustes" id="horario">
+      <summary><h2>Horario</h2>{% icono "abajo" "ico chevron" %}</summary>
+      <div class="seccion-cuerpo">
+        <div class="horario" data-horario>
+          {% for d in dias %}
+          <div class="dia" data-dia="{{ d.key }}" data-nombre="{{ d.nombre }}">
+            <strong class="dia-nombre">{{ d.corto }}<span class="sr-only">{{ d.nombre|slice:"3:" }}</span></strong>
+            <div class="tramos" data-tramos>
+              {% for t in d.tramos %}
+              <div class="tramo"><input type="time" value="{{ t.open }}" aria-label="{{ d.nombre }}: abre" data-abre> <span aria-hidden="true">–</span> <input type="time" value="{{ t.close }}" aria-label="{{ d.nombre }}: cierra" data-cierra>
+                <button type="button" class="btn fantasma icono sm" data-quitar-tramo aria-label="Quitar este horario del {{ d.nombre|lower }}">{% icono "x" %}</button></div>
+              {% endfor %}
+              <span class="cerrado dim"{% if d.tramos %} hidden{% endif %}>Cerrado</span>
+              <button type="button" class="enlace boton-enlace" data-agregar-tramo{% if not d.tramos %} hidden{% endif %}>+ Otro horario</button>
+            </div>
+            <label class="switch"><input type="checkbox" role="switch" data-abierto{% if d.tramos %} checked{% endif %} aria-label="Abierto el {{ d.nombre|lower }}"></label>
+          </div>
+          {% endfor %}
+        </div>
+        <button type="button" class="btn secundario sm" data-copiar-horario>{% icono "copiar" %}<span data-copiar-texto>Copiar el primer día abierto a todos</span></button>
+        <p class="dim small">Varios horarios el mismo día = horario partido (ej. 12:00–15:00 y 18:00–22:00). Si cierras después de medianoche, pon la hora de cierre de la madrugada.</p>
+      </div>
+    </details>
+
+    <details class="card seccion-ajustes" id="redes">
+      <summary><h2>Redes sociales</h2>{% icono "abajo" "ico chevron" %}</summary>
+      <div class="seccion-cuerpo">
+        {% include "components/campo.html" with nombre="instagram" etiqueta="Instagram" tipo="url" valor=ajustes.instagram marcador="https://instagram.com/turestaurante" %}
+        {% include "components/campo.html" with nombre="facebook" etiqueta="Facebook" tipo="url" valor=ajustes.facebook marcador="https://facebook.com/turestaurante" %}
+        {% include "components/campo.html" with nombre="tiktok" etiqueta="TikTok" tipo="url" valor=ajustes.tiktok marcador="https://tiktok.com/@turestaurante" %}
+      </div>
+    </details>
+
+    <details class="card seccion-ajustes" id="pagos">
+      <summary><h2>Servicios y medios de pago</h2>{% icono "abajo" "ico chevron" %}</summary>
+      <div class="seccion-cuerpo">
+        <fieldset class="opciones-chip"><legend>Servicios</legend>
+          {% for k, nombre, activo in servicios %}<label class="chip-opcion"><input type="checkbox" name="services" value="{{ k }}"{% if activo %} checked{% endif %}><span>{{ nombre }}</span></label>{% endfor %}
+        </fieldset>
+        <fieldset class="opciones-chip"><legend>Medios de pago</legend>
+          {% for k, nombre, activo in medios %}<label class="chip-opcion"><input type="checkbox" name="payment_methods" value="{{ k }}"{% if activo %} checked{% endif %}><span>{{ nombre }}</span></label>{% endfor %}
+        </fieldset>
+      </div>
+    </details>
+
+    <div class="guardar-barra">
+      <span class="estado-guardado" data-estado-guardado aria-live="polite">Todo guardado</span>
+      <span class="fin"></span>
+      <button type="submit" class="btn" data-guardar>{% icono "check" %}Guardar cambios <kbd class="atajo solo-pc">Ctrl S</kbd></button>
+    </div>
+  </form>
+
+  <aside class="editor-vista" aria-label="Vista previa" data-vista>
+    <div class="vista-cab">
+      <strong>Vista previa en vivo</strong>
+      <button type="button" class="btn fantasma icono sm cerrar-vista" data-cerrar-vista aria-label="Cerrar la vista previa">{% icono "x" %}</button>
+    </div>
+    {% include "components/vista_previa.html" %}
+    {% if enlace %}<a class="enlace small" href="{{ enlace }}" target="_blank" rel="noopener">Abrir mi menú en otra pestaña</a>{% endif %}
+  </aside>
+</div>
+
+<template id="t-tramo"><div class="tramo"><input type="time" value="12:00" data-abre> <span aria-hidden="true">–</span> <input type="time" value="21:00" data-cierra>
+  <button type="button" class="btn fantasma icono sm" data-quitar-tramo aria-label="Quitar este horario">{% icono "x" %}</button></div></template>
+{% endblock %}
+
+{% block scripts %}
+<script src="{% static 'panel/js/subir-foto.js' %}"></script>
+<script src="{% static 'panel/js/vista-previa.js' %}"></script>
+<script src="{% static 'panel/js/colores.js' %}"></script>
+<script src="{% static 'panel/js/personalizar.js' %}"></script>
+{% endblock %}

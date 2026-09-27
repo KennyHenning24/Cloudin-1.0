@@ -1,0 +1,119 @@
+{% extends "panel/_base.html" %}
+{% block title %}Mesas — Cloudin{% endblock %}
+{% block titulo %}Mesas{% endblock %}
+{% block subtitulo %}<p class="sub" id="reloj">Actualizando…</p>{% endblock %}
+{% block acciones %}
+  <a class="btn ghost" href="{% url 'panel:mensajes' %}">Mensajes</a>
+{% endblock %}
+
+{% block head %}
+{{ block.super }}
+<style>
+  .leyenda-m{display:flex;gap:14px;flex-wrap:wrap;font-size:13px;color:var(--text-2)}
+  .leyenda-m span{display:inline-flex;align-items:center;gap:6px}
+  .leyenda-m i{width:12px;height:12px;border-radius:50%}
+  .salon{display:grid;gap:var(--sp-4);grid-template-columns:repeat(auto-fill,minmax(200px,1fr))}
+  .mesa-c{position:relative;display:flex;flex-direction:column;gap:6px;padding:16px;border-radius:var(--r-xl);
+    background:var(--surface);border:1.5px solid var(--line);box-shadow:var(--shadow);min-height:168px;
+    transition:transform .35s var(--ease),box-shadow .35s var(--ease),border-color .25s}
+  .mesa-c:hover{transform:translateY(-4px);box-shadow:var(--shadow-lg)}
+  .mesa-c.ocupada{border-color:color-mix(in srgb,var(--durazno) 55%,var(--line));background:linear-gradient(160deg,var(--durazno-bg),transparent 60%),var(--surface)}
+  .mesa-c .cab-m{display:flex;align-items:center;gap:10px}
+  .mesa-c .num{font-size:24px;font-weight:800;letter-spacing:-.03em}
+  .mesa-c .plano{color:var(--menta)}
+  .mesa-c.ocupada .plano{color:var(--durazno)}
+  .mesa-c .total{font-size:20px;font-weight:800;margin-top:auto}
+  .mesa-c .quien{font-size:13.5px;color:var(--text-2);font-weight:600}
+  .mesa-c .aviso-m{font-size:12.5px;font-weight:700;padding:5px 10px;border-radius:10px;align-self:flex-start}
+  .zona-t{display:flex;align-items:center;gap:10px;margin:var(--sp-5) 0 var(--sp-3)}
+  .zona-t:first-child{margin-top:0}
+  .zona-t h2{font-size:16px;font-weight:800}
+  @keyframes latirBorde{50%{box-shadow:0 0 0 6px color-mix(in srgb,var(--warn) 22%,transparent)}}
+  .mesa-c.urgente{animation:latirBorde 1.8s infinite}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="kpis">
+  <div class="kpi"><div class="cab"><span class="chip-ico durazno"><svg class="ico" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M7 20v-4M17 20v-4"/></svg></span>Mesas ocupadas</div>
+    <div class="valor" id="k-ocupadas">—</div><div class="pie" id="k-ocupadas-pie">de — en el local</div></div>
+  <div class="kpi"><div class="cab"><span class="chip-ico menta"><svg class="ico" viewBox="0 0 24 24"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></span>En las mesas ahora</div>
+    <div class="valor" id="k-ventas">—</div><div class="pie">suma de las cuentas abiertas</div></div>
+  <div class="kpi"><div class="cab"><span class="chip-ico amarillo"><svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span>Por atender</div>
+    <div class="valor" id="k-pendientes">—</div><div class="pie">pedidos sin servir</div></div>
+</div>
+
+<div class="bloque">
+  <div class="bloque-cab" style="flex-wrap:wrap">
+    <h2>El local</h2>
+    <div class="leyenda-m fin">
+      <span><i style="background:var(--menta)"></i>Libre</span>
+      <span><i style="background:var(--durazno)"></i>Ocupada</span>
+    </div>
+  </div>
+  <div id="mesas"><div class="salon">{% for i in "123456" %}<div class="mesa-c cargando"></div>{% endfor %}</div></div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const cont = document.getElementById("mesas");
+
+/* La mesa vista desde arriba, con una silla por puesto alrededor. */
+function planoMesa(puestos) {
+  const n = Math.max(1, Math.min(Number(puestos) || 4, 12));
+  const redonda = n <= 3;
+  const sillas = [];
+  for (let i = 0; i < n; i++) {
+    const a = (i / n) * Math.PI * 2 - Math.PI / 2;
+    const x = 30 + Math.cos(a) * 23, y = 30 + Math.sin(a) * 23;
+    sillas.push(`<rect x="${(x - 4.5).toFixed(1)}" y="${(y - 4.5).toFixed(1)}" width="9" height="9" rx="3" fill="currentColor" opacity=".55"/>`);
+  }
+  const tablero = redonda ? '<circle cx="30" cy="30" r="14" fill="currentColor"/>'
+    : '<rect x="15" y="15" width="30" height="30" rx="8" fill="currentColor"/>';
+  return `<svg class="plano" viewBox="0 0 60 60" width="52" height="52" aria-hidden="true">${sillas.join("")}${tablero}</svg>`;
+}
+const esc = (t) => String(t ?? "").replace(/[&<>"']/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+
+/* Una mesa se ocupa sola con el primer pedido (menú digital, mesero o panel) y
+   queda libre cuando se cierra su cuenta. */
+function tarjeta(m) {
+  const clase = m.is_occupied ? "ocupada" : "";
+  return `<a class="mesa-c ${clase} ${m.pending_orders ? "urgente" : ""}" href="/panel/mesa/${m.id}/">
+    <div class="cab-m">${planoMesa(m.seats)}<div><div class="num">Mesa ${m.number}</div>
+      <div class="dim small">${m.seats} puestos</div></div></div>
+    ${m.is_occupied ? `<div class="quien">${esc(m.session_customer) || "Cuenta abierta"}</div>
+        <div class="total">${money(m.session_total)}</div>` : ""}
+    ${!m.is_occupied ? `<div class="aviso-m pill menta" style="margin-top:auto">Libre</div>` : ""}
+    ${m.pending_orders ? `<div class="aviso-m pill amarillo">${m.pending_orders} pedido${m.pending_orders > 1 ? "s" : ""} sin atender</div>` : ""}
+  </a>`;
+}
+
+const texto = (id, valor) => { document.getElementById(id).textContent = valor; };
+
+async function refrescar() {
+  try {
+    const mesas = await api("/api/v1/staff/tables/");
+    const activas = mesas.filter(m => m.is_active !== false);
+    const ocupadas = activas.filter(m => m.is_occupied).length;
+    texto("k-ocupadas", ocupadas);
+    texto("k-ocupadas-pie", `de ${activas.length} en el local`);
+    texto("k-ventas", money(activas.reduce((s, m) => s + Number(m.session_total || 0), 0)));
+    texto("k-pendientes", activas.reduce((s, m) => s + (m.pending_orders || 0), 0));
+
+    const zonas = {};
+    activas.forEach(m => { (zonas[m.zona || "Salón"] = zonas[m.zona || "Salón"] || []).push(m); });
+    const nombres = Object.keys(zonas);
+    pintarSiCambia(cont, activas.length ? nombres.map(z => `
+      ${nombres.length > 1 ? `<div class="zona-t"><span class="chip-ico sm cielo"><svg class="ico" viewBox="0 0 24 24"><path d="M12 21s-7-6.1-7-11a7 7 0 0 1 14 0c0 4.9-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></svg></span>
+        <h2>${esc(z)}</h2><span class="dim small">${zonas[z].length} mesas</span></div>` : ""}
+      <div class="salon">${zonas[z].map(tarjeta).join("")}</div>`).join("")
+      : `<div class="card vacio-grande"><h3>No hay mesas todavía</h3>
+           <p>Créalas en <a href="/panel/configuracion/" style="color:var(--brand)">Configuración</a>.</p></div>`);
+    texto("reloj", "Actualizado a las " + new Date().toLocaleTimeString("es-CO", {hour: "numeric", minute: "2-digit"}));
+  } catch (e) { console.error(e); }
+}
+refrescar();
+setInterval(refrescar, 5000);
+</script>
+{% endblock %}

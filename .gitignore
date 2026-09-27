@@ -1,0 +1,21 @@
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.env
+.env.*
+!.env.example
+*.sqlite3
+tenant_dbs/
+qrcodes/
+staticfiles/
+.DS_Store
+media/
+.pytest_cache/
+.ruff_cache/
+*.log
+
+# Cloudflare (wrangler)
+node_modules/
+.wrangler/
+.dev.vars*

@@ -1,0 +1,5 @@
+{% load cloudin %}{% comment %}
+Badge / Chip. Estados con ícono + texto: disponible, agotado, destacado, alerta. Etiquetas: texto solo.
+{% include "components/chip.html" with estado="agotado" %}
+{% include "components/chip.html" with texto="Vegetariano" %}
+{% endcomment %}{% if estado == "disponible" %}<span class="chip disponible">{% icono "check" %}Disponible</span>{% elif estado == "agotado" %}<span class="chip agotado">{% icono "agotado" %}Agotado</span>{% elif estado == "destacado" %}<span class="chip destacado">{% icono "estrella" %}Destacado</span>{% elif estado == "sin_precio" %}<span class="chip alerta">{% icono "alerta" %}Sin precio</span>{% else %}<span class="chip{% if clase %} {{ clase }}{% endif %}">{% if icono %}{% icono icono %}{% endif %}{{ texto }}</span>{% endif %}

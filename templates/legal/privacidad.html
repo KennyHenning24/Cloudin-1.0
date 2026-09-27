@@ -1,0 +1,69 @@
+{% extends "legal/_base.html" %}
+{% block title %}Política de privacidad — Cloudin{% endblock %}
+{% block legal %}
+<h1>Política de privacidad y tratamiento de datos personales</h1>
+<p class="version">Versión {{ legal.version }} · Ley 1581 de 2012 y Decreto 1074 de 2015</p>
+
+<div class="resumen">
+  <p><strong>En pocas palabras:</strong> solo pedimos los datos necesarios para que Cloudin funcione, los
+  guardamos protegidos, no los vendemos ni los usamos para publicidad, y tienes derecho a conocerlos,
+  corregirlos y pedir que se borren.</p>
+</div>
+
+<h2>1. Responsable</h2>
+<p><strong>{{ legal.responsable }}</strong>{% if legal.nit %}, NIT {{ legal.nit }}{% endif %}{% if legal.direccion %}, {{ legal.direccion }}{% endif %}, {{ legal.ciudad }}.
+{% if legal.correo %}Correo para temas de datos personales: <strong>{{ legal.correo }}</strong>.{% endif %}</p>
+<p>Cloudin es <strong>responsable</strong> de los datos de las personas que usan el panel (usuarios de los
+restaurantes). Frente a los datos que cada restaurante registra de sus clientes y empleados, Cloudin actúa como
+<strong>encargado</strong>: los trata por cuenta del restaurante, que es su responsable.</p>
+
+<h2>2. Qué datos tratamos</h2>
+<ul>
+  <li><strong>Usuarios del panel:</strong> nombre, usuario, correo y contraseña (guardada cifrada, nunca en texto plano).</li>
+  <li><strong>Datos del restaurante:</strong> razón social, NIT, dirección, datos fiscales y de facturación.</li>
+  <li><strong>Operación:</strong> pedidos, cuentas, facturas, turnos de caja, inventario, compras y propinas.</li>
+  <li><strong>Empleados del restaurante:</strong> nombre, documento, cargo y horas marcadas.</li>
+  <li><strong>Comensales:</strong> nombre y teléfono de quien reserva o pide, y los datos fiscales cuando pide factura a su nombre.</li>
+  <li><strong>Datos técnicos:</strong> dirección IP y navegador al aceptar estos documentos o al iniciar sesión, por seguridad.</li>
+</ul>
+
+<h2>3. Para qué los usamos</h2>
+<ul>
+  <li>Prestar el servicio: tomar pedidos, gestionar reservas, facturar, cuadrar la caja, controlar inventario.</li>
+  <li>Enviar al restaurante avisos de reservas y pedidos, y recordatorios a los comensales cuando el restaurante lo decide.</li>
+  <li>Emitir facturas electrónicas a través del proveedor tecnológico autorizado por la DIAN.</li>
+  <li>Generar análisis, alertas y recomendaciones para el mismo restaurante.</li>
+  <li>Dar soporte, mantener la seguridad y cumplir obligaciones legales.</li>
+</ul>
+<p>No vendemos datos personales ni los usamos para publicidad de terceros.</p>
+
+<h2>4. Con quién se comparten</h2>
+<p>Solo con quienes hacen posible el servicio: el proveedor tecnológico de facturación electrónica (para emitir
+las facturas ante la DIAN), el proveedor de hosting donde vive la plataforma y las autoridades cuando la ley lo
+exija. Los datos de un restaurante nunca se muestran a otro.</p>
+
+<h2>5. Seguridad</h2>
+<p>Cada restaurante tiene su propia base de datos. Las contraseñas se guardan cifradas, el acceso exige usuario y
+contraseña, los intentos fallidos se bloquean y en producción la conexión viaja cifrada (HTTPS).</p>
+
+<h2>6. Cookies y almacenamiento</h2>
+<p>El panel usa solo cookies <strong>necesarias</strong>: la de la sesión (para que no tengas que escribir la clave
+en cada pantalla) y la de seguridad contra formularios falsos. También guarda en tu navegador el tema claro u
+oscuro que elijas. No usamos cookies de publicidad ni de analítica de terceros, por eso no mostramos un aviso de
+cookies.</p>
+
+<h2>7. Tus derechos</h2>
+<p>Como titular puedes: conocer, actualizar y rectificar tus datos; pedir prueba de tu autorización; saber cómo se
+han usado; revocar la autorización o pedir que se borren cuando no haya un deber legal de conservarlos; acceder a
+ellos gratis, y presentar quejas ante la Superintendencia de Industria y Comercio.</p>
+
+<h2>8. Cómo ejercerlos</h2>
+<p>{% if legal.correo %}Escribe a <strong>{{ legal.correo }}</strong>{% else %}Escríbenos por los canales de soporte de Cloudin{% endif %}
+con tu nombre, lo que necesitas y un dato de contacto. Las consultas se responden en máximo 10 días hábiles
+(prorrogables 5) y los reclamos en máximo 15 días hábiles (prorrogables 8). Si eres comensal de un restaurante,
+también puedes dirigirte directamente al restaurante, que es el responsable de tus datos.</p>
+
+<h2>9. Vigencia</h2>
+<p>Esta política rige desde su publicación. Los datos se conservan mientras el restaurante use Cloudin y durante
+el tiempo que exijan las normas contables y tributarias.</p>
+{% endblock %}

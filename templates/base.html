@@ -1,0 +1,39 @@
+{% load static %}<!doctype html>
+<html lang="es" data-theme="claro">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>{% block title %}Cloudin{% endblock %}</title>
+<link rel="icon" href="{% static 'img/favicon.ico' %}" sizes="any">
+<link rel="icon" type="image/png" sizes="32x32" href="{% static 'img/favicon-32.png' %}">
+<link rel="icon" type="image/png" sizes="512x512" href="{% static 'img/favicon-512.png' %}">
+<link rel="apple-touch-icon" href="{% static 'img/apple-touch-icon.png' %}">
+<meta name="theme-color" content="#13151C">
+<meta name="application-name" content="Cloudin">
+<script>
+  /* El tema se aplica antes de pintar, para que no parpadee. Si la persona lo
+     eligió (interruptor), se respeta; si no, sigue al de su sistema; y si el
+     sistema no dice nada, claro (un local con mucha luz). */
+  (function () {
+    var t = null;
+    try { t = localStorage.getItem("cloudin-tema"); } catch (e) {}
+    if (t !== "claro" && t !== "oscuro") {
+      t = window.matchMedia && matchMedia("(prefers-color-scheme: dark)").matches ? "oscuro" : "claro";
+    }
+    document.documentElement.dataset.theme = t;
+  })();
+</script>
+<link rel="preload" href="{% static 'fonts/plus-jakarta-sans-latin.woff2' %}" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="{% static 'css/cloudin.css' %}">
+{% block head %}{% endblock %}
+</head>
+<body>
+{% block layout %}{% endblock %}
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<div class="avisos" id="avisos" aria-live="polite" aria-atomic="false"></div>
+<script>window.CSRF = "{{ csrf_token }}";</script>
+<script src="{% static 'panel/js/base.js' %}"></script>
+<script src="{% static 'panel/js/ui.js' %}"></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

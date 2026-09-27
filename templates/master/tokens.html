@@ -1,0 +1,57 @@
+{% extends "master/_base.html" %}
+{% block title %}Tokens de API — Cloudin{% endblock %}
+{% block titulo %}Tokens de API{% endblock %}
+{% block subtitulo %}<p class="sub">Para importar menús con <code>POST /api/admin/import-menu/</code></p>{% endblock %}
+
+{% block content %}
+{% if nuevo %}
+<div class="card" style="border-color:var(--brand-line)">
+  <div class="card-head"><div>
+    <h2>Token «{{ nuevo.nombre }}» creado</h2>
+    <p>Cópialo ahora: <strong>no se vuelve a mostrar</strong>. Guárdalo en una variable de entorno
+      (<code>CLOUDIN_ADMIN_TOKEN</code>), nunca en archivos del proyecto.</p>
+  </div></div>
+  <div class="row" style="gap:var(--sp-2);flex-wrap:wrap">
+    <code id="token-nuevo" style="word-break:break-all;font-size:14px">{{ nuevo.token }}</code>
+    <button class="btn sm" type="button"
+            onclick="navigator.clipboard.writeText(document.getElementById('token-nuevo').textContent);this.textContent='Copiado ✓'">Copiar</button>
+  </div>
+</div>
+{% endif %}
+
+<div class="card">
+  <div class="card-head"><div><h2>Crear un token</h2><p>Uno por equipo o por uso, para poder revocarlo sin afectar a los demás.</p></div></div>
+  <form method="post" class="row" style="gap:var(--sp-2);flex-wrap:wrap;align-items:flex-end">
+    {% csrf_token %}
+    <div class="campo" style="flex:1;min-width:220px;margin:0">
+      <label for="nombre">Nombre</label>
+      <input id="nombre" name="nombre" maxlength="80" placeholder="Ej. Portátil de Juan" required>
+    </div>
+    <button class="btn" type="submit">Crear token</button>
+  </form>
+</div>
+
+<div class="card">
+  <div class="tabla-wrap">
+    <table>
+      <thead><tr><th>Nombre</th><th>Comienza con</th><th>Creado</th><th>Último uso</th><th>Estado</th><th class="fin"></th></tr></thead>
+      <tbody>
+      {% for t in tokens %}
+        <tr>
+          <td>{{ t.name }}<div class="dim small">{{ t.user.username }}</div></td>
+          <td><code>{{ t.prefix }}…</code></td>
+          <td class="dim small">{{ t.created_at|date:"d/m/Y H:i" }}</td>
+          <td class="dim small">{{ t.last_used_at|date:"d/m/Y H:i"|default:"Nunca" }}</td>
+          <td>{% if t.revoked_at %}<span class="pill off">Revocado</span>{% else %}<span class="pill ok"><i class="dot"></i>Activo</span>{% endif %}</td>
+          <td class="fin">{% if not t.revoked_at %}
+            <form method="post" action="{% url 'master:token-revocar' t.id %}">{% csrf_token %}
+              <button class="btn ghost sm" type="submit">Revocar</button></form>{% endif %}</td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="6" class="dim">Todavía no hay tokens.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

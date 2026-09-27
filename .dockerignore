@@ -1,0 +1,23 @@
+# Nada de secretos ni datos locales dentro de la imagen.
+.git
+.env
+.env.*
+.dev.vars*
+*.sqlite3
+tenant_dbs/
+media/
+qrcodes/
+staticfiles/
+*.rar
+
+# Herramientas y cachés
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+node_modules/
+.wrangler/
+.claude/
+tests/

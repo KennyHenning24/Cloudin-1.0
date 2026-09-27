@@ -1,0 +1,11 @@
+{% load cloudin %}{% comment %}
+Input / Textarea / Select con su etiqueta, ayuda y error junto al campo.
+{% include "components/campo.html" with nombre="name" etiqueta="Nombre" valor=producto.name requerido=True %}
+{% include "components/campo.html" with nombre="description" etiqueta="Descripción" tipo="textarea" maximo=140 %}
+{% include "components/campo.html" with nombre="city" etiqueta="Ciudad" error="Escribe la ciudad." %}
+{% endcomment %}{% with id_campo=id|default:nombre %}<div class="campo{% if error %} con-error{% endif %}">
+  <label for="c-{{ id_campo }}">{{ etiqueta }}{% if requerido %} <span aria-hidden="true">*</span>{% endif %}{% if maximo %}<span class="contador" data-contador-de="c-{{ id_campo }}">{{ valor|default:''|length }}/{{ maximo }}</span>{% endif %}</label>
+  {% if tipo == "textarea" %}<textarea id="c-{{ id_campo }}" name="{{ nombre }}"{% if maximo %} maxlength="{{ maximo }}"{% endif %}{% if requerido %} required{% endif %}{% if marcador %} placeholder="{{ marcador }}"{% endif %}{% if error %} aria-invalid="true" aria-describedby="e-{{ id_campo }}"{% elif ayuda %} aria-describedby="a-{{ id_campo }}"{% endif %} rows="{{ filas|default:3 }}">{{ valor|default:'' }}</textarea>
+  {% else %}<input id="c-{{ id_campo }}" name="{{ nombre }}" type="{{ tipo|default:'text' }}" value="{{ valor|default:'' }}"{% if maximo %} maxlength="{{ maximo }}"{% endif %}{% if requerido %} required{% endif %}{% if marcador %} placeholder="{{ marcador }}"{% endif %}{% if modo %} inputmode="{{ modo }}"{% endif %}{% if autocompletar %} autocomplete="{{ autocompletar }}"{% endif %}{% if deshabilitado %} disabled{% endif %}{% if error %} aria-invalid="true" aria-describedby="e-{{ id_campo }}"{% elif ayuda %} aria-describedby="a-{{ id_campo }}"{% endif %}>{% endif %}
+  {% if error %}<div class="error" id="e-{{ id_campo }}">{% icono "alerta" "ico sm" %}<span>{{ error }}</span></div>{% elif ayuda %}<div class="ayuda" id="a-{{ id_campo }}">{{ ayuda }}</div>{% endif %}
+</div>{% endwith %}

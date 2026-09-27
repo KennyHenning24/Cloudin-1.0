@@ -1,0 +1,64 @@
+{% extends "panel/_base.html" %}
+{% block title %}Cocina — Cloudin{% endblock %}
+{% block titulo %}Cocina{% endblock %}
+{% block subtitulo %}<p class="sub dim small">Comandas activas, la más vieja primero</p>{% endblock %}
+{% block acciones %}
+  <span class="pill neutro" id="conteo">—</span>
+  <span class="pill neutro" id="reloj">—</span>
+{% endblock %}
+
+{% block content %}
+<div class="grid-cards" id="comandas" style="grid-template-columns:repeat(auto-fill,minmax(270px,1fr))"></div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const minutos = iso => Math.floor((Date.now() - new Date(iso)) / 60000);
+
+
+function tarjeta(o) {
+  const min = minutos(o.created_at);
+  const borde = min > 15 ? "var(--danger)" : min > 8 ? "var(--warn)" : "var(--line)";
+  const reloj = min > 15 ? "bad" : min > 8 ? "warn" : "neutro";
+  return `<article class="card" style="padding:var(--sp-3);border-color:${borde}">
+    <div class="spread" style="margin-bottom:var(--sp-1)">
+      <strong style="font-size:17px">Mesa ${o.table_number}</strong>
+      <span class="fin pill ${reloj}">${min} min</span>
+    </div>
+    <div class="dim small" style="margin-bottom:var(--sp-2)">
+      #${o.id} · ${o.mesero_nombre ? "mesero " + escHTML(o.mesero_nombre) : (o.source === "qr" ? "cliente (QR)" : "panel")}${o.customer_name ? " · " + escHTML(o.customer_name) : ""}
+    </div>
+    <div style="display:grid;gap:4px;font-size:15px;margin-bottom:var(--sp-2)">
+      ${o.items.filter(i => i.novedad !== "anulado").map(i => `<div>${i.quantity} × ${escHTML(i.product_name)}${
+        i.note ? ` <span class="dim">(${escHTML(i.note)})</span>` : ""}${i.novedad ? ` <span class="pill menta">${i.novedad === "cortesia" ? "cortesía" : "devolución"}</span>` : ""}</div>`).join("")}
+    </div>
+    ${o.note ? `<div class="dim small" style="margin-bottom:var(--sp-2)">Nota: ${escHTML(o.note)}</div>` : ""}
+    <div class="row">
+      ${o.status === "pending"
+        ? `<button class="btn ghost sm" onclick="estado(${o.id},'preparing')">Preparando</button>` : ""}
+      <button class="btn ok sm" onclick="estado(${o.id},'served')">Servido</button>
+      ${botonImprimir(o)}
+    </div>
+  </article>`;
+}
+
+async function refrescar() {
+  try {
+    const pedidos = await api("/api/v1/staff/kitchen/");
+    pintarSiCambia(document.getElementById("comandas"), pedidos.length
+      ? pedidos.map(tarjeta).join("")
+      : '<div class="card vacio">No hay comandas por hacer.</div>');
+    document.getElementById("conteo").textContent = `${pedidos.length} activas`;
+    document.getElementById("reloj").textContent = new Date().toLocaleTimeString("es-CO");
+  } catch (e) { console.error(e); }
+}
+
+async function estado(id, status) {
+  await api(`/api/v1/staff/orders/${id}/status/`, {method: "PATCH", body: JSON.stringify({status})});
+  refrescar();
+}
+
+refrescar();
+setInterval(refrescar, 5000);
+</script>
+{% endblock %}

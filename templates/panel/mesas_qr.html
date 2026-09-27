@@ -1,0 +1,56 @@
+{% extends "panel/_base.html" %}
+{% block title %}QR de las mesas — Cloudin{% endblock %}
+{% block titulo %}QR de las mesas{% endblock %}
+{% block subtitulo %}<p class="sub dim small">Uno por mesa, listos para imprimir y pegar</p>{% endblock %}
+{% block acciones %}
+  <a class="btn ghost" href="{% url 'panel:configuracion' %}">Volver a configuración</a>
+  <button class="btn" onclick="window.print()">Imprimir hoja</button>
+{% endblock %}
+
+{% block head %}
+{{ block.super }}
+<style>
+  .hoja{display:grid;gap:var(--sp-3);grid-template-columns:repeat(auto-fill,minmax(225px,1fr))}
+  .qr-card{background:#fff;color:#111;border-radius:var(--r-lg);padding:18px;text-align:center;
+           break-inside:avoid}
+  .qr-card img{width:100%;max-width:180px;margin:0 auto;display:block}
+  .qr-card .n{font-size:25px;font-weight:800;margin:0 0 2px}
+  .qr-card .r{font-size:11.5px;color:#555;margin:0 0 10px}
+  .qr-card .pie{font-size:10.5px;color:#666;margin-top:10px;word-break:break-all}
+  @media print{
+    .side,.topbar,.noprint{display:none !important}
+    body{background:#fff}
+    .app{display:block}
+    .content{padding:0;max-width:none}
+    .hoja{grid-template-columns:repeat(2,1fr);gap:8mm}
+    .qr-card{border:1px dashed #999}
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="noprint">
+  <p class="muted" style="margin-bottom:var(--sp-3)">
+    Cada QR abre la carta ya identificada con esa mesa. Imprímelos, recórtalos y
+    pégalos en la mesa que corresponde.
+  </p>
+  {% if not tenant.site_url %}
+    <div class="aviso alerta">
+      Falta registrar el sitio web en Configuración: sin él no se puede armar el enlace del QR.
+    </div>
+  {% endif %}
+</div>
+
+<div class="hoja">
+  {% for m in mesas %}
+    <div class="qr-card">
+      <p class="n">Mesa {{ m.mesa.number }}</p>
+      <p class="r">{{ tenant.name }} · escanea para pedir</p>
+      {% if m.qr %}<img src="{{ m.qr }}" alt="QR de la mesa {{ m.mesa.number }}">{% endif %}
+      <p class="pie">{{ m.enlace|default:"— sin sitio web registrado —" }}</p>
+    </div>
+  {% empty %}
+    <p class="vacio">No hay mesas activas todavía.</p>
+  {% endfor %}
+</div>
+{% endblock %}

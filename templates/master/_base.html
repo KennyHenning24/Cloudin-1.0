@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block layout %}
+<div class="app">
+  <div class="velo" onclick="document.body.classList.remove('menu-abierto')"></div>
+  <aside class="side" id="menu-lateral">
+    <a class="side-brand" href="{% url 'master:home' %}" title="Ir al inicio">
+      <img class="mark" src="{% static 'img/cloudin-marca.png' %}" alt="">
+      <img class="wordmark wm-oscuro" src="{% static 'img/cloudin-texto.png' %}" alt="Cloudin"><img class="wordmark wm-claro" src="{% static 'img/cloudin-texto-claro.png' %}" alt="" aria-hidden="true">
+    </a>
+
+    <div class="side-who">
+      <div class="rol">Panel maestro</div>
+      <div class="quien">{{ user.first_name|default:user.username }}</div>
+    </div>
+
+    <nav>
+      <a href="{% url 'master:home' %}" class="{% if seccion == 'restaurantes' %}on{% endif %}">
+        <svg class="ico" viewBox="0 0 24 24"><path d="M3 21h18M5 21V8l7-5 7 5v13M10 21v-6h4v6"/></svg>
+        Restaurantes
+      </a>
+      <a href="{% url 'master:restaurante-nuevo' %}" class="{% if seccion == 'nuevo' %}on{% endif %}">
+        <svg class="ico" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+        Nuevo restaurante
+      </a>
+      <a href="{% url 'master:tokens' %}" class="{% if seccion == 'tokens' %}on{% endif %}">
+        <svg class="ico" viewBox="0 0 24 24"><circle cx="8" cy="15" r="4"/><path d="m10.8 12.2 8.2-8.2M17 6l2 2M15 8l2 2"/></svg>
+        Tokens de API
+      </a>
+      <a href="/admin/">
+        <svg class="ico" viewBox="0 0 24 24"><ellipse cx="12" cy="5.5" rx="8" ry="3"/><path d="M4 5.5v13c0 1.7 3.6 3 8 3s8-1.3 8-3v-13M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3"/></svg>
+        Datos en crudo
+      </a>
+    </nav>
+
+    <div class="side-foot">
+      <div class="tema" role="group" aria-label="Color del panel">
+        <button type="button" data-tema="oscuro">Oscuro</button>
+        <button type="button" data-tema="claro">Claro</button>
+      </div>
+      {# Desde Django 5 el cierre de sesión solo acepta POST. #}
+      <form method="post" action="/admin/logout/">
+        {% csrf_token %}
+        <button class="btn ghost block" type="submit">
+          <svg class="ico" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>
+          Salir
+        </button>
+      </form>
+    </div>
+  </aside>
+
+  <div class="main">
+    <header class="topbar">
+      <button class="icon-btn menu-btn" type="button" aria-label="Abrir el menú"
+              onclick="document.body.classList.add('menu-abierto')">
+        <svg class="ico" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h10"/></svg>
+      </button>
+      <div>
+        <h1>{% block titulo %}{% endblock %}</h1>
+        {% block subtitulo %}{% endblock %}
+      </div>
+      <div class="acciones">{% block acciones %}{% endblock %}</div>
+    </header>
+
+    <div class="content">
+      {% if messages %}{% for m in messages %}
+        <div class="aviso {% if m.level_tag == 'warning' %}alerta{% elif m.level_tag == 'error' %}malo{% else %}exito{% endif %}">{{ m }}</div>
+      {% endfor %}{% endif %}
+      {% block content %}{% endblock %}
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,17 @@
+{% load cloudin %}{% comment %}
+Tarjeta de QR con descargar (PNG y SVG) e imprimir.
+{% include "components/qr.html" with titulo="Tu menú" enlace=enlace png=url_png svg=url_svg %}
+Sin `enlace` (el menú digital todavía no está publicado) no hay QR: se explica en su lugar.
+{% endcomment %}{% if not enlace %}<div class="card">{% include "components/vacio.html" with titulo="Tu menú digital todavía no está publicado" texto="Cuando su página esté en línea, aquí aparece su código QR y el de cada mesa." icono="qr" %}</div>{% else %}<div class="card qr-card">
+  <div class="qr"><img src="{{ png }}" alt="Código QR de {{ titulo|lower }}" width="120" height="120" loading="lazy"></div>
+  <div class="stack-sm" style="min-width:0;flex:1">
+    <strong>{{ titulo }}</strong>
+    <a class="enlace enlace-menu" href="{{ enlace }}" target="_blank" rel="noopener">{{ enlace }}</a>
+    <div class="row">
+      <button type="button" class="btn secundario sm" onclick="copiar('{{ enlace|escapejs }}', this)">{% icono "copiar" %}Copiar enlace</button>
+      <a class="btn secundario sm" href="{{ png }}" download>{% icono "descargar" %}PNG</a>
+      {% if svg %}<a class="btn secundario sm" href="{{ svg }}" download>{% icono "descargar" %}SVG</a>{% endif %}
+      <a class="btn fantasma sm" href="{{ png }}" target="_blank" rel="noopener">{% icono "imprimir" %}Imprimir</a>
+    </div>
+  </div>
+</div>{% endif %}
