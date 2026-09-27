@@ -18,7 +18,7 @@
         <tr>
           <th>Restaurante</th>
           <th>Identificador</th>
-          <th>Plan</th>
+          <th>Pedidos por QR</th>
           <th>Base de datos</th>
           <th>Usuarios</th>
           <th>Estado</th>
@@ -33,7 +33,7 @@
             <div class="dim small">alta el {{ r.created_at|date:"d/m/Y" }}</div>
           </td>
           <td><code>{{ r.slug }}</code></td>
-          <td><span class="pill {% if r.plan == 'completo' %}ok{% endif %}">{{ r.get_plan_display }}</span></td>
+          <td><span class="pill {% if r.pedidos_qr %}ok{% else %}neutro{% endif %}">{% if r.pedidos_qr %}Encendidos{% else %}Apagados{% endif %}</span></td>
           <td class="dim small">
             {{ r.db_name }}
             {% if not r.provisioned_at %}<span class="pill off">sin aprovisionar</span>{% endif %}

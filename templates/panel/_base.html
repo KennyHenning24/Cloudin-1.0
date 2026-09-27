@@ -3,31 +3,23 @@
 
 {% block layout %}
 {% if user.is_authenticated %}
-{% with plan_menu=tenant.es_plan_menu %}
-<div class="app{% if plan_menu %} app-menu{% endif %} {% block app_clase %}{% endblock %}">
-  {% if plan_menu %}
-    {% include "panel/_nav_menu.html" %}
-  {% else %}
-    {% include "panel/_nav_completo.html" %}
-  {% endif %}
+<div class="app {% block app_clase %}{% endblock %}">
+  {% include "panel/_nav_completo.html" %}
 
   <div class="main">
     <div class="sin-conexion" role="status">{% icono "sin-internet" "ico sm" %}Sin internet · guardaremos tus cambios al reconectar</div>
     <header class="topbar">
-      {% block topbar_inicio %}{% if plan_menu %}
-        <a class="topbar-marca" href="{% url 'panel:inicio' %}" aria-label="Cloudin, ir al inicio"><img src="{% static 'img/cloudin-marca.png' %}" alt="" width="28" height="28"></a>
-      {% else %}
+      {% block topbar_inicio %}
         <button class="icon-btn menu-btn" type="button" aria-label="Abrir el menú" aria-controls="menu-lateral" data-abrir-menu>
           <svg class="ico" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h10"/></svg>
         </button>
-      {% endif %}{% endblock %}
+      {% endblock %}
       <div style="min-width:0">
         <h1>{% block titulo %}{% endblock %}</h1>
         {% block subtitulo %}{% endblock %}
       </div>
       <div class="acciones">
         {% block acciones %}{% endblock %}
-        {% if not plan_menu %}
         <div style="position:relative">
           <button class="icon-btn" type="button" id="campana" aria-label="Avisos" aria-expanded="false">
             <svg class="ico" viewBox="0 0 24 24"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.9 1.9 0 0 0 3.4 0"/></svg>
@@ -39,7 +31,6 @@
           </div>
         </div>
         <a class="avatar" href="{% url 'panel:cuenta' %}" title="Tu cuenta: {{ user.get_full_name|default:user.username }}">{{ user.first_name|default:user.username|slice:":1"|upper }}</a>
-        {% endif %}
       </div>
     </header>
 
@@ -59,11 +50,6 @@
     </div>
   </div>
 
-  {% if plan_menu %}
-    <nav class="barra-inferior" aria-label="Secciones">
-      {% include "panel/_nav_menu_items.html" with corto=True %}
-    </nav>
-  {% else %}
   <nav class="barra-movil" aria-label="Accesos rápidos">
     <a href="{% url 'panel:inicio' %}" class="{% if seccion == 'inicio' %}on{% endif %}">
       <svg class="ico" viewBox="0 0 24 24"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg>Inicio
@@ -82,10 +68,8 @@
       <svg class="ico" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg>Más
     </button>
   </nav>
-  {% endif %}
   {% block fab %}{% endblock %}
 </div>
-{% endwith %}
 {% else %}
   <div class="content">{% block anonimo %}{% endblock %}</div>
 {% endif %}
@@ -95,7 +79,7 @@
 <link rel="manifest" href="{% url 'panel:manifest' %}">
 <style>
   .cerrar-menu{display:none;position:absolute;top:14px;right:14px}
-  @media (max-width:980px){.app:not(.app-menu) .cerrar-menu{display:inline-grid}}
+  @media (max-width:980px){.cerrar-menu{display:inline-grid}}
   .banda-soporte{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:10px 16px;border-radius:var(--r);
     margin-bottom:var(--sp-4);background:var(--amarillo-bg);color:var(--text);border:1px solid color-mix(in srgb,var(--amarillo) 40%,transparent)}
   .banda-soporte form{margin:0 0 0 auto}
@@ -113,7 +97,7 @@
   .aviso-fila small{display:block;color:var(--text-3);font-size:12.5px}
   .aviso-fila .n{margin-left:auto;font-weight:800;font-size:15px}
 </style>
-{% if user.is_authenticated and not tenant.es_plan_menu %}
+{% if user.is_authenticated %}
 <script>
 /* ---------- menú en el celular ---------- */
 document.addEventListener("click", (e) => {

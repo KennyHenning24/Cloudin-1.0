@@ -11,8 +11,9 @@
  *  3. «Enviar pedido» (POST …/enviar/) lo manda a la cocina. Si la mesa estaba libre,
  *     ese pedido la ocupa. El precio lo calcula siempre Cloudin, nunca esta página.
  *  4. Cada 5 s consulta el estado (GET …/estado/): carrito, pedidos y en qué van.
- *     Si Cloudin dice `recibe_pedidos: false` (plan solo menú o solo meseros), no hay
- *     botones: la carta queda para mirar.
+ *     Si Cloudin dice `recibe_pedidos: false` (el restaurante apagó los pedidos por QR
+ *     en su panel), no hay botones: la carta queda para mirar. Al encenderlos, los
+ *     botones vuelven solos en la siguiente consulta.
  */
 (() => {
   "use strict";
@@ -208,7 +209,7 @@
 
   function botones(raiz = document) {
     if (!estado) return;  // primero hay que saber si el restaurante recibe pedidos por el QR
-    if (estado.recibe_pedidos === false) {  // solo menú o solo meseros: la carta queda para mirar
+    if (estado.recibe_pedidos === false) {  // pedidos por QR apagados: la carta queda para mirar
       document.querySelectorAll(".cl-agregar").forEach((b) => b.remove());
       return;
     }

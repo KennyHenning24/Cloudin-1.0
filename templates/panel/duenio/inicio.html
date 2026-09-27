@@ -36,6 +36,7 @@
 {% if servicio %}
 <section aria-labelledby="t-servicio">
   <h2 class="h-seccion" id="t-servicio">Pedidos y mesas</h2>
+  {% include "components/pedidos_qr.html" with es_admin=es_admin %}
   <div class="kpis-menu">
     <a class="kpi-menu" href="{% url 'panel:tables' %}"><b>{{ servicio.ocupadas }} de {{ servicio.mesas }}</b><span>mesas ocupadas</span></a>
     <a class="kpi-menu" href="{% url 'panel:kitchen' %}"><b>{{ servicio.por_atender }}</b><span>por atender en cocina</span></a>

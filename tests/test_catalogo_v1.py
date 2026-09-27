@@ -138,11 +138,13 @@ def test_ajustes_del_negocio_nacen_con_lo_que_se_sabe(restaurante, en_restaurant
 
 
 @pytest.mark.django_db
-def test_origenes_permitidos_y_plan(crear_restaurante):
+def test_origenes_permitidos_y_como_se_toman_los_pedidos(crear_restaurante):
     t = crear_restaurante("con-sitio", site_url="https://x.pages.dev/menu.html",
                           allowed_origins=["https://mi-restaurante.com/", "ftp://no.sirve"])
     assert t.origenes_permitidos == {"https://x.pages.dev", "https://mi-restaurante.com"}
-    assert t.es_plan_menu
+    # Todos tienen Cloudin completo: un restaurante nuevo recibe pedidos por el QR y la app
+    # de meseros queda apagada hasta que su administrador la encienda.
+    assert t.pedidos_qr and not t.app_meseros
 
 
 @pytest.mark.django_db

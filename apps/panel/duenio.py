@@ -1,8 +1,6 @@
-"""Panel del dueño: el menú digital.
-
-Con el plan «Menú digital» es todo el panel (Inicio · Mi menú · Personalizar ·
-Mesas y QR · Cuenta); con el plan completo se suman las pantallas de pedidos,
-mesas y meseros. Sigue los wireframes aprobados (docs/wireframes/).
+"""Panel del dueño: el menú digital (Inicio · Mi menú · Personalizar · Mesas y QR ·
+Cuenta). Las pantallas de pedidos, mesas, cocina y meseros están en views.py y
+meseros.py. Sigue los wireframes aprobados (docs/wireframes/).
 
 Las pantallas pintan el estado inicial y el JavaScript del panel guarda los
 cambios con la API /api/v1/staff/ (apps/api/catalogo_views.py). El asistente de
@@ -153,14 +151,13 @@ def _ultimo_cambio():
 
 
 def inicio_menu(request):
-    """Inicio del panel (lo llama views.inicio). Con el plan completo suma el
-    resumen de pedidos y mesas."""
+    """Inicio del panel (lo llama views.inicio): el estado del menú, el resumen de
+    pedidos y mesas, y el interruptor de los pedidos por QR."""
     tenant = request.tenant
     ajustes = RestaurantSettings.load()
     admin = es_admin(request)
-    # La primera vez, el dueño del plan «Menú digital» empieza por el asistente (se
-    # puede saltar). El plan completo entra directo, como siempre.
-    if (tenant.es_plan_menu and admin and not request.user.is_superuser
+    # La primera vez, el administrador empieza por el asistente (se puede saltar).
+    if (admin and not request.user.is_superuser
             and ajustes.onboarding_done_at is None and ajustes.onboarding_step == 0):
         return redirect("panel:bienvenida")
 
@@ -191,14 +188,14 @@ def inicio_menu(request):
         "ultimo_cambio": _ultimo_cambio(),
         "enlace": qr.enlace_del_menu(tenant),
         "menus": Menu.objects.filter(deleted_at__isnull=True).count(),
-        "servicio": None if tenant.es_plan_menu else resumen_del_servicio(),
+        "servicio": resumen_del_servicio(),
     })
 
 
 # ---------------------------------------------------------------- Mi menú
 
 
-@panel_view(menu=True)
+@panel_view()
 def mi_menu(request):
     """Categorías y productos del menú elegido. Buscar y filtrar pasa en el
     navegador (instantáneo); guardar, con la API."""
@@ -254,7 +251,7 @@ def _producto_para_editor(producto, request) -> dict | None:
     return datos
 
 
-@panel_view(menu=True)
+@panel_view()
 def producto(request, producto=None):
     """El editor: lo básico arriba, las opciones avanzadas plegadas y la vista previa.
 
@@ -309,7 +306,7 @@ def _horario_por_dia() -> list[dict]:
             for d in range(7)]
 
 
-@panel_view(menu=True)
+@panel_view()
 def personalizar(request):
     """Marca del menú, datos del negocio, contacto, horario, redes y pagos."""
     _solo_admin(request)
@@ -330,7 +327,7 @@ def personalizar(request):
 # ------------------------------------------------------------- Mesas y QR
 
 
-@panel_view(menu=True)
+@panel_view()
 def mesas_y_qr(request):
     tenant = request.tenant
     mesas = [{"mesa": m, "enlace": qr.enlace_de_mesa(tenant, m)}
@@ -369,7 +366,7 @@ def _guardar_copia_cifrada(user, clave: str) -> None:
         m.save(update_fields=["password_cifrada", "password_actualizada"])
 
 
-@panel_view(menu=True)
+@panel_view()
 def cuenta(request):
     """Perfil, contraseña, equipo (según el rol), tema y cerrar sesión."""
     tenant, user = request.tenant, request.user
@@ -478,7 +475,7 @@ def _paso_valido(valor, maximo: int) -> int:
         return 1
 
 
-@panel_view(menu=True)
+@panel_view()
 def bienvenida(request):
     """4 pasos y el final. Se puede saltar en cualquier momento y se retoma
     desde el Inicio donde iba (RestaurantSettings.onboarding_step)."""

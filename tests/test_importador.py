@@ -70,7 +70,7 @@ def test_importa_el_ejemplo_creando_el_restaurante(client, bases_creadas_en_la_p
     r = importar_semilla(semilla(), Carpeta(EJEMPLO), crear_restaurante=True)
     assert r.creado and r.contadores["productos"]["creados"] == 4
     t = Tenant.objects.get(slug="restaurante-ejemplo")
-    assert t.plan == Tenant.PLAN_MENU and t.site_url == "http://localhost:4431"
+    assert t.pedidos_qr and t.site_url == "http://localhost:4431"
     assert t.menu_page == "http://localhost:4431/index.html"
 
     # El dueño queda creado con su rol y recibe la invitación.
@@ -239,7 +239,7 @@ def test_create_restaurant(bases_creadas_en_la_prueba, en_restaurante):
     call_command("create_restaurant", "--name", "La Esquina", "--owner-email", "ana@example.com",
                  "--owner-name", "Ana Ruiz")
     t = Tenant.objects.get(slug="la-esquina")
-    assert t.plan == Tenant.PLAN_MENU
+    assert t.pedidos_qr and not t.app_meseros
     assert TenantMembership.objects.get(tenant=t).role == TenantMembership.ROLE_OWNER
     assert "La Esquina" in mail.outbox[0].subject
     with en_restaurante(t):

@@ -7,16 +7,17 @@ from .provisioning import provision_tenant
 
 @admin.register(Tenant)
 class TenantAdmin(admin.ModelAdmin):
-    list_display = ("name", "slug", "plan", "domain_link", "is_active", "provisioned_at")
-    list_filter = ("is_active", "plan")
+    list_display = ("name", "slug", "pedidos_qr", "domain_link", "is_active", "provisioned_at")
+    list_filter = ("is_active", "pedidos_qr", "app_meseros")
     search_fields = ("name", "slug", "nit")
     readonly_fields = ("api_key", "db_name", "provisioned_at", "created_at")
     actions = ("accion_aprovisionar",)
     fieldsets = (
-        (None, {"fields": ("name", "slug", "plan", "is_active")}),
+        (None, {"fields": ("name", "slug", "is_active")}),
+        ("Cómo se toman los pedidos", {"fields": ("pedidos_qr", "app_meseros")}),
         ("Datos fiscales", {"fields": ("legal_name", "nit", "address", "city", "phone")}),
         ("Sitio web y menú", {"fields": ("site_url", "allowed_origins", "menu_page", "table_page_path",
-                                         "menu_fuente", "modo_servicio")}),
+                                         "menu_fuente")}),
         ("Técnico", {"fields": ("api_key", "db_name", "provisioned_at", "created_at")}),
     )
 

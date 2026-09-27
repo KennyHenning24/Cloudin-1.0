@@ -3,8 +3,8 @@
 Cloudin no tiene un menú propio: el QR lleva a la página del menú del restaurante
 (`Tenant.menu_page`, la que llega con la importación). Para una mesa:
 1. `menu_page` + `?mesa=<token>` (el runtime lo lee y muestra «Mesa 5»).
-2. Si el restaurante pide por QR desde su sitio (plan completo, `site_url`), el
-   enlace de siempre (`mesa.html?m=<token>`): así no hay que reimprimir.
+2. Si el restaurante pide por QR desde su sitio (`site_url`), el enlace de siempre
+   (`mesa.html?m=<token>`): así no hay que reimprimir.
 3. Si todavía no hay página publicada, no hay QR (enlace vacío).
 
 El token (no el número) va en el QR: así nadie puede pedir para otra mesa
@@ -35,7 +35,7 @@ def enlace_del_menu(tenant) -> str:
 def enlace_de_mesa(tenant, mesa) -> str:
     if tenant.menu_page:
         return con_parametro(tenant.menu_page, "mesa", mesa.token)
-    if tenant.site_url and not tenant.es_plan_menu:
+    if tenant.site_url:
         return tenant.qr_link(mesa.token)
     return ""
 

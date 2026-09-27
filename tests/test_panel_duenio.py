@@ -1,5 +1,6 @@
-"""Panel del dueño (plan «Menú digital»): pantallas, permisos por rol, asistente de
-la primera vez, cuenta y equipo, mesas y QR, vista previa y app instalable (PWA)."""
+"""Panel del dueño: pantallas, permisos por rol, asistente de la primera vez, cuenta y
+equipo, mesas y QR, los interruptores de pedidos por QR y app de meseros, vista previa
+y app instalable (PWA)."""
 
 import io
 import json
@@ -25,7 +26,7 @@ PANTALLAS_DEL_MENU = ("inicio", "mi-menu", "carta-producto-nuevo", "personalizar
 
 @pytest.fixture
 def menu_digital(crear_restaurante, crear_usuario, en_restaurante):
-    tenant = crear_restaurante("birria-lucho", nombre="Birria Don Lucho")  # plan «Menú digital» por defecto
+    tenant = crear_restaurante("birria-lucho", nombre="Birria Don Lucho")
     dueno = crear_usuario(tenant, "lucho", rol=TenantMembership.ROLE_OWNER, nombre="Lucho", correo="lucho@example.com")
     with en_restaurante(tenant):
         cat = Category.objects.create(name="Birria")
@@ -58,16 +59,16 @@ def test_las_pantallas_del_menu_abren(client, menu_digital):
 
 
 @pytest.mark.django_db
-def test_el_plan_menu_no_ve_pedidos_mesas_ni_meseros(client, menu_digital):
+def test_todos_tienen_pedidos_mesas_cocina_y_meseros(client, menu_digital):
+    """No hay planes: cualquier restaurante tiene el panel completo."""
     client.force_login(menu_digital.dueno)
     for nombre in ("tables", "kitchen", "mensajes", "meseros", "configuracion"):
-        r = client.get(reverse(f"panel:{nombre}"))
-        assert r.status_code == 302 and r.url == reverse("panel:inicio"), nombre
+        assert client.get(reverse(f"panel:{nombre}")).status_code == 200, nombre
     html = client.get(reverse("panel:inicio")).content.decode()
-    for seccion in ("Mi menú", "Personalizar", "Mesas y QR", "Cuenta"):
-        assert seccion in html
-    assert "Pedidos y mesas" not in html and 'id="campana"' not in html
-    assert 'class="barra-inferior"' in html and 'class="fab"' in html
+    for seccion in ("Mi menú", "Personalizar", "Códigos QR", "Meseros", "Mesas", "Cocina"):
+        assert seccion in html, seccion
+    assert "Pedidos y mesas" in html and 'id="campana"' in html and 'class="fab"' in html
+    assert "barra-inferior" not in html
 
 
 @pytest.mark.django_db
@@ -262,6 +263,61 @@ def test_crear_mesas_y_ver_sus_qr(client, menu_digital, en_restaurante):
     assert r.status_code == 200 and r["Content-Type"] == "image/png"
 
 
+# ------------------------------------------- cómo se toman los pedidos
+
+
+@pytest.mark.django_db
+def test_el_administrador_apaga_y_enciende_los_pedidos_por_qr(client, menu_digital, en_restaurante):
+    with en_restaurante(menu_digital.tenant):
+        mesa = Table.objects.create(number=1)
+    llave = {"HTTP_X_API_KEY": menu_digital.tenant.api_key}
+    estado = f"/api/v1/mesa/{mesa.token}/estado/"
+    client.force_login(menu_digital.dueno)
+    for pantalla in ("inicio", "qr", "meseros"):  # el interruptor está en las tres
+        assert "data-pedidos-qr" in client.get(reverse(f"panel:{pantalla}")).content.decode(), pantalla
+    assert client.get(estado, **llave).json()["recibe_pedidos"] is True
+
+    r = client.post(reverse("panel:pedidos-qr"), {"activo": "0", "next": reverse("panel:qr")})
+    assert r.status_code == 302 and r.url == reverse("panel:qr")
+    menu_digital.tenant.refresh_from_db()
+    assert not menu_digital.tenant.pedidos_qr
+    assert "Pedidos por QR apagados" in client.get(reverse("panel:qr")).content.decode()
+    assert client.get(estado, **llave).json()["recibe_pedidos"] is False
+    r = client.post(f"/api/v1/mesa/{mesa.token}/enviar/", {"by": "Ana"}, content_type="application/json", **llave)
+    assert r.status_code == 403 and r.json()["codigo"] == "sin_pedidos"
+
+    # Una dirección de otro sitio no sirve para volver: se va al Inicio.
+    r = client.post(reverse("panel:pedidos-qr"), {"activo": "1", "next": "https://otro.example/"})
+    assert r.url == reverse("panel:inicio")
+    menu_digital.tenant.refresh_from_db()
+    assert menu_digital.tenant.pedidos_qr
+    assert client.get(estado, **llave).json()["recibe_pedidos"] is True
+
+
+@pytest.mark.django_db
+def test_el_equipo_ve_si_hay_pedidos_por_qr_pero_no_los_cambia(client, menu_digital, crear_usuario):
+    cajero = crear_usuario(menu_digital.tenant, "caja", rol=TenantMembership.ROLE_STAFF)
+    client.force_login(cajero)
+    html = client.get(reverse("panel:inicio")).content.decode()
+    assert "Pedidos desde el QR de la mesa" in html and 'role="switch"' not in html.split("data-pedidos-qr")[1][:1500]
+    assert client.post(reverse("panel:pedidos-qr"), {"activo": "0"}).status_code == 403
+    menu_digital.tenant.refresh_from_db()
+    assert menu_digital.tenant.pedidos_qr
+
+
+@pytest.mark.django_db
+def test_la_app_de_meseros_se_enciende_en_meseros(client, menu_digital):
+    entrar = reverse("mesero:entrar", kwargs={"slug": menu_digital.tenant.slug})
+    assert client.get(entrar).status_code == 403  # apagada al empezar
+    client.force_login(menu_digital.dueno)
+    r = client.post(reverse("panel:meseros"), {"accion": "app_meseros", "activo": "1"})
+    assert r.status_code == 302
+    menu_digital.tenant.refresh_from_db()
+    assert menu_digital.tenant.app_meseros and menu_digital.tenant.pedidos_qr  # el QR no cambia
+    client.logout()
+    assert client.get(entrar).status_code == 200
+
+
 # ---------------------------------------------------------- vista previa
 
 
@@ -293,20 +349,24 @@ def test_el_panel_se_instala_como_app(client):
     assert client.get(reverse("panel:sin-conexion")).status_code == 200
 
 
-# --------------------------------------------------------- plan completo
+# ------------------------------------------------------ pedidos y mesas
 
 
 @pytest.mark.django_db
-def test_el_plan_completo_tiene_mi_menu_y_los_enlaces_viejos_llevan_al_editor(
+def test_el_panel_tiene_mi_menu_y_pedidos_y_los_enlaces_viejos_llevan_al_editor(
         client, crear_restaurante, crear_usuario, en_restaurante):
-    tenant = crear_restaurante("completo", plan="completo")
+    tenant = crear_restaurante("completo")
     admin = crear_usuario(tenant)
     with en_restaurante(tenant):
         p = Product.objects.create(category=Category.objects.create(name="Platos"), name="Bandeja", price=Decimal("25000"))
     client.force_login(admin)
+    # La primera vez el administrador empieza por el asistente; se puede saltar.
+    r = client.get(reverse("panel:inicio"))
+    assert r.status_code == 302 and r.url == reverse("panel:bienvenida")
+    client.post(reverse("panel:bienvenida"), {"accion": "saltar"})
     html = client.get(reverse("panel:inicio")).content.decode()
     assert f'href="{reverse("panel:mi-menu")}"' in html and f'href="{reverse("panel:personalizar")}"' in html
-    # El plan completo suma pedidos, mesas, cocina y meseros (y ya no hay turno de caja).
+    # Pedidos, mesas, cocina y meseros (y ya no hay turno de caja).
     assert "Pedidos y mesas" in html and 'id="campana"' in html
     for nombre in ("tables", "mensajes", "kitchen", "meseros"):
         assert f'href="{reverse(f"panel:{nombre}")}"' in html, nombre

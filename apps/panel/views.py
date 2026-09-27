@@ -20,17 +20,15 @@ from apps.dining.models import Table
 from apps.orders.models import Order, TableSession
 
 
-def panel_view(solo_admin=False, menu=False):
+def panel_view(solo_admin=False):
     """Resuelve el restaurante de la petición y controla quién puede entrar.
 
     En vez de un 404 seco, cada caso tiene su salida:
       - superusuario sin restaurante elegido -> lo mandamos al panel maestro,
-      - usuario de otro restaurante o sin permiso -> página de "sin acceso",
-      - plan «Menú digital» en una pantalla del plan completo -> al Inicio.
+      - usuario de otro restaurante o sin permiso -> página de "sin acceso".
 
-    `menu=True` marca las pantallas del menú digital (Mi menú, Personalizar,
-    Mesas y QR, Cuenta): existen en los dos planes. Las demás (mesas, pedidos,
-    cocina, meseros) son del plan completo.
+    Todos los restaurantes tienen el panel completo: menú digital, pedidos, mesas,
+    cocina y meseros.
     """
 
     def decorador(vista):
@@ -56,11 +54,6 @@ def panel_view(solo_admin=False, menu=False):
                     )
 
             request.tenant = tenant
-
-            # El plan «Menú digital» solo tiene las pantallas del menú: lo demás
-            # (mesas, pedidos, cocina, meseros) lleva al Inicio.
-            if tenant.es_plan_menu and not menu:
-                return redirect("panel:inicio")
 
             # Los términos y la política se aceptan una vez; sin eso no se entra.
             from .legal import ya_acepto
@@ -163,17 +156,17 @@ def configuracion(request):
     return render(request, "panel/configuracion.html", {"seccion": "config"})
 
 
-@panel_view(menu=True)
+@panel_view()
 def inicio(request):
-    """La portada del panel: el estado del menú digital (apps/panel/duenio.py) y,
-    con el plan completo, además cómo van los pedidos y las mesas."""
+    """La portada del panel: el estado del menú digital y cómo van los pedidos y las
+    mesas (apps/panel/duenio.py)."""
     from .duenio import inicio_menu
 
     return inicio_menu(request)
 
 
 def resumen_del_servicio() -> dict:
-    """Mesas ocupadas, pedidos por atender y pedidos del día (plan completo)."""
+    """Mesas ocupadas, pedidos por atender y pedidos del día."""
     abiertas = TableSession.objects.filter(status=TableSession.STATUS_OPEN)
     return {
         "mesas": Table.objects.filter(is_active=True).count(),
