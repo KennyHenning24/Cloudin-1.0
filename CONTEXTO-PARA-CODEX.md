@@ -17,6 +17,7 @@
 |---|---|
 | **Este archivo** | Montaje, mapa del código, reglas y recetas de cambio |
 | `README.md` | Documentación técnica del producto, pantalla por pantalla |
+| `PASO-A-PASO-NUEVO-RESTAURANTE.md` | Registrar un restaurante y conectar su menú, paso a paso, con la plantilla `client/plantilla/index.html` |
 | `GUIA-MENU-DIGITAL.md` | Cómo construir el menú digital de un cliente en Cloudflare Pages y cómo lee la carta y manda pedidos |
 | `CONECTAR-MENU-A-CLOUDIN.md` | Cómo el sitio web de un restaurante le entrega su carta al panel |
 | `INTEGRACION-SITIO-WEB.md` | API para la tablet o el sitio del restaurante (pedidos por número de mesa) |

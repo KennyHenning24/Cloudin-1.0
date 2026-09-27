@@ -106,12 +106,14 @@ para cuando haya presupuesto.
 1. Abre `https://<tu-servicio>.onrender.com/master/` y entra con el superusuario. Si el
    servicio estaba dormido, la primera carga tarda un minuto.
 2. **Nuevo restaurante**, con el plan **«Cloudin completo»** si va a recibir pedidos. El
-   panel maestro muestra una sola vez el usuario y la contraseña del restaurante.
-3. Entra a `https://<tu-servicio>.onrender.com/panel/login/` con esos datos: **Códigos
-   QR** para crear las mesas y **Mi menú** para la carta y las fotos. Al subir una foto,
-   su dirección empieza con `https://pub-….r2.dev/`: así sabes que quedó en R2.
-4. El menú digital del cliente, en Cloudflare Pages, apunta a esta dirección:
-   `GUIA-MENU-DIGITAL.md`, sección 4.
+   panel maestro muestra una sola vez el usuario, la contraseña y el enlace del panel
+   (`https://<tu-servicio>.onrender.com/panel/login/`: Cloudin toma la dirección del
+   servicio de `RENDER_EXTERNAL_HOSTNAME`, que Render define solo).
+3. Entra al panel con esos datos: **Códigos QR** para crear las mesas y **Mi menú** para
+   la carta y las fotos. Al subir una foto, su dirección empieza con
+   `https://pub-….r2.dev/`: así sabes que quedó en R2.
+4. El recorrido completo, con el menú en Cloudflare Pages y el pedido de prueba:
+   **`PASO-A-PASO-NUEVO-RESTAURANTE.md`**.
 
 ## 4. El día a día
 

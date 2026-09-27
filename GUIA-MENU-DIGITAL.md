@@ -9,6 +9,10 @@
 > Todo lo que dice existe en el código y está probado (`tests/test_pedidos_menu_digital.py`
 > y un recorrido real en el navegador). La implementación de referencia está en
 > `client/example/`: `index.html` (la carta) y `carrito.js` (el carrito y el pedido).
+>
+> **¿Primera vez?** El paso a paso, con los nombres exactos de cada pantalla, desde
+> registrar el restaurante hasta el pedido de prueba, y la plantilla mínima
+> (`client/plantilla/index.html`) están en **`PASO-A-PASO-NUEVO-RESTAURANTE.md`**.
 
 ---
 
@@ -132,7 +136,9 @@ puedes usar la misma plantilla para todos los clientes.
 
 ### 4.1 La carpeta del menú
 
-Empieza copiando `client/example/` a un repositorio nuevo (uno por cliente):
+Empieza copiando `client/example/` a un repositorio nuevo (uno por cliente), o, más
+simple, `client/plantilla/index.html` (la plantilla mínima, comentada) junto con
+`client/example/carrito.js`:
 
 ```
 menu-culturabrisket/
@@ -404,6 +410,8 @@ Lo que expone para tu JavaScript:
 | Evento `cloudin:error` | Cloudin no respondió; queda lo pre-renderizado o lo guardado. |
 
 La referencia viva de plantillas, CSS mínimo y animaciones es `client/example/index.html`.
+Todas las zonas, los atributos y los campos, en tablas: `PASO-A-PASO-NUEVO-RESTAURANTE.md`
+§3.4 y §3.5.
 
 ### 5.5 Sin el runtime (tu propio JavaScript)
 

@@ -1,0 +1,129 @@
+<!doctype html>
+<!--
+  PLANTILLA MÍNIMA de un menú digital conectado a Cloudin.
+  Copia esta carpeta (index.html) y client/example/carrito.js al repositorio del cliente.
+  Guía paso a paso: PASO-A-PASO-NUEVO-RESTAURANTE.md (parte 3).
+
+  Qué cambiar, y nada más:
+    1. <servidor-cloudin>  → la dirección de tu servidor (p. ej. cloudin-abcd.onrender.com), en 2 lugares.
+    2. <slug>              → el identificador del restaurante (p. ej. la-casa), en 2 lugares.
+    3. apiKey              → la API key del restaurante (ck_…) si recibe pedidos por QR; si no, "".
+  El diseño (CSS y HTML) es libre, siempre que conserves los atributos data-cloudin-*.
+-->
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Menú</title>
+<style>
+  :root { --fondo: #1A1110; --texto: #FFF6EC; --suave: rgba(255,246,236,.72); --linea: rgba(255,246,236,.14); }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--fondo); color: var(--texto); font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  a { color: inherit; }
+  .envoltura { max-width: 880px; margin: 0 auto; padding: 0 16px 96px; }
+  .cab { display: flex; gap: 14px; align-items: center; padding: 28px 0 16px; }
+  .cab img { width: 64px; height: 64px; border-radius: 50%; object-fit: cover; }
+  .cab h1 { margin: 0; font-size: 26px; line-height: 1.2; }
+  .cab p { margin: 2px 0 0; color: var(--suave); }
+  .whatsapp { display: inline-flex; align-items: center; min-height: 44px; margin-top: 8px; padding: 0 16px; border-radius: 12px;
+    background: var(--cloudin-primary, #B3261E); color: #fff; font-weight: 700; text-decoration: none; }
+  .categorias-nav { position: sticky; top: 0; z-index: 2; display: flex; gap: 8px; overflow-x: auto; padding: 10px 0;
+    background: var(--fondo); border-bottom: 1px solid var(--linea); }
+  .categorias-nav a { flex: none; padding: 8px 14px; border: 1px solid var(--linea); border-radius: 999px; text-decoration: none; font-weight: 600; }
+  .categoria { scroll-margin-top: 64px; padding-top: 24px; }
+  .categoria h2 { margin: 0; font-size: 22px; color: var(--cloudin-secondary, #F2C14E); }
+  .categoria > p { margin: 4px 0 0; color: var(--suave); }
+  .platos { display: grid; gap: 12px; margin-top: 12px; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); }
+  .plato { display: flex; flex-direction: column; border: 1px solid var(--linea); border-radius: 16px; overflow: hidden; }
+  .plato img { width: 100%; aspect-ratio: 1; object-fit: cover; }
+  .dish__body { display: flex; flex-direction: column; gap: 6px; padding: 14px; }
+  .dish__body h3 { margin: 0; font-size: 17px; }
+  .dish__body p { margin: 0; color: var(--suave); font-size: 14px; }
+  .presentaciones { list-style: none; margin: 0; padding: 0; color: var(--suave); font-size: 14px; }
+  .precio { color: var(--cloudin-secondary, #F2C14E); font-size: 17px; }
+  .agotado { align-self: flex-start; padding: 2px 10px; border-radius: 999px; background: var(--linea); font-size: 12px; font-weight: 700; }
+  .plato[data-available="false"] { opacity: .55; }
+  .cargando { color: var(--suave); }
+  [data-cloudin-state="error"] .cargando::after { content: " No se pudo cargar la carta: revisa la conexión y recarga la página."; }
+  .pie { margin-top: 40px; padding-top: 16px; border-top: 1px solid var(--linea); color: var(--suave); font-size: 14px; }
+</style>
+</head>
+<body>
+<div class="envoltura">
+
+  <!-- DATOS DEL NEGOCIO: data-cloudin-field="business.…" funciona en cualquier parte de la página. -->
+  <header class="cab">
+    <img data-cloudin-if="business.logo" data-cloudin-src="business.logo" alt="">
+    <div>
+      <h1 data-cloudin-field="business.name">Menú</h1>
+      <p data-cloudin-if="business.tagline" data-cloudin-field="business.tagline"></p>
+      <p data-cloudin-if="business.hours_today" data-cloudin-field="business.hours_today"></p>
+      <a class="whatsapp" data-cloudin-if="business.whatsapp_link" data-cloudin-href="business.whatsapp_link">Escríbenos por WhatsApp</a>
+    </div>
+  </header>
+
+  <!-- LA CARTA: data-cloudin="menu" es la raíz. Adentro, las zonas que el runtime llena. -->
+  <main data-cloudin="menu">
+
+    <!-- Barra de categorías (opcional): un enlace por categoría, con la plantilla "category-link". -->
+    <nav class="categorias-nav" data-cloudin="category-nav" aria-label="Categorías">
+      <template data-cloudin-template="category-link">
+        <a data-cloudin-href="category.anchor" data-cloudin-field="category.name"></a>
+      </template>
+    </nav>
+
+    <!-- Categorías (obligatoria): el runtime borra lo que haya aquí (menos las <template>) y pinta la carta. -->
+    <div data-cloudin="categories">
+      <p class="cargando">Cargando la carta…</p>
+
+      <!-- Una categoría. Solo cuenta el PRIMER elemento de cada <template>. -->
+      <template data-cloudin-template="category">
+        <section class="categoria">
+          <h2 data-cloudin-field="category.name"></h2>
+          <p data-cloudin-if="category.description" data-cloudin-field="category.description"></p>
+          <!-- Los platos de esta categoría van aquí (obligatorio dentro de la categoría). -->
+          <div class="platos" data-cloudin="products"></div>
+        </section>
+      </template>
+
+      <!-- Un plato. El runtime le pone data-cloudin-key, data-available y data-featured. -->
+      <template data-cloudin-template="product">
+        <article class="plato">
+          <img data-cloudin-if="product.image" data-cloudin-src="product.image" loading="lazy" width="600" height="600">
+          <!-- carrito.js pone el botón «Agregar» al final de .dish__body. -->
+          <div class="dish__body">
+            <h3 data-cloudin-field="product.name"></h3>
+            <p data-cloudin-if="product.description" data-cloudin-field="product.description"></p>
+            <ul class="presentaciones" data-cloudin="variants">
+              <template data-cloudin-template="variant">
+                <li><span data-cloudin-field="variant.name"></span> · <span data-cloudin-field="variant.price"></span></li>
+              </template>
+            </ul>
+            <strong class="precio" data-cloudin-field="product.price"></strong>
+            <span class="agotado" data-cloudin-if="!product.available">Agotado</span>
+          </div>
+        </article>
+      </template>
+    </div>
+  </main>
+
+  <footer class="pie">
+    <p><span data-cloudin-field="business.address"></span> · <span data-cloudin-field="business.city"></span></p>
+    <p><a data-cloudin-if="business.phone" data-cloudin-href="business.phone_link" data-cloudin-field="business.phone"></a></p>
+  </footer>
+</div>
+
+<!-- CONFIGURACIÓN: primero esto, después los dos scripts. -->
+<script>
+  window.CLOUDIN_CONFIG = {
+    restaurant: "<slug>",
+    api: "https://<servidor-cloudin>/api/public/<slug>/menu/",
+    hideSoldOut: false,
+    cacheTtl: 60,
+    apiKey: ""
+  };
+</script>
+<script src="https://<servidor-cloudin>/static/cloudin-menu.v1.js" defer></script>
+<script src="carrito.js" defer></script>
+</body>
+</html>

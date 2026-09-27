@@ -9,7 +9,9 @@ Backend único multi-tenant para restaurantes. Sirve para dos cosas:
    queda ocupada sola, el pedido llega a Mensajes y Cocina, y los meseros (Cloudin
    Meseros) trabajan sobre las mismas mesas.
 
-Cómo construir y conectar un menú digital: **[GUIA-MENU-DIGITAL.md](GUIA-MENU-DIGITAL.md)**.
+Registrar un restaurante y conectar su menú, paso a paso:
+**[PASO-A-PASO-NUEVO-RESTAURANTE.md](PASO-A-PASO-NUEVO-RESTAURANTE.md)**. La referencia
+completa del menú digital: **[GUIA-MENU-DIGITAL.md](GUIA-MENU-DIGITAL.md)**.
 La facturación electrónica (Factus), el turno de caja, el inventario, las reservas,
 los empleados, las propinas, Cloudin Control y la analítica de ventas **se quitaron**
 (ver «Módulos retirados»).
@@ -218,6 +220,10 @@ Lo mismo con un producto que ya se vendió: se elimina de la carta pero se conse
 
 ## El menú digital y los sitios conectados
 
+- **[PASO-A-PASO-NUEVO-RESTAURANTE.md](PASO-A-PASO-NUEVO-RESTAURANTE.md)** — el
+  recorrido completo para un cliente nuevo: registrarlo en el panel maestro, cargar su
+  carta, armar su menú con `client/plantilla/index.html` (qué atributos lleva el HTML),
+  publicarlo en Pages, conectarlo para pedir, imprimir los QR y probar.
 - **[GUIA-MENU-DIGITAL.md](GUIA-MENU-DIGITAL.md)** — la guía para construir el menú
   digital de un cliente: tecnologías, Cloudflare Pages paso a paso, la carta pública,
   el carrito compartido de la mesa, errores, seguridad y un checklist. La implementación
