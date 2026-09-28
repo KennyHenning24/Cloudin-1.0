@@ -24,7 +24,10 @@
 <meta name="description" content="Ejemplo de menú digital conectado a Cloudin.">
 <link rel="icon" href="assets/brand/logo.svg">
 <style>
-  :root { --fondo:#1A1110; --texto:#FFF6EC; --primario:#B3261E; --secundario:#F2C14E; --suave:rgba(255,246,236,.72); --linea:rgba(255,246,236,.14); }
+  /* Los colores de Personalizar (--cloudin-*); el segundo valor, por si no eligió. */
+  :root { --fondo: var(--cloudin-background, #1A1110); --texto: var(--cloudin-text, #FFF6EC);
+          --primario: var(--cloudin-primary, #B3261E); --secundario: var(--cloudin-secondary, #F2C14E);
+          --suave: color-mix(in srgb, var(--texto) 72%, transparent); --linea: color-mix(in srgb, var(--texto) 14%, transparent); }
   * { box-sizing: border-box; }
   body { margin: 0; background: var(--fondo); color: var(--texto); font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
   a { color: inherit; }
@@ -64,7 +67,8 @@
 <body>
 <div class="envoltura">
   <header class="cab">
-    <img src="assets/brand/logo.svg" alt="Logo de Restaurante Ejemplo" width="72" height="72">
+    <img data-cloudin-if="business.logo" data-cloudin-src="business.logo" src="assets/brand/logo.svg"
+         alt="Logo de Restaurante Ejemplo" width="72" height="72">
     <div>
       <h1 data-cloudin-field="business.name">Restaurante Ejemplo</h1>
       <p data-cloudin-field="business.tagline">Comida casera, en Cali</p>
@@ -195,6 +199,7 @@
     currency: "COP",
     hideSoldOut: false,
     cacheTtl: 60,
+    live: 15,  // carta en vivo: cada 15 s revisa si cambió (un agotado se ve sin recargar)
     // La X-API-Key del restaurante (panel maestro → ficha del restaurante). Con ella y
     // el QR de una mesa (?mesa=<token>), carrito.js deja pedir; sin ella, solo se mira.
     apiKey: ""
