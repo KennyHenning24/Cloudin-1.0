@@ -45,7 +45,8 @@ class Tenant(models.Model):
     # Cloudin completo; con los dos apagados, el menú digital queda solo para mirar. Es
     # configuración del restaurante, no un dato de su operación: vive aquí y no en su base.
     pedidos_qr = models.BooleanField("Recibe pedidos desde el QR de la mesa", default=True)
-    app_meseros = models.BooleanField("Usa la app de meseros", default=False)
+    # Encendida por defecto: sin cuentas de meseros (las crea el administrador) nadie entra.
+    app_meseros = models.BooleanField("Usa la app de meseros", default=True)
 
     # Página del menú para las mesas (la del QR), p. ej. https://x.pages.dev/menu.html.
     # El QR de cada mesa es esta dirección + ?mesa=<token>. Cloudin no sirve un menú

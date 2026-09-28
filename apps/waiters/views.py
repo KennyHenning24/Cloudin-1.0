@@ -82,7 +82,8 @@ def app_mesero(api=False):
             if not tenant.app_meseros:
                 if api:
                     return JsonResponse(
-                        {"detail": "El servicio de meseros no está activo en este restaurante.",
+                        {"detail": "La app de meseros está apagada. El administrador la enciende "
+                                   "en su panel: Meseros → App de meseros.",
                          "codigo": "meseros_apagado"}, status=403)
                 return render(request, "mesero/desactivado.html", {"t": tenant}, status=403)
 

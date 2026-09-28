@@ -197,7 +197,7 @@ equipo ve cómo están):
 | Interruptor | Dónde | Encendido | Apagado |
 |---|---|---|---|
 | **Pedidos desde el QR de la mesa** (viene encendido) | **Inicio** (en «Pedidos y mesas»), **Códigos QR** y **Meseros** | El cliente pide desde el menú y el pedido llega a Mensajes y Cocina | El menú muestra la carta, pero no deja pedir |
-| **App de meseros** (viene apagada) | **Meseros** | Los meseros toman pedidos en su app y van a la misma cuenta de la mesa | Los meseros no pueden entrar |
+| **App de meseros** (viene encendida; sin cuentas de meseros nadie entra) | **Meseros** | Los meseros toman pedidos en su app y van a la misma cuenta de la mesa | Los meseros no pueden entrar |
 
 Sirve, por ejemplo, para pausar los pedidos por QR cuando la cocina está llena o el local
 cerró: el menú abierto en los teléfonos esconde el botón «Agregar» en segundos, y al
@@ -660,7 +660,7 @@ Para ver los errores del menú en el computador: abre la página → clic derech
 [ ] 2. Mesas creadas (Códigos QR → ¿Cuántas mesas tienes?)
 [ ] 2. Categorías y productos con precio y foto (Mi menú)
 [ ] 2. Logo, colores, contacto, WhatsApp y horario (Personalizar)
-[ ] 2. Pedidos por QR encendidos (Inicio); app de meseros si la van a usar (Meseros)
+[ ] 2. Pedidos por QR encendidos (Inicio); cuentas de meseros si los van a usar (Meseros)
 [ ] 2. https://<servidor-cloudin>/api/public/<slug>/menu/ muestra la carta
 [ ] 3. index.html con el código de «Menú digital» → Copiar código; carrito.js al lado
 [ ] 4. Publicado en Pages; https://<proyecto>.pages.dev muestra la carta

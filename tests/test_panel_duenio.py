@@ -306,14 +306,19 @@ def test_el_equipo_ve_si_hay_pedidos_por_qr_pero_no_los_cambia(client, menu_digi
 
 
 @pytest.mark.django_db
-def test_la_app_de_meseros_se_enciende_en_meseros(client, menu_digital):
+def test_la_app_de_meseros_se_apaga_y_enciende_en_meseros(client, menu_digital):
     entrar = reverse("mesero:entrar", kwargs={"slug": menu_digital.tenant.slug})
-    assert client.get(entrar).status_code == 403  # apagada al empezar
+    assert client.get(entrar).status_code == 200  # encendida al empezar
     client.force_login(menu_digital.dueno)
-    r = client.post(reverse("panel:meseros"), {"accion": "app_meseros", "activo": "1"})
+    r = client.post(reverse("panel:meseros"), {"accion": "app_meseros", "activo": "0"})
     assert r.status_code == 302
     menu_digital.tenant.refresh_from_db()
-    assert menu_digital.tenant.app_meseros and menu_digital.tenant.pedidos_qr  # el QR no cambia
+    assert not menu_digital.tenant.app_meseros and menu_digital.tenant.pedidos_qr  # el QR no cambia
+    client.logout()
+    apagada = client.get(entrar)
+    assert apagada.status_code == 403 and "Meseros → App de meseros" in apagada.content.decode()
+    client.force_login(menu_digital.dueno)
+    client.post(reverse("panel:meseros"), {"accion": "app_meseros", "activo": "1"})
     client.logout()
     assert client.get(entrar).status_code == 200
 

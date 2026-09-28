@@ -133,6 +133,8 @@ def test_api_del_sitio_y_app_de_meseros(client, restaurante_listo):
 
 
 @pytest.mark.django_db
-def test_app_de_meseros_apagada_en_autoservicio(client, crear_restaurante):
-    tenant = crear_restaurante("solo-qr")
-    assert client.get(f"/mesero/{tenant.slug}/entrar/").status_code == 403
+def test_app_de_meseros_encendida_al_crear_y_apagada_si_se_apaga(client, crear_restaurante):
+    assert client.get(f"/mesero/{crear_restaurante('nuevo').slug}/entrar/").status_code == 200
+    tenant = crear_restaurante("solo-qr", app_meseros=False)
+    r = client.get(f"/mesero/{tenant.slug}/entrar/")
+    assert r.status_code == 403 and "Meseros → App de meseros" in r.content.decode()

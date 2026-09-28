@@ -192,7 +192,7 @@ del restaurante cambia en su panel (`Tenant.pedidos_qr` y `Tenant.app_meseros`):
 | Interruptor | Dónde | Encendido | Apagado |
 |---|---|---|---|
 | **Pedidos desde el QR de la mesa** (encendido al crear el restaurante) | Inicio, Códigos QR y Meseros | El menú digital deja pedir | El menú queda para mirar: `recibe_pedidos: false` y los envíos responden `403 sin_pedidos` |
-| **App de meseros** (apagada al crear el restaurante) | Meseros | Los meseros entran a la app y toman pedidos | La app responde que el servicio de meseros no está activo |
+| **App de meseros** (encendida al crear el restaurante; sin cuentas de meseros nadie entra) | Meseros | Los meseros entran a la app y toman pedidos | La app responde que está apagada y dónde se enciende |
 
 Con los dos encendidos, los pedidos del QR y de los meseros van a la misma cuenta de la
 mesa. Cualquier miembro del equipo ve cómo están; solo el administrador los cambia.
