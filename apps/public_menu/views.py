@@ -27,8 +27,12 @@ from apps.tenants.models import Tenant
 
 from . import selectors, serializers
 
-TOPE_POR_IP = 600          # peticiones…
+TOPE_POR_IP = 600          # cartas completas…
 VENTANA_TOPE = 10 * 60     # …cada 10 minutos (un restaurante lleno comparte la IP del wifi)
+# El menú abierto pregunta cada 15 s si la carta cambió (runtime, «carta en vivo»). Sin cambios
+# la respuesta es un 304 sin datos, que no gasta el tope de arriba: todas las consultas juntas
+# tienen este otro, que alcanza para ~150 teléfonos en el mismo wifi.
+TOPE_CONSULTAS = 6000
 CACHE_CONTROL = "public, max-age=30"
 
 
@@ -82,9 +86,10 @@ def menu_api(request, slug=None):
     if tenant is None:
         return _cors(JsonResponse({"detail": "Ese restaurante no existe o no está activo."}, status=404))
     request.tenant = tenant
-    if not permitido(request, "menu_publico", TOPE_POR_IP, VENTANA_TOPE):
-        return _cors(JsonResponse({"detail": "Demasiadas consultas seguidas. Intenta en unos minutos."},
-                                  status=429))
+    demasiadas = _cors(JsonResponse({"detail": "Demasiadas consultas seguidas. Intenta en unos minutos."},
+                                    status=429))
+    if not permitido(request, "menu_consultas", TOPE_CONSULTAS, VENTANA_TOPE):
+        return demasiadas
 
     with tenant_context(tenant):
         mesa = selectors.mesa_por_token_o_numero(request.GET.get("table", ""))
@@ -96,6 +101,8 @@ def menu_api(request, slug=None):
             respuesta = HttpResponseNotModified()
             respuesta["ETag"] = etag
             return _cors(respuesta)
+        if not permitido(request, "menu_publico", TOPE_POR_IP, VENTANA_TOPE):
+            return demasiadas
         datos = dict(datos_del_menu(tenant, request))
         if mesa is not None:
             datos["table"] = {"number": mesa.number}

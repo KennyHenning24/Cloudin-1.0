@@ -17,6 +17,11 @@
  *     El sitio los usa así: color: var(--cloudin-primary, #B3261E).
  *  8. Vista previa del panel: con ?cloudin-preview=1 y dentro de un iframe, acepta
  *     (solo del origen de la API) los datos que el dueño está editando y los pinta.
+ *  9. Con ?cloudin-check=1 carga el revisor de Cloudin (cloudin-check.v1.js): prueba con
+ *     cartas de mentira si el menú muestra todo lo que cambia en el panel.
+ * 10. Carta en vivo: mientras la página se ve, pregunta cada `live` segundos (15; 0 = nunca)
+ *     y al volver a ella si la carta cambió. Sin cambios Cloudin responde 304 (sin datos) y
+ *     no se repinta; con cambios (un agotado, un plato nuevo, otro precio) se repinta sola.
  */
 ((w, d) => {
   "use strict";
@@ -34,7 +39,7 @@
     todos = (s, r = d) => [...r.querySelectorAll(s)],
     evento = (n, detail) => d.dispatchEvent(new CustomEvent("cloudin:" + n, { detail }));
 
-  let etiquetas = {}, pintado = 0, avisado = 0;
+  let etiquetas = {}, pintado = 0, avisado = 0, ultimo; // ultimo: ETag de lo último pintado
 
   const Cloudin = (w.Cloudin = {
     version: 1,
@@ -247,8 +252,9 @@
       .then((r) => {
         if (!r.ok) throw Error("HTTP " + r.status);
         const e = r.headers.get("ETag");
-        if (c && e && e == c.e && pintado && !MESA) return guardar(e, c.d), estado("live");
-        return r.json().then((x) => (pintar(x, "live"), guardar(e, x)));
+        if (e && e == ultimo) return estado("live"); // sin cambios desde lo último pintado
+        if (c && e && e == c.e && pintado && !MESA) return (ultimo = e), guardar(e, c.d), estado("live");
+        return r.json().then((x) => (pintar(x, "live"), (ultimo = e), guardar(e, x)));
       })
       .catch((error) => {
         pintado || estado("error"); // sin caché: queda el HTML pre-renderizado, intacto
@@ -271,6 +277,14 @@
     });
     d.addEventListener("cloudin:ready", () => w.parent.postMessage({ tipo: "cloudin:vista-lista" }, ORIGEN));
   }
+
+  // Revisión de la conexión (?cloudin-check=1): el revisor vive en Cloudin, junto al runtime.
+  Q.has("cloudin-check") && d.head.append(Object.assign(d.createElement("script"), { src: ORIGEN + "/static/cloudin-check.v1.js" }));
+
+  // Carta en vivo (no en la vista previa: ahí manda el panel). Solo con la página a la vista.
+  const EN_VIVO = (C.live ?? 15) * 1e3,
+    revisar = () => d.visibilityState == "visible" && cargar(1);
+  if (EN_VIVO && !PREVIA) setInterval(revisar, EN_VIVO), d.addEventListener("visibilitychange", revisar);
 
   estado("static");
   d.readyState == "loading" ? d.addEventListener("DOMContentLoaded", () => cargar()) : cargar();

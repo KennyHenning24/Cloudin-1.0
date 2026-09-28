@@ -165,6 +165,24 @@ def test_tope_por_ip(client, restaurante, monkeypatch):
 
 
 @pytest.mark.django_db
+def test_preguntar_si_cambio_no_gasta_el_tope(client, restaurante, monkeypatch):
+    """El menú abierto pregunta cada 15 s si la carta cambió: esas respuestas 304 no gastan el
+    tope de cartas completas, pero todas las consultas juntas tienen el suyo."""
+    from apps.public_menu import views
+
+    monkeypatch.setattr(views, "TOPE_POR_IP", 2)
+    monkeypatch.setattr(views, "TOPE_CONSULTAS", 8)
+    url = URL.format(restaurante.slug)
+    primera = client.get(url)
+    assert primera.status_code == 200
+    etag = primera["ETag"]
+    assert [client.get(url, HTTP_IF_NONE_MATCH=etag).status_code for _ in range(5)] == [304] * 5
+    assert client.get(url).status_code == 200      # la segunda carta completa todavía cabe
+    assert client.get(url).status_code == 429      # la tercera no (tope de cartas completas)
+    assert client.get(url, HTTP_IF_NONE_MATCH=etag).status_code == 429  # 9.ª consulta: tope general
+
+
+@pytest.mark.django_db
 def test_por_subdominio_tambien(client, restaurante):
     r = client.get("/api/public/menu/", HTTP_HOST="la-esquina.localhost")
     assert r.status_code == 200 and r.json()["business"]["slug"] == "la-esquina"

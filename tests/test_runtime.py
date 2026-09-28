@@ -357,3 +357,177 @@ def test_horario_igual_que_en_python(entorno, cuando):
     page.add_init_script(f"Date.now = () => {int(momento.timestamp() * 1000)};")
     page = abrir()
     assert page.text_content("#hoy") == horario_de_hoy(DATOS["business"]["hours"], momento.astimezone(BOGOTA))
+
+
+# ------------------------------------------------ revisor del menú (?cloudin-check=1)
+
+REVISOR = (Path(__file__).resolve().parent.parent / "static" / "cloudin-check.v1.js").read_text(encoding="utf-8")
+
+# El ejemplo de arriba con todo lo del negocio conectado y los colores de Personalizar en el CSS.
+CONECTADO = CUERPO + """
+<header class="marca">
+  <img class="logo" data-cloudin-if="business.logo" data-cloudin-src="business.logo" alt="">
+  <p data-cloudin-if="business.tagline" data-cloudin-field="business.tagline"></p>
+</header>
+<footer>
+  <span data-cloudin-field="business.address"></span> · <span data-cloudin-field="business.city"></span>
+  <a data-cloudin-if="business.phone_link" data-cloudin-href="business.phone_link"><span data-cloudin-field="business.phone"></span></a>
+  <a data-cloudin-if="business.instagram" data-cloudin-href="business.instagram">Instagram</a>
+</footer>
+<style>
+  body { background: var(--cloudin-background, #fff); color: var(--cloudin-text, #111); }
+  .dish__price { color: var(--cloudin-primary, #B3261E); }
+</style>
+"""
+
+# Un menú «conectado» a medias: carga el runtime, pero la carta y el negocio están escritos a mano.
+A_MANO = """
+<header><img src="/assets/logo.png" alt="Logo"><h1>Restaurante Ejemplo</h1><p>Comida casera, en Cali</p></header>
+<nav><a href="#hamburguesas">Hamburguesas</a> <a href="#bebidas">Bebidas</a></nav>
+<main>
+  <section id="hamburguesas"><h2>Hamburguesas</h2>
+    <article data-cloudin-key="hamburguesa-clasica"><img src="/assets/clasica.jpg" alt="">
+      <div class="dish__body"><h3>Hamburguesa clásica</h3>
+        <p>Carne de res, queso, lechuga, tomate y papas a la francesa.</p><strong>$ 24.000</strong></div></article>
+    <article data-cloudin-key="vegetariana"><img src="/assets/vegetariana.jpg" alt="">
+      <div class="dish__body"><h3>Hamburguesa vegetariana</h3><strong>$ 26.000</strong></div></article>
+  </section>
+  <section id="bebidas"><h2>Bebidas</h2>
+    <article data-cloudin-key="limonada-de-coco"><img src="/assets/limonada.jpg" alt="">
+      <div class="dish__body"><h3>Limonada de coco</h3><strong>$ 8.500</strong></div></article>
+  </section>
+</main>
+<footer><a href="https://wa.me/573001234567">WhatsApp</a> <a href="tel:+573001234567">Llamar</a> Cra 00 # 00-00, Cali</footer>
+<style>strong { color: #B3261E; }</style>
+"""
+
+
+def _revisar(navegador, cuerpo, con_runtime=True, **config):
+    """Abre el menú con ?cloudin-check=1 y devuelve lo que dejó el revisor."""
+    cfg = {"restaurant": "ejemplo", "api": API, "apiKey": "ck_prueba", "hideSoldOut": False, "cacheTtl": 0, **config}
+    html = ('<!doctype html><html lang="es"><head><meta charset="utf-8"></head><body>' + cuerpo
+            + (f"<script>window.CLOUDIN_CONFIG = {json.dumps(cfg)};</script>"
+               '<script src="https://cloudin.test/static/cloudin-menu.v1.js" defer></script>'
+               '<script src="/carrito.js" defer></script>' if con_runtime else "") + "</body></html>")
+    contexto = navegador.new_context()
+    contexto.route("https://sitio.test/carrito.js", lambda r: r.fulfill(status=200, body="", content_type="application/javascript"))
+    contexto.route("https://sitio.test/assets/**", lambda r: r.fulfill(status=200, body=b"", content_type="image/png"))
+    contexto.route("https://sitio.test/", lambda r: r.fulfill(status=200, body=html, content_type="text/html; charset=utf-8"))
+    contexto.route("https://sitio.test/?**", lambda r: r.fulfill(status=200, body=html, content_type="text/html; charset=utf-8"))
+    contexto.route("https://cloudin.test/static/cloudin-menu.v1.js",
+                   lambda r: r.fulfill(status=200, body=RUNTIME, content_type="application/javascript"))
+    contexto.route("https://cloudin.test/static/cloudin-check.v1.js",
+                   lambda r: r.fulfill(status=200, body=REVISOR, content_type="application/javascript"))
+    contexto.route("https://cloudin.test/static/img/**", lambda r: r.fulfill(status=200, body=b"", content_type="image/png"))
+    contexto.route("https://cloudin.test/media/**", lambda r: r.fulfill(status=200, body=b"", content_type="image/webp"))
+    contexto.route(API + "**", ApiFalsa())
+    page = contexto.new_page()
+    errores = []
+    page.on("pageerror", lambda e: errores.append(str(e)))
+    page.goto("https://sitio.test/?cloudin-check=1")
+    if not con_runtime:
+        page.add_script_tag(url="https://cloudin.test/static/cloudin-check.v1.js")
+    page.wait_for_function("() => window.CloudinCheck && window.CloudinCheck.terminado", timeout=30000)
+    informe = page.evaluate("window.CloudinCheck")
+    return contexto, page, informe, {r["id"]: r for r in informe["resultados"]}, errores
+
+
+def test_el_revisor_aprueba_un_menu_conectado(navegador):
+    contexto, page, informe, r, errores = _revisar(navegador, CONECTADO)
+    assert informe["aprobado"], informe["texto"]
+    for id_ in ("carta", "carrito", "plato-nuevo", "categoria-nueva", "barra", "cambiar-nombre", "cambiar-precio",
+                "cambiar-descripcion", "cambiar-foto", "eliminar", "agotado", "a-mano", "colores", "negocio-nombre",
+                "negocio-frase", "negocio-logo", "negocio-whatsapp", "negocio-telefono", "negocio-direccion",
+                "negocio-horario", "negocio-redes"):
+        assert r[id_]["estado"] == "ok", r[id_]
+    # El logo está vacío en el panel (su <img> se quitó) pero está conectado: no es «escrito a mano».
+    assert "llénalo en Personalizar" in r["negocio-logo"]["texto"]
+    # Al terminar queda la carta real, y el informe está a la vista.
+    assert textos(page, "#menu [data-cloudin=categories] .dish h4") == [
+        "Hamburguesa clásica", "Hamburguesa vegetariana", "Limonada de coco"]
+    assert "Plato nuevo" not in page.inner_text("body")  # el informe va fuera del <body>
+    assert "Tu menú está conectado" in page.locator("#cloudin-check .resumen").inner_text()
+    contexto.close()
+    assert errores == []
+
+
+def test_el_revisor_encuentra_lo_escrito_a_mano(navegador):
+    contexto, page, informe, r, errores = _revisar(navegador, A_MANO)
+    assert not informe["aprobado"]
+    for id_ in ("plato-nuevo", "categoria-nueva", "barra", "cambiar-nombre", "cambiar-precio", "cambiar-descripcion",
+                "cambiar-foto", "eliminar", "agotado", "a-mano", "colores", "negocio-nombre", "negocio-frase",
+                "negocio-logo", "negocio-whatsapp", "negocio-telefono", "negocio-direccion"):
+        assert r[id_]["estado"] == "falla", r[id_]
+    assert r["a-mano"]["texto"].startswith("3 platos están escritos a mano")
+    for plato in ("«Hamburguesa clásica»", "«Hamburguesa vegetariana»", "«Limonada de coco»"):
+        assert plato in r["a-mano"]["texto"]
+    assert "«Hamburguesa clásica» sigue escrito a mano" in r["eliminar"]["texto"]
+    assert informe["texto"].splitlines()[1].startswith("❌ Hay ")  # el resumen, listo para pegarle a Claude Code
+    contexto.close()
+    assert errores == []
+
+
+def test_el_revisor_sin_runtime(navegador):
+    contexto, page, informe, r, errores = _revisar(navegador, A_MANO, con_runtime=False)
+    assert not informe["aprobado"]
+    assert r["conexion"]["estado"] == "falla" and r["runtime"]["estado"] == "falla"
+    contexto.close()
+
+
+def test_el_revisor_con_agotados_ocultos(navegador):
+    contexto, page, informe, r, errores = _revisar(navegador, CONECTADO, hideSoldOut=True)
+    assert r["agotado"]["estado"] == "ok" and informe["aprobado"], informe["texto"]
+    contexto.close()
+
+
+# ------------------------------------------------------- carta en vivo (sin recargar)
+
+def _pintadas(page):
+    return len([e for e in page.evaluate("window.__eventos") if e["tipo"] == "rendered"])
+
+
+def test_un_agotado_del_panel_se_ve_sin_recargar(entorno):
+    abrir, api, page, errores = entorno
+    page = abrir(live=1)
+    pintadas = _pintadas(page)
+    preguntas = len(api.urls)
+    page.wait_for_timeout(2500)
+    assert len(api.urls) >= preguntas + 2  # sigue preguntando si la carta cambió…
+    assert _pintadas(page) == pintadas     # …y si no cambió, no repinta
+    # El dueño agota la limonada en su panel: la carta sube de versión.
+    api.etag = 'W/"ejemplo-2"'
+    api.datos["menus"][0]["categories"][1]["products"][0]["available"] = False
+    page.wait_for_function("""() => document.querySelector('#menu [data-cloudin-key="limonada-de-coco"]')
+        .dataset.available === 'false'""", timeout=5000)
+    assert page.locator('#menu [data-cloudin-key="limonada-de-coco"] .dish__soldout').inner_text() == "Agotado"
+    # Y un plato nuevo aparece solo.
+    api.etag = 'W/"ejemplo-3"'
+    api.datos["menus"][0]["categories"][1]["products"].append(
+        {**api.datos["menus"][0]["categories"][1]["products"][0], "id": "p9", "key": "jugo-de-mango",
+         "name": "Jugo de mango", "available": True})
+    page.locator("#menu h4", has_text="Jugo de mango").wait_for(timeout=5000)
+    assert page.evaluate("performance.getEntriesByType('navigation').length") == 1  # nunca recargó
+    assert errores == []
+
+
+def test_en_segundo_plano_no_pregunta_y_al_volver_si(entorno):
+    abrir, api, page, errores = entorno
+    page = abrir(live=1)
+    page.evaluate("Object.defineProperty(document, 'visibilityState', {configurable: true, get: () => 'hidden'})")
+    preguntas = len(api.urls)
+    page.wait_for_timeout(2200)
+    assert len(api.urls) == preguntas  # el teléfono guardado en el bolsillo no gasta datos
+    api.etag = 'W/"ejemplo-2"'
+    api.datos["menus"][0]["categories"][1]["products"][0]["name"] = "Limonada de coco helada"
+    page.evaluate("""() => { Object.defineProperty(document, 'visibilityState', {configurable: true, get: () => 'visible'});
+                             document.dispatchEvent(new Event('visibilitychange')); }""")
+    page.locator("#menu h4", has_text="Limonada de coco helada").wait_for(timeout=3000)
+    assert errores == []
+
+
+def test_live_cero_no_pregunta(entorno):
+    abrir, api, page, errores = entorno
+    page = abrir(live=0)
+    preguntas = len(api.urls)
+    page.wait_for_timeout(1500)
+    assert len(api.urls) == preguntas

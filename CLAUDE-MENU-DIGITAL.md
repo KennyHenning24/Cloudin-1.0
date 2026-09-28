@@ -10,11 +10,90 @@
 >
 > **Para la persona:** copia este archivo a la raíz del repositorio del menú con el
 > nombre `CLAUDE.md` (Claude Code lo lee solo al empezar), o dile a Claude Code «lee
-> `CLAUDE-MENU-DIGITAL.md` antes de empezar».
+> `CLAUDE-MENU-DIGITAL.md` antes de empezar». Si el menú ya existe con los platos escritos
+> a mano, pídele: «Convierte este menú siguiendo la sección 0 de CLAUDE.md, sin cambiar el
+> diseño, hasta que `?cloudin-check=1` salga sin ❌».
 >
 > El código de Cloudin está en `https://github.com/KennyHenning24/Cloudin-1.0`. Si
 > trabajas dentro de ese repositorio, las piezas están en `client/plantilla/index.html`,
 > `client/example/carrito.js` y `static/src/cloudin-menu.v1.src.js`.
+
+> **Lo más importante, antes que nada.** El menú es una **plantilla**: ningún plato,
+> precio, foto, categoría ni dato del negocio (nombre, logo, WhatsApp, teléfono, dirección,
+> horario, redes, colores) va escrito a mano en el HTML. Todo sale de Cloudin. Lo que el
+> restaurante cambie en su panel (un plato nuevo, uno eliminado, un **agotado**, otra foto,
+> otro precio, otro color) aparece **solo** en el menú, también en el que el cliente ya tiene
+> abierto: en máximo 15 segundos, sin volver a publicar y **sin recargar la página**. Se
+> comprueba con la **prueba de fuego**: `https://<menú>/?cloudin-check=1` debe salir sin ❌
+> (sección 10.4). No digas «listo» antes. Si el menú ya existe y tiene la carta escrita a
+> mano, empieza por la **sección 0**.
+
+---
+
+## 0. Si el menú ya existe con la carta escrita a mano (convertirlo)
+
+**Síntoma:** en el panel el restaurante crea un plato, cambia una foto, un precio o un
+color, y el menú no cambia (a lo sumo se notan los agotados o los eliminados). El menú tiene
+la carta **escrita en el HTML** y Cloudin no la puede tocar. Se convierte **sin cambiar el
+diseño**, en este orden:
+
+1. **Diagnóstico.** Sirve el sitio en local (sección 10.1). Si todavía no tiene el bloque de
+   conexión, agrégalo primero (sección 3.2). Abre `http://localhost:8080/?cloudin-check=1`:
+   el informe dice qué está escrito a mano y qué no cambia desde el panel. Guárdalo.
+2. **Trabaja en una rama** (`git switch -c conectar-cloudin`). Nada de push a `main` sin
+   permiso del usuario (sección 9).
+3. **La carta ya está en Cloudin.** Abre `https://<servidor>/api/public/<slug>/menu/`: si
+   ahí están los platos, **no los vuelvas a escribir en ningún lado**. Si falta alguno, se
+   agrega en el panel (o por importación, sección 7.2), nunca en el HTML.
+4. **Fotos.** Si en esa carta las fotos apuntan al sitio (`"image":
+   "https://<menú>/assets/…"`), **no borres esos archivos del sitio**: son las fotos que el
+   menú muestra hasta que el restaurante suba otra en el panel (la del panel reemplaza a la
+   del sitio).
+5. **Convierte, conservando clases, estructura y CSS:**
+   - Toma **una** tarjeta de plato y hazla `<template data-cloudin-template="product">`:
+     el nombre con `data-cloudin-field="product.name"`, el precio con
+     `data-cloudin-field="product.price"`, la descripción con
+     `data-cloudin-field="product.description"` (y `data-cloudin-if`), la foto con
+     `<img data-cloudin-if="product.image" data-cloudin-src="product.image">` y el aviso de
+     agotado con `data-cloudin-if="!product.available"`. La caja de textos lleva la clase
+     `dish__body` (ahí `carrito.js` pone «Agregar»).
+   - Toma **una** sección de categoría y hazla `<template data-cloudin-template="category">`,
+     con el título en `data-cloudin-field="category.name"` y un `data-cloudin="products"`
+     adentro. Todo va en `data-cloudin="categories"`, dentro de `data-cloudin="menu"`
+     (sección 4.1).
+   - **Borra todas las demás tarjetas y secciones escritas a mano.** (Opcional: una copia
+     pre-renderizada dentro de `categories` como respaldo, regla 4.6.8.)
+   - Barra de categorías: `data-cloudin="category-nav"` con
+     `<template data-cloudin-template="category-link">` y
+     `data-cloudin-href="category.anchor"`. Recomendados: `data-cloudin="featured"` (4.7).
+   - Encabezado y pie: nombre, logo, frase, WhatsApp, teléfono, dirección, horario y redes
+     con los campos `business.*` (tabla 4.4). Un enlace fijo (`https://wa.me/57…`,
+     `tel:…`) pasa a `data-cloudin-href`.
+   - **Colores:** donde el CSS tiene los colores de la marca escribe
+     `var(--cloudin-primary, <el color de hoy>)` (y `--cloudin-secondary`,
+     `--cloudin-background`, `--cloudin-text`). El segundo valor es el color actual, por si el
+     restaurante no eligió otro en Personalizar.
+6. **Quita los scripts propios que leen o «sincronizan» la carta:** un `fetch` a Cloudin, un
+   arreglo de platos en JavaScript, algo que marca agotados a mano. El runtime hace todo eso,
+   y mantiene la carta al día mientras la página está abierta. Lo que tu JavaScript le haga a
+   los platos (animaciones, efectos) va en el evento `cloudin:rendered` (sección 4.5).
+   `carrito.js` se queda.
+7. **La mesa usa esta misma página.** El QR de cada mesa abre la «Página del menú» con
+   `?mesa=<token>`: no hace falta otra página. Si el sitio tiene un `mesa.html` de antes
+   (QR impresos con `mesa.html?m=<token>`), déjalo solo para redirigir, y esos QR siguen
+   sirviendo:
+   ```html
+   <!doctype html><meta charset="utf-8"><title>Tu mesa</title>
+   <script>
+     const q = new URLSearchParams(location.search), t = q.get("mesa") || q.get("m");
+     location.replace("./" + (t ? "?mesa=" + encodeURIComponent(t) : ""));
+   </script>
+   ```
+8. **Prueba de fuego** (sección 10.4) hasta que no quede ningún ❌. Después, la prueba real
+   con el usuario: que agote un plato en el panel y lo vea cambiar en el menú abierto (sin
+   recargar, en máximo 15 s); que cree un plato, cambie una foto y un color.
+9. **Publicar solo con permiso** (sección 9), y repetir `?cloudin-check=1` en la dirección
+   publicada.
 
 ---
 
@@ -47,7 +126,7 @@
 
 | Regla | Por qué |
 |---|---|
-| **No escribas platos ni precios a mano en el HTML** como fuente de datos. Todo sale de Cloudin con plantillas (sección 4) | Si el restaurante cambia un precio en su panel, el menú tiene que cambiar solo |
+| **Nada de la carta ni del negocio escrito a mano en el HTML:** ni platos, ni precios, ni fotos, ni categorías, ni nombre, logo, WhatsApp, teléfono, dirección, horario, redes o colores. Todo sale de Cloudin con plantillas (sección 4) y se comprueba con `?cloudin-check=1` (10.4) | Lo que el restaurante cambia en su panel tiene que verse solo en el menú, sin tocar el código |
 | **El precio lo calcula Cloudin.** Muéstralo, nunca lo mandes en un pedido | El servidor lo recalcula y no deja cobrar menos |
 | **El carrito vive en Cloudin** (`PUT …/borrador/`), no solo en el teléfono | Todos los de la mesa ven y editan el mismo carrito |
 | **Llama a Cloudin directo desde el navegador.** Nada de Pages Functions, Workers o servidores «proxy» en medio | Los topes son por IP: con un proxy todos los clientes comparten una IP y se bloquea el restaurante |
@@ -127,6 +206,7 @@ Al final de `index.html`, antes de `</body>`, **en este orden**:
     api: "https://<servidor>/api/public/<slug>/menu/",
     hideSoldOut: false,
     cacheTtl: 60,
+    live: 15,
     apiKey: "ck_…"
   };
 </script>
@@ -141,6 +221,7 @@ Al final de `index.html`, antes de `</body>`, **en este orden**:
 | `apiKey` | Para pedir | `ck_…`. Ponla siempre: si el restaurante apaga los pedidos por QR, el menú esconde los botones solo, y al encenderlos vuelven sin tocar la página. Vacía (`""`), la carta queda solo para mirar para siempre |
 | `hideSoldOut` | No | `false` (lo agotado se ve apagado) o `true` (lo agotado no se muestra) |
 | `cacheTtl` | No | Segundos que la carta guardada vale cuando se abre **sin** QR (60). Con QR siempre pide la carta al día |
+| `live` | No | **Carta en vivo:** cada cuántos segundos pregunta, mientras la página está abierta y a la vista, si la carta cambió (15). Así un agotado, un plato nuevo o un precio nuevo aparecen solos, sin recargar. Sin cambios Cloudin responde vacío (304): casi no gasta datos. `0` la apaga (no lo hagas) |
 
 `contract`, `locale` y `currency` (en ejemplos viejos) no las usa nadie: puedes omitirlas.
 
@@ -156,8 +237,9 @@ Al final de `index.html`, antes de `</body>`, **en este orden**:
 ## 4. Pintar la carta: el runtime `cloudin-menu.v1.js`
 
 Es la forma recomendada. Lee la carta, la guarda en el teléfono, la pinta con **tus**
-plantillas HTML, respeta agotados y horarios, pone los colores del restaurante y funciona
-con la vista previa del panel. Tú solo marcas el HTML con atributos.
+plantillas HTML, respeta agotados y horarios, pone los colores del restaurante, funciona
+con la vista previa del panel y **mantiene la carta al día sola** mientras la página está
+abierta (`live`, sección 3.2). Tú solo marcas el HTML con atributos.
 
 ### 4.1 El esqueleto mínimo que funciona
 
@@ -281,6 +363,13 @@ Estados: `static` sin datos todavía · `cached` pintada la carta guardada en el
 `live` pintada la carta que acaba de llegar · `error` Cloudin no respondió y no había carta
 guardada (queda el HTML tal cual).
 
+**La carta se repinta sola** mientras la página está abierta (cada `live` segundos y al
+volver a la pestaña, solo si algo cambió en el panel): el runtime vacía las zonas, pinta las
+copias nuevas y dispara `cloudin:rendered`. Por eso lo que tu JavaScript le haga a los platos
+(animaciones de entrada, efectos, botones propios) se engancha en `cloudin:rendered` sobre
+`detail.root`, **nunca una sola vez al cargar la página**: si no, se pierde en el siguiente
+repintado. `carrito.js` ya lo hace así.
+
 JavaScript: `window.Cloudin.data` (la carta completa, JSON de la sección 5.2),
 `window.Cloudin.table` (`{token, number}` si vino del QR), `window.Cloudin.state`,
 `window.Cloudin.refresh()` (vuelve a pedir la carta). Eventos en `document`:
@@ -325,7 +414,10 @@ JavaScript: `window.Cloudin.data` (la carta completa, JSON de la sección 5.2),
 ## 5. Leer la carta sin el runtime (si usas tu propio JavaScript o un framework)
 
 Úsalo solo si el diseño no se puede hacer con plantillas. Pierdes la vista previa en vivo
-del panel (sección 8), la caché del runtime y los colores automáticos; tienes que hacerlos tú.
+del panel (sección 8), la caché del runtime, los colores automáticos, la carta en vivo y la
+prueba de fuego (10.4); tienes que hacerlos tú. La carta en vivo es obligatoria igual: con la
+página a la vista, vuelve a pedir la carta cada 15 s con `If-None-Match: <ETag>` (Cloudin
+responde `304` si no cambió) y repinta solo cuando llega una nueva.
 Con un framework (Astro, etc.), la salida tiene que ser **estática** y la carta se pide
 **en el navegador**, nunca al construir el sitio (si no, un cambio de precio exigiría
 republicar).
@@ -573,8 +665,8 @@ para la tablet del propio restaurante.
 ## 7. Cambiar la carta: platos, precios, fotos, categorías
 
 El menú **no** se edita para cambiar la carta. La carta vive en Cloudin y se cambia de dos
-formas; en las dos el menú publicado muestra el cambio solo (al instante para quien entra
-por el QR; en máximo `cacheTtl` segundos para quien vuelve sin QR).
+formas; en las dos el menú publicado muestra el cambio solo: al instante para quien lo abre,
+y en máximo `live` segundos (15) para quien ya lo tiene abierto, sin recargar.
 
 ### 7.1 En el panel del restaurante (el día a día)
 
@@ -868,6 +960,47 @@ botones `.cl-agregar`, agrega un plato, abre `.cl-barra`, escribe en `#cl-nombre
 debe haber `.cl-agregar`. Revisa que la consola no tenga errores y que no haya scroll
 horizontal a 390 px de ancho.
 
+### 10.4 Prueba de fuego: `?cloudin-check=1`
+
+Abre el menú con `?cloudin-check=1`: en local `http://localhost:8080/?cloudin-check=1`, ya
+publicado `https://<menú>/?cloudin-check=1`. El runtime carga el revisor de Cloudin
+(`https://<servidor>/static/cloudin-check.v1.js`), que **sin guardar nada** le pasa a la
+página cartas de prueba y mira si cambia:
+
+| Prueba | Qué simula |
+|---|---|
+| Plato nuevo, categoría nueva | El restaurante los crea en el panel |
+| Cambiar nombre, precio, descripción y foto | Los edita en el panel |
+| Eliminar | Lo elimina |
+| Agotado | Lo marca agotado |
+| Escritos a mano | Quita todos los platos: lo que siga en la página está escrito en el HTML |
+| Negocio | Otro nombre, frase, logo, WhatsApp, teléfono, dirección, horario e Instagram |
+| Colores | Otros colores en Personalizar: algo del diseño tiene que cambiar de color |
+| Conexión | Bloque de conexión, `apiKey` y `carrito.js` |
+
+Al final vuelve a pintar la carta real y muestra el informe: ✅ bien, ❌ hay que arreglarlo
+(cada uno dice cómo) y ⚠️ para revisar con el usuario (por ejemplo, un dato que el diseño no
+muestra). **Mientras quede un ❌, el menú no está conectado.** El botón **Copiar informe** lo
+deja listo para pegar. Si el servidor estaba dormido (Render gratis), espera hasta un minuto.
+
+Con Playwright (Python):
+
+```python
+page.goto("http://localhost:8080/?cloudin-check=1")
+page.wait_for_function("() => window.CloudinCheck && window.CloudinCheck.terminado", timeout=120000)
+informe = page.evaluate("window.CloudinCheck")
+print(informe["texto"])        # el mismo informe de la pantalla
+assert informe["aprobado"], "quedan ❌"
+```
+
+Sin Playwright, pídele al usuario que abra la dirección con `?cloudin-check=1` y te pegue el
+informe. Si la página no muestra ningún informe, es que no carga `cloudin-menu.v1.js` desde
+el servidor (sección 3.2).
+
+**Y la prueba en vivo, con el usuario:** con el menú abierto en su teléfono, que agote un
+plato en el panel. En máximo 15 segundos el plato sale «Agotado», **sin recargar**; al
+volverlo a poner disponible, regresa. Lo mismo con un plato nuevo.
+
 ---
 
 ## 11. Diagnóstico
@@ -888,13 +1021,22 @@ horizontal a 390 px de ancho.
 | «Enviaste muchos pedidos seguidos…» | Tope por IP (el wifi del local es una sola IP) | Esperar |
 | Un cambio de precio no se ve | Carta guardada en el teléfono (hasta `cacheTtl` sin QR) | Esperar un minuto y recargar |
 | La importación dice «se dejó lo que puso el dueño» | El dueño cambió ese campo en el panel | Cambiarlo en el panel |
+| Un plato nuevo, una foto o un precio del panel no aparecen; a lo sumo cambian los agotados | La carta está escrita a mano en el HTML | Sección 0 y `?cloudin-check=1` |
+| El menú solo cambia al recargar | `live: 0`, o tu propio JavaScript pinta la carta una sola vez | Quita `live: 0`; pinta con el runtime (sección 4) |
+| Las animaciones o botones propios de los platos se pierden al rato | La carta se repintó sola (llegó un cambio del panel) | Engánchalos en `cloudin:rendered` (sección 4.5) |
+| `?cloudin-check=1` no muestra nada | La página no carga el runtime desde el servidor | Sección 3.2 |
 
 ---
 
 ## 12. Antes de decir «listo»
 
 ```
-[ ] La carta sale de Cloudin: ningún plato ni precio escrito a mano como dato
+[ ] ?cloudin-check=1 sin ❌ (los ⚠️ revisados con el usuario), en local y ya publicado
+[ ] Con el menú abierto, un agotado del panel se ve en máximo 15 s, sin recargar
+[ ] La carta sale de Cloudin: ningún plato, precio, foto ni categoría escrito a mano
+[ ] Nada del negocio escrito a mano (nombre, logo, WhatsApp, teléfono, dirección, horario, redes); colores con var(--cloudin-…)
+[ ] Lo que el JavaScript propio hace a los platos, enganchado en cloudin:rendered
+[ ] Si había mesa.html: solo redirige a ?mesa= (sección 0, paso 7)
 [ ] Bloque de conexión con servidor, slug y apiKey reales (no inventados); runtime cargado desde el servidor
 [ ] carrito.js junto a index.html, cargado después del runtime
 [ ] Zonas y plantillas: menu > categories > template category (con products) + template product
