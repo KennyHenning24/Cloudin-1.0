@@ -117,21 +117,21 @@ corre en Cloudflare:
 | Dirección del servidor Cloudin (`<servidor-cloudin>`) | Render: arriba en la página del servicio (`DESPLIEGUE-GRATIS.md`). Cloudflare: la del Worker (`DESPLIEGUE-CLOUDFLARE.md`) | `https://cloudin.onrender.com` o `https://cloudin-1-0.<tu-cuenta>.workers.dev` |
 | Identificador (slug) | Panel maestro `/master/` | `culturabrisket` |
 | Llave de conexión (`ck_…`) | Panel maestro → el restaurante → **API key** (o su panel → Configuración → Sitio web) | `ck_Xa3…` |
-| Plan | Panel maestro | **Cloudin completo** para recibir pedidos |
-| Cómo se toman los pedidos | Su panel → **Meseros** (o `/admin/` → Restaurantes → «Sitio web y menú») | Autoservicio, o Ambos |
+| Pedidos por QR | Su panel → Inicio, **Códigos QR** o **Meseros** (el interruptor «Pedidos desde el QR de la mesa»). El panel maestro muestra cómo está | Encendidos (así viene un restaurante nuevo) |
 | Mesas | Su panel → **Códigos QR** (crear mesas 1..N) | Mesas 1 a 12 |
 
-¿El menú digital de este cliente recibe pedidos?
+Todos los restaurantes tienen Cloudin completo; no hay planes. ¿El menú digital de este
+cliente recibe pedidos? Lo decide su administrador con el interruptor **«Pedidos desde
+el QR de la mesa»**:
 
-| Plan | Cómo se toman los pedidos | ¿Recibe pedidos por el QR? |
-|---|---|---|
-| Menú digital | cualquiera | **No.** La carta queda para mirar: su panel no tiene dónde ver pedidos. Cloudin responde `recibe_pedidos: false` y rechaza con `403 sin_pedidos`. |
-| Cloudin completo | Autoservicio | **Sí.** |
-| Cloudin completo | Ambos (QR y meseros) | **Sí**, y los meseros también piden desde su app. |
-| Cloudin completo | Solo meseros | **No** (`403 solo_meseros`): el mesero toma el pedido en su app. |
+| Pedidos por QR | ¿Qué pasa en el menú? |
+|---|---|
+| Encendidos | El cliente pide desde el QR. Si la **App de meseros** (su panel → Meseros) también está encendida, los meseros suman pedidos a la misma cuenta. |
+| Apagados | La carta queda para mirar. Cloudin responde `recibe_pedidos: false` y rechaza los envíos con `403 sin_pedidos`. |
 
-`carrito.js` lee `recibe_pedidos` y no muestra el botón «Agregar» cuando es falso, así que
-puedes usar la misma plantilla para todos los clientes.
+`carrito.js` lee `recibe_pedidos` cada 5 segundos: esconde el botón «Agregar» cuando es
+falso y lo vuelve a mostrar cuando se encienden, sin recargar la página. Usa la misma
+plantilla (y la misma `apiKey`) para todos los clientes.
 
 ---
 
@@ -224,7 +224,6 @@ línea). Esa tarjeta dice además si algún menú ya pidió la carta y trae el b
 |---|---|---|
 | **Página del menú (QR)** | La dirección exacta de la página: `https://culturabrisket.pages.dev/` | Con ella se generan los QR (`…?mesa=<token>`) y queda autorizada para pedir |
 | **Otros sitios autorizados** | Lista JSON de orígenes extra: `["https://menu.culturabrisket.com"]` | Dominio propio, rama de pruebas, etc. |
-| **Cómo se toman los pedidos** | Autoservicio o Ambos (el restaurante también lo cambia en su panel → **Meseros**) | Ver la tabla de la sección 3 |
 
 Por qué importa: el navegador **solo deja pedir desde los orígenes registrados**
 (esquema + dominio + puerto, sin ruta). Leer la carta funciona desde cualquier lado; los
@@ -597,8 +596,7 @@ Respuesta **`201`**: el estado (6.3) con el carrito vacío, la cuenta con el ped
 | `400` | — | El carrito está vacío. |
 | `400` | `opciones` | Una línea quedó inválida (cambió una opción del plato). El `detail` dice cuál. |
 | `409` | `agotado` | Un plato del carrito se agotó. Quitarlo y volver a enviar. |
-| `403` | `sin_pedidos` | Plan «Menú digital»: el restaurante no recibe pedidos por el QR. |
-| `403` | `solo_meseros` | El restaurante trabaja solo con meseros. |
+| `403` | `sin_pedidos` | El restaurante apagó los pedidos por el QR en su panel. |
 | `429` | `demasiados` | Muchos envíos seguidos desde la misma IP (sección 8). |
 | `404` | — | El token no corresponde a una mesa activa (QR viejo). |
 
@@ -698,8 +696,7 @@ function mensajeDeError(cuerpo) {
 |---|---|---|---|
 | `400` | — | Falta `X-API-Key` o está mala: «No se identificó el restaurante…» | Es un error de configuración: revisa `apiKey`. |
 | `400` | — / `opciones` | Falta una opción obligatoria, se pasó un máximo, o la opción ya no existe | El mensaje tal cual; recargar la carta (`Cloudin.refresh()`). |
-| `403` | `sin_pedidos` | El plan del restaurante no recibe pedidos por el QR | «Pídele tu pedido al mesero.» y ocultar el carrito |
-| `403` | `solo_meseros` | Trabaja solo con meseros | «Llama al mesero, él toma tu pedido.» |
+| `403` | `sin_pedidos` | El restaurante apagó los pedidos por el QR | «Pídele tu pedido al mesero.» y ocultar el carrito |
 | `404` | — | Token de mesa inexistente (QR viejo) | «Este QR ya no es válido, pide ayuda al mesero.» |
 | `409` | — | El carrito cambió en otro teléfono (`PUT borrador`) | Nada: reaplicar el cambio sobre el estado que vino y reintentar. |
 | `409` | `agotado` | Un plato del carrito se agotó | Quitarlo del carrito y avisar. |
@@ -783,9 +780,9 @@ Para usarlo en otro diseño:
 ### 11.1 En local
 
 1. Arranca Cloudin: `python manage.py runserver` (ver `README.md`).
-2. En `/admin/`, al restaurante de prueba ponle **Página del menú**
-   `http://localhost:4431/index.html`, plan **Cloudin completo** y «Cómo se toman los
-   pedidos» en **Autoservicio** o **Ambos**.
+2. En el panel maestro → el restaurante de prueba → tarjeta «Menú digital», ponle
+   **Página del menú (QR)** `http://localhost:4431/index.html`. Los pedidos por QR vienen
+   encendidos (se apagan en su panel → Inicio, Códigos QR o Meseros).
 3. En `client/example/index.html` pon el `slug`, la `api` (`http://localhost:8000/api/public/<slug>/menu/`)
    y la `apiKey` del restaurante.
 4. Sirve la carpeta: `python -m http.server 4431 --directory client/example`.
@@ -825,11 +822,11 @@ Después cierra la cuenta de prueba en el panel para dejar la mesa libre.
 
 ## 12. Checklist por cliente
 
-- [ ] El restaurante existe en `/master/`, con el plan correcto (sección 3) y sus mesas creadas.
+- [ ] El restaurante existe en `/master/` y tiene sus mesas creadas.
 - [ ] La carta está completa en su panel (**Mi menú**): precios, fotos, opciones obligatorias.
 - [ ] El proyecto de Pages publica y `CLOUDIN_CONFIG` apunta al servidor y al slug correctos.
-- [ ] **Página del menú** registrada en `/admin/` (y el dominio propio en «Otros sitios autorizados»).
-- [ ] **Cómo se toman los pedidos** = Autoservicio o Ambos (panel → Meseros), si va a pedir por QR.
+- [ ] **Página del menú** registrada (panel maestro → «Menú digital»; y el dominio propio en «Otras direcciones autorizadas»).
+- [ ] **Pedidos desde el QR de la mesa** encendidos en su panel, si va a pedir por QR.
 - [ ] Abierto desde el QR de una mesa aparecen los botones «Agregar».
 - [ ] Un plato con opción obligatoria no se puede agregar sin elegirla.
 - [ ] Pedido de prueba: llega a **Mensajes** y **Cocina** con el nombre y el precio correctos, y la mesa queda ocupada.
@@ -868,6 +865,6 @@ Después cierra la cuenta de prueba en el panel para dejar la mesa libre.
 | Topes por IP y precio mínimo | `apps/api/limites.py` |
 | Orígenes autorizados (CORS) | `apps/tenants/cors.py`, `Tenant.origenes_permitidos` |
 | Enlace del QR de cada mesa | `apps/dining/qr.py` (`enlace_de_mesa`) |
-| Plan y modo de servicio | `apps/tenants/models.py` (`recibe_pedidos_del_menu`) |
+| Pedidos por QR y app de meseros | `apps/tenants/models.py` (`pedidos_qr`, `app_meseros`), `apps/panel/meseros.py` (`pedidos_qr`) |
 | Ejemplo completo | `client/example/index.html`, `client/example/carrito.js` |
 | Pruebas | `tests/test_pedidos_menu_digital.py` |

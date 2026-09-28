@@ -4,7 +4,7 @@
 {% block titulo %}Cloudin <span style="color:var(--brand)">Meseros</span>{% endblock %}
 {% block subtitulo %}<p class="sub dim small">Cómo se toman los pedidos y quién los toma</p>{% endblock %}
 {% block acciones %}
-  {% if tenant.usa_meseros %}
+  {% if tenant.app_meseros %}
     <a class="btn ghost" href="{{ enlace }}" target="_blank" rel="noopener">Abrir la app</a>
   {% endif %}
   <a class="btn" href="{% url 'panel:mesero-nuevo' %}">
@@ -16,25 +16,6 @@
 {% block head %}
 {{ block.super }}
 <style>
-  .modos{display:grid;gap:var(--sp-3);grid-template-columns:repeat(auto-fit,minmax(230px,1fr))}
-  .modo{position:relative;display:block;cursor:pointer;border-radius:var(--r-lg);padding:var(--sp-4);
-    background:var(--surface);border:1.5px solid var(--line);transition:border-color .15s,background .15s}
-  .modo:hover{border-color:var(--brand-line)}
-  .modo input{position:absolute;opacity:0;pointer-events:none}
-  .modo .ico-modo{width:42px;height:42px;border-radius:13px;display:grid;place-items:center;
-    background:var(--surface-3);margin-bottom:var(--sp-3)}
-  .modo .ico-modo svg{width:22px;height:22px;stroke:var(--text-2);fill:none;stroke-width:1.8;
-    stroke-linecap:round;stroke-linejoin:round}
-  .modo h3{font-size:15.5px;font-weight:680}
-  .modo p{font-size:13px;color:var(--text-3);margin-top:4px;line-height:1.55}
-  .modo .check{position:absolute;top:14px;right:14px;width:22px;height:22px;border-radius:50%;
-    border:1.5px solid var(--line);display:grid;place-items:center}
-  .modo.on{border-color:var(--brand);background:linear-gradient(150deg,rgba(247,122,39,.12),transparent 65%),var(--surface)}
-  .modo.on .ico-modo{background:var(--brand-grad)}
-  .modo.on .ico-modo svg{stroke:#fff}
-  .modo.on .check{border-color:var(--brand);background:var(--brand)}
-  .modo.on .check::after{content:"";width:8px;height:8px;border-radius:50%;background:#fff}
-
   .tablet{display:grid;gap:var(--sp-4);grid-template-columns:auto 1fr;align-items:center}
   .tablet img.qr{width:132px;height:132px;border-radius:14px;background:#fff;padding:8px}
   .persona{display:flex;align-items:center;gap:12px}
@@ -60,45 +41,25 @@
 
 {% block content %}
 
-<form method="post" id="form-modo">
+<div class="bloque-cab" style="margin-top:0">
+  <h2>¿Cómo se toman los pedidos?</h2>
+</div>
+{% include "components/pedidos_qr.html" with es_admin=True %}
+<form class="card interruptor" method="post" data-app-meseros>
   {% csrf_token %}
-  <input type="hidden" name="accion" value="modo">
-  <div class="bloque-cab" style="margin-top:0">
-    <svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.2"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>
-    <h2>¿Cómo se toman los pedidos?</h2>
-  </div>
-  <div class="modos">
-    {% for valor, texto in MODOS %}
-    <label class="modo {% if tenant.modo_servicio == valor %}on{% endif %}">
-      <input type="radio" name="modo" value="{{ valor }}" {% if tenant.modo_servicio == valor %}checked{% endif %}
-             onchange="this.form.submit()">
-      <span class="check"></span>
-      <span class="ico-modo">
-        {% if valor == "autoservicio" %}
-          <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3M21 14v7h-7"/></svg>
-        {% elif valor == "meseros" %}
-          <svg viewBox="0 0 24 24"><rect x="5" y="2" width="14" height="20" rx="2.5"/><path d="M11 18h2"/></svg>
-        {% else %}
-          <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9.5" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8"/></svg>
-        {% endif %}
-      </span>
-      {% if valor == "autoservicio" %}
-        <h3>Autoservicio</h3>
-        <p>El cliente escanea el QR de la mesa y pide solo. Así funciona hoy.</p>
-      {% elif valor == "meseros" %}
-        <h3>Meseros</h3>
-        <p>El mesero toma el pedido en la tablet. El QR del cliente ya no envía pedidos.</p>
-      {% else %}
-        <h3>Ambos</h3>
-        <p>El cliente puede pedir por QR y el mesero también toma pedidos.</p>
-      {% endif %}
-    </label>
-    {% endfor %}
-  </div>
-  <noscript><button class="btn" type="submit" style="margin-top:var(--sp-3)">Guardar modo</button></noscript>
+  <input type="hidden" name="accion" value="app_meseros">
+  <input type="hidden" name="activo" value="{{ tenant.app_meseros|yesno:'0,1' }}">
+  <span class="chip-ico {% if tenant.app_meseros %}menta{% else %}gris{% endif %}">{% icono "celular" %}</span>
+  <span class="interruptor-texto">
+    <strong>App de meseros</strong>
+    <span class="dim small">{% if tenant.app_meseros %}Encendida: los meseros toman pedidos en la tablet o el celular y llegan a la misma cuenta de la mesa.{% else %}Apagada: los meseros no pueden entrar a la app.{% endif %}</span>
+  </span>
+  <label class="switch"><input type="checkbox" role="switch"{% if tenant.app_meseros %} checked{% endif %}
+    aria-label="App de meseros" onchange="this.form.submit()"></label>
+  <noscript><button class="btn sm" type="submit">{% if tenant.app_meseros %}Apagar{% else %}Encender{% endif %}</button></noscript>
 </form>
 
-{% if tenant.usa_meseros %}
+{% if tenant.app_meseros %}
 <div class="bloque cols cols-2" style="display:grid">
   <div>
     <div class="kpis">
@@ -211,7 +172,7 @@
     <p class="dim small">
       La cuenta de un mesero sirve <strong>solo para la tablet</strong>: no entra a este panel.
       Cada pedido que toma llega a la cocina con su nombre.
-      {% if not tenant.usa_meseros %}Para que puedan entrar, elige «Meseros» o «Ambos» arriba.{% endif %}
+      {% if not tenant.app_meseros %}Para que puedan entrar, enciende «App de meseros» arriba.{% endif %}
     </p>
   </div>
 </div>

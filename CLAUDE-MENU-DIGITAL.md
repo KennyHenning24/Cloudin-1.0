@@ -65,7 +65,7 @@
 | **Dirección del servidor Cloudin** | `https://cloudin-x7k2.onrender.com` | Render → el servicio `cloudin` → arriba, debajo del nombre. Es la misma con la que entra a `/master/` |
 | **Identificador (slug) del restaurante** | `culturabrisket` | Panel maestro (`/master/`) → la lista de restaurantes |
 | **API key del restaurante** (`ck_…`) | `ck_bc6axscYu3K6…` | Panel maestro → el restaurante → tarjeta **Acceso** → «API key (para su sitio web)» |
-| **Plan** | «Cloudin completo» | Panel maestro → lista de restaurantes, columna «Plan». Solo «Cloudin completo» recibe pedidos por el QR |
+| **¿Recibe pedidos por el QR?** | Sí | Todos los restaurantes tienen Cloudin completo; lo decide el interruptor «Pedidos desde el QR de la mesa» del panel del restaurante (sección 9.3). El panel maestro muestra cómo está |
 | **Dirección donde se publicará el menú** | `https://culturabrisket.pages.dev/` | Cloudflare Pages, después de publicar (sección 9) |
 | Token de superadmin (`cld_…`), **solo si vas a cargar la carta por importación** (sección 7.2) | `cld_…` | Panel maestro → **Tokens de API** → Crear token. Pídele que lo ponga en una variable de entorno (`CLOUDIN_ADMIN_TOKEN`), no en el chat ni en archivos |
 
@@ -74,8 +74,8 @@ código** entrega el bloque de conexión (sección 3.2) ya lleno con el servidor
 identificador y la API key. Pídele al usuario que te lo pegue.
 
 Si el restaurante todavía no existe en Cloudin, el usuario lo crea en el panel maestro →
-**Nuevo restaurante** (plan **Cloudin completo** si va a recibir pedidos). Ver
-`PASO-A-PASO-NUEVO-RESTAURANTE.md` en el repositorio de Cloudin.
+**Nuevo restaurante**. Ver `PASO-A-PASO-NUEVO-RESTAURANTE.md` en el repositorio de
+Cloudin.
 
 **Comprueba la conexión antes de escribir código:** abre (o `curl`)
 `https://<servidor>/api/public/<slug>/menu/`. Debe responder JSON con
@@ -138,7 +138,7 @@ Al final de `index.html`, antes de `</body>`, **en este orden**:
 |---|---|---|
 | `api` | **Sí** | La carta pública, completa: `https://` y `/` final. Sin ella el runtime y el carrito no hacen nada. De aquí sale también la dirección del servidor para los pedidos |
 | `restaurant` | Sí | El slug. Nombre de la carta guardada en el teléfono (`localStorage["cloudin:<slug>"]`): con ella quien vuelve ve la carta al instante |
-| `apiKey` | Para pedir | `ck_…`. Vacía (`""`): la carta queda solo para mirar. Con el plan «Menú digital» déjala vacía |
+| `apiKey` | Para pedir | `ck_…`. Ponla siempre: si el restaurante apaga los pedidos por QR, el menú esconde los botones solo, y al encenderlos vuelven sin tocar la página. Vacía (`""`), la carta queda solo para mirar para siempre |
 | `hideSoldOut` | No | `false` (lo agotado se ve apagado) o `true` (lo agotado no se muestra) |
 | `cacheTtl` | No | Segundos que la carta guardada vale cuando se abre **sin** QR (60). Con QR siempre pide la carta al día |
 
@@ -421,8 +421,8 @@ El menú deja pedir solo si se cumplen **las cuatro**:
 1. La página se abrió desde el QR de una mesa: `?mesa=<token>` (12 caracteres al azar;
    **el token, no el número**).
 2. `CLOUDIN_CONFIG.apiKey` tiene la API key.
-3. El restaurante recibe pedidos por QR: plan **Cloudin completo** y modo **Autoservicio**
-   o **Ambos** (el dueño lo elige en su panel → Meseros). Cloudin lo dice en
+3. El restaurante tiene encendidos los **pedidos desde el QR de la mesa** (el interruptor
+   de su panel; un restaurante nuevo los trae encendidos). Cloudin lo dice en
    `recibe_pedidos` (6.3).
 4. La dirección desde la que se abre el menú está registrada en Cloudin (sección 9.2).
 
@@ -443,7 +443,7 @@ Hace todo lo de esta sección:
   nombre de quien pide (recordado en el teléfono); lo ya pedido con su estado.
 - «Enviar pedido» (`POST enviar/`) → «¡Pedido enviado! La cocina ya lo tiene.».
 - Consulta `estado/` cada 5 s mientras la página está visible; si `recibe_pedidos` es
-  `false`, quita los botones.
+  `false`, quita los botones, y si vuelve a ser `true`, los pone otra vez.
 
 Personalizarlo: los colores salen de `--cloudin-primary` (botones) y `--fondo` (ventanas);
 los textos y el CSS están al principio del archivo. Si lo modificas, conserva el escape de
@@ -552,8 +552,7 @@ muestra «¡Gracias por tu visita!» y deja el carrito limpio. Nada se cierra so
 |---|---|---|---|
 | `400` | — | Falta `X-API-Key` o está mala («No se identificó el restaurante…») | Error de configuración: revisa `apiKey` |
 | `400` | — / `opciones` | Carrito vacío, opción obligatoria faltante o que ya no existe | El `detail` tal cual; `Cloudin.refresh()` |
-| `403` | `sin_pedidos` | Plan «Menú digital» | «Pídele tu pedido al mesero.» y oculta el carrito |
-| `403` | `solo_meseros` | Trabaja solo con meseros | «Llama al mesero, él toma tu pedido.» |
+| `403` | `sin_pedidos` | El restaurante apagó los pedidos por QR | «Pídele tu pedido al mesero.» y oculta el carrito |
 | `404` | — | Token de mesa inexistente (QR viejo) | «Este QR ya no es válido, pide ayuda al mesero.» |
 | `409` | — | El carrito cambió en otro teléfono | Reaplica y reintenta |
 | `409` | `agotado` | Un plato del carrito se agotó | Quítalo y avisa |
@@ -707,9 +706,9 @@ Campos del formulario: `seed` (obligatorio, JSON de hasta 2 MB), `assets` (zip d
 60 MB, 1000 archivos y 150 MB descomprimido; cada foto hasta 8 MB; las rutas de la semilla
 se buscan tal cual dentro del zip, con o sin una carpeta `site/` delante), `dry_run` (`1` = solo revisar),
 `invite` (`1` = si la semilla trae `owner.email` y el restaurante no tiene dueño, lo crea y
-le manda la invitación), `create_tenant` (`1` = crear el restaurante si no existe; **no lo
-uses**: se crea con el plan «Menú digital». Mejor que el usuario lo cree en el panel
-maestro con el plan correcto).
+le manda la invitación), `create_tenant` (`1` = crear el restaurante si no existe; úsalo solo si el
+usuario lo pide: lo normal es que lo cree en el panel maestro, donde recibe el usuario y
+la contraseña del dueño).
 
 Respuesta (`200`, o `201` si creó el restaurante):
 
@@ -747,8 +746,7 @@ Con acceso al servidor (o a su base desde un PC), lo mismo por consola:
 - No copies la carta al HTML como fuente de datos ni «actualices precios» en el código.
 - No uses la API interna del panel (`/api/v1/staff/…`): exige la sesión del dueño y CSRF; es
   para el panel, no para menús.
-- No crees el restaurante con `create_tenant=1` si va a recibir pedidos (queda en plan
-  «Menú digital»).
+- No crees el restaurante con `create_tenant=1` sin que el usuario lo pida.
 
 ---
 
@@ -803,17 +801,19 @@ Leer la carta funciona desde cualquier dirección; **pedir** solo desde las regi
 vista previa de Pages (`https://<hash>.<proyecto>.pages.dev`) o `http://localhost:8080` no
 pueden pedir mientras no estén en «Otras direcciones autorizadas».
 
-### 9.3 El plan y quién toma los pedidos
+### 9.3 Quién toma los pedidos
 
-| Plan (panel maestro / `/admin/`) | Modo (panel del dueño → Meseros) | ¿El QR pide? |
-|---|---|---|
-| Menú digital | cualquiera | No (`recibe_pedidos: false`, `403 sin_pedidos`) |
-| Cloudin completo | Autoservicio | Sí |
-| Cloudin completo | Ambos | Sí, y los meseros también |
-| Cloudin completo | Meseros | No (`403 solo_meseros`) |
+Todos los restaurantes tienen Cloudin completo: no hay planes. Son dos interruptores que
+cambia el administrador del restaurante en su panel:
 
-El plan se cambia en `/admin/` → Restaurantes → el restaurante → «Plan». La misma plantilla
-sirve para todos: `carrito.js` esconde los botones cuando no se puede pedir.
+| Interruptor | Dónde | Encendido | Apagado |
+|---|---|---|---|
+| **Pedidos desde el QR de la mesa** (viene encendido) | Inicio, Códigos QR y Meseros | El menú deja pedir | La carta queda para mirar (`recibe_pedidos: false`, `403 sin_pedidos`) |
+| **App de meseros** (viene apagada) | Meseros | Los meseros toman pedidos en su app, a la misma cuenta de la mesa | Los meseros no pueden entrar |
+
+La misma plantilla y la misma `apiKey` sirven para todos: `carrito.js` consulta el estado
+cada 5 segundos y esconde o muestra los botones solo cuando el restaurante cambia el
+interruptor.
 
 ### 9.4 `_headers` (opcional)
 
@@ -879,7 +879,7 @@ horizontal a 390 px de ancho.
 | «Cargando…» sin errores, o carta vacía | El restaurante no tiene productos | Cargar la carta (sección 7) |
 | Tu diseño con secciones vacías | Plantilla fuera de su zona, con dos elementos raíz, o sin `products` en la categoría | Compara con 4.1 |
 | Un dato no aparece | No está lleno en el panel, o el campo está mal escrito (tres partes, mayúsculas) | Tabla 4.4 |
-| No hay «Agregar» en ningún plato | Sin `?mesa`, `apiKey` vacía o mala, `carrito.js` no cargó (404), plan «Menú digital», modo «Meseros», o CORS | Sección 6.1 y la consola |
+| No hay «Agregar» en ningún plato | Sin `?mesa`, `apiKey` vacía o mala, `carrito.js` no cargó (404), pedidos por QR apagados en el panel, o CORS | Sección 6.1 y la consola |
 | «Agregar» falta en un plato | Agotado o sin precio | Panel → Mi menú |
 | «blocked by CORS policy» en la consola | La dirección del menú no coincide con la registrada (http/https, www, otra de Pages) | Sección 9.2 |
 | En el panel: «Tu menú todavía no está publicado» / sin QR | «Página del menú (QR)» vacía | Sección 9.2 |

@@ -209,8 +209,8 @@ restaurante cierra la mesa.
 > `carrito.js`) es **`GUIA-MENU-DIGITAL.md`**. Aquí va el resumen.
 
 Cada mesa tiene su propio código QR con un enlace único. Si el restaurante tiene
-registrada la **Página del menú**, el QR es esa página + `?mesa=<token>`; si no, en
-el plan completo, el sitio + la ruta de mesas + `?m=<token>`
+registrada la **Página del menú**, el QR es esa página + `?mesa=<token>`; si no, el
+sitio + la ruta de mesas + `?m=<token>`
 (`https://tusitio.com/mesa.html?m=<token>`). El panel los muestra e imprime en
 **Códigos QR**.
 
@@ -240,8 +240,8 @@ El estado que devuelven todos:
 }
 ```
 
-`recibe_pedidos` es `false` si el restaurante no recibe pedidos por el QR (plan
-«Menú digital» o solo meseros): en ese caso no muestres el carrito.
+`recibe_pedidos` es `false` si el restaurante apagó los pedidos por el QR en su panel:
+en ese caso no muestres el carrito (y vuelve a mostrarlo si cambia a `true`).
 
 El `borrador` se guarda entero en cada cambio, mandando la `version` que se
 tenía. Si otra persona escribió primero, la respuesta es `409` con el estado al
@@ -266,8 +266,7 @@ cargarlos.
 | `400` | Falta `table_number` | Enviar el número de mesa |
 | `404` | Esa mesa no existe o está inactiva | Recargar las mesas |
 | `400` | Falta elegir un topping obligatorio | Mostrar el mensaje y dejar elegir |
-| `403` | `codigo: "solo_meseros"` · (pedidos por QR) el restaurante solo trabaja con meseros | Pedir que llamen al mesero |
-| `403` | `codigo: "sin_pedidos"` · (pedidos por QR) el plan del restaurante no recibe pedidos | Pedir que llamen al mesero |
+| `403` | `codigo: "sin_pedidos"` · (pedidos por QR) el restaurante apagó los pedidos por QR | Pedir que llamen al mesero |
 | `429` | `codigo: "demasiados"` · muchos pedidos seguidos desde la misma IP | Esperar unos minutos; no borrar el pedido |
 
 Los pedidos entran a cualquier hora: no hay turno de caja que abrir.

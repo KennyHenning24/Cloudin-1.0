@@ -21,7 +21,7 @@ def test_nuevo_restaurante_con_la_pagina_de_su_menu(client, jefe, bases_creadas_
 
     bases_creadas_en_la_prueba.append("la-casa")
     r = client.post(reverse("master:restaurante-nuevo"), {
-        "name": "La Casa", "slug": "la-casa", "plan": "completo",
+        "name": "La Casa", "slug": "la-casa",
         "menu_page": "https://la-casa.pages.dev/",
         "admin_usuario": "admin", "admin_correo": "ana@example.com",
     })
@@ -29,11 +29,12 @@ def test_nuevo_restaurante_con_la_pagina_de_su_menu(client, jefe, bases_creadas_
     tenant = Tenant.objects.get(slug="la-casa")
     assert tenant.menu_page == "https://la-casa.pages.dev/" and tenant.site_url == ""
     assert "https://la-casa.pages.dev" in tenant.origenes_permitidos  # ya puede pedir
+    assert tenant.pedidos_qr  # todos tienen Cloudin completo: no se pregunta el plan
 
 
 @pytest.mark.django_db
 def test_la_ficha_registra_la_pagina_y_da_el_codigo_del_menu(client, jefe, crear_restaurante, en_restaurante):
-    tenant = crear_restaurante("cultura", plan="completo")
+    tenant = crear_restaurante("cultura")
     ficha = reverse("master:restaurante", args=["cultura"])
     html = client.get(ficha).content.decode()
     assert "Sin página registrada" in html and "Sin conexión todavía" in html
@@ -64,7 +65,7 @@ def test_la_ficha_registra_la_pagina_y_da_el_codigo_del_menu(client, jefe, crear
 
 @pytest.mark.django_db
 def test_la_ficha_rechaza_direcciones_que_no_son_web(client, jefe, crear_restaurante):
-    tenant = crear_restaurante("cultura", plan="completo", menu_page="https://culturabrisket.pages.dev/")
+    tenant = crear_restaurante("cultura", menu_page="https://culturabrisket.pages.dev/")
     r = client.post(reverse("master:restaurante-menu", args=["cultura"]),
                     {"pagina": "https://otra.pages.dev/", "otros": "menu.culturabrisket.com"}, follow=True)
     assert "no es una dirección" in r.content.decode()
@@ -73,7 +74,14 @@ def test_la_ficha_rechaza_direcciones_que_no_son_web(client, jefe, crear_restaur
 
 
 @pytest.mark.django_db
-def test_con_el_plan_menu_el_codigo_no_lleva_llave(client, jefe, crear_restaurante):
-    crear_restaurante("solo-carta")  # plan «Menú digital»: la carta es solo para mirar
-    html = client.get(reverse("master:restaurante", args=["solo-carta"])).content.decode()
-    assert 'apiKey: ""' in html
+def test_el_codigo_siempre_lleva_la_llave_y_la_ficha_dice_si_hay_pedidos_por_qr(client, jefe, crear_restaurante):
+    """Todos tienen Cloudin completo: con los pedidos por QR apagados el menú esconde los
+    botones solo, así que la llave va siempre y al encenderlos no hay que tocar la página."""
+    tenant = crear_restaurante("solo-carta", pedidos_qr=False)
+    ficha = reverse("master:restaurante", args=["solo-carta"])
+    html = client.get(ficha).content.decode()
+    assert f'apiKey: "{tenant.api_key}"' in html and "Pedidos por QR apagados" in html
+    assert "Pedidos por QR" in client.get(reverse("master:home")).content.decode()
+    tenant.pedidos_qr = True
+    tenant.save()
+    assert "Pedidos por QR encendidos" in client.get(ficha).content.decode()

@@ -18,6 +18,7 @@
 
   <section aria-labelledby="t-mesas">
     <h2 class="h-seccion" id="t-mesas">Mesas</h2>
+    {% include "components/pedidos_qr.html" with es_admin=es_admin %}
     {% if es_admin %}
     <form class="card mesas-cuantas" id="form-mesas" novalidate>
       <div class="campo">

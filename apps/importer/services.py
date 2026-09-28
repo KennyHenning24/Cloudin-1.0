@@ -174,9 +174,9 @@ def _restaurante(negocio: dict, crear: bool, aplicar: bool, resumen: Resumen):
         return None
     from apps.tenants.services import aprovisionar, crear_restaurante
 
-    tenant = crear_restaurante(nombre=negocio["name"], slug=negocio["slug"], plan=Tenant.PLAN_MENU,
-                               nit=negocio["nit"], legal_name=negocio["legal_name"],
-                               address=negocio["address"], city=negocio["city"], phone=negocio["phone"])
+    tenant = crear_restaurante(nombre=negocio["name"], slug=negocio["slug"], nit=negocio["nit"],
+                               legal_name=negocio["legal_name"], address=negocio["address"],
+                               city=negocio["city"], phone=negocio["phone"])
     aprovisionar(tenant)
     return tenant
 

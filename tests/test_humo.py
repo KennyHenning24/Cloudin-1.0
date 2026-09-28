@@ -13,7 +13,7 @@ from apps.catalog.models import Category, Product
 from apps.dining.models import Table
 
 # Rutas del panel que solo aceptan POST o que no son pantallas.
-SOLO_POST = {"logout", "soporte-salir", "entrar-como"}
+SOLO_POST = {"logout", "soporte-salir", "entrar-como", "pedidos-qr"}
 # Solo existen con DEBUG=True (tienen su propia prueba en test_diseno.py).
 SOLO_DEBUG = {"design-system"}
 # Pantallas principales: deben responder 200, no una redirección.
@@ -37,7 +37,7 @@ def _rutas_sin_parametros(espacio):
 
 @pytest.fixture
 def restaurante_listo(crear_restaurante, crear_usuario, en_restaurante):
-    tenant = crear_restaurante("humo", modo_servicio="mixto", plan="completo")
+    tenant = crear_restaurante("humo", pedidos_qr=True, app_meseros=True)
     user = crear_usuario(tenant)
     with en_restaurante(tenant):
         mesa = Table.objects.create(number=1)

@@ -79,7 +79,7 @@ def app_mesero(api=False):
             tenant = _tenant_o_404(slug)
             _activar(request, tenant)
 
-            if not tenant.usa_meseros:
+            if not tenant.app_meseros:
                 if api:
                     return JsonResponse(
                         {"detail": "El servicio de meseros no está activo en este restaurante.",
@@ -109,7 +109,7 @@ def app_mesero(api=False):
 def entrar(request, slug):
     tenant = _tenant_o_404(slug)
     _activar(request, tenant)
-    if not tenant.usa_meseros:
+    if not tenant.app_meseros:
         return render(request, "mesero/desactivado.html", {"t": tenant}, status=403)
     if mesero_en_sesion(request, tenant):
         return redirect("mesero:app", slug=tenant.slug)

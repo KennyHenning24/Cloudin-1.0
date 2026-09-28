@@ -17,7 +17,7 @@ ORIGEN = "https://la-casa.pages.dev"
 
 @pytest.fixture
 def casa(crear_restaurante, crear_usuario, en_restaurante):
-    tenant = crear_restaurante("la-casa", plan="completo", menu_page=PAGINA)
+    tenant = crear_restaurante("la-casa", menu_page=PAGINA)
     admin = crear_usuario(tenant, rol=TenantMembership.ROLE_ADMIN)
     with en_restaurante(tenant):
         cat = Category.objects.create(name="Hamburguesas")
@@ -130,23 +130,28 @@ def test_opcion_que_no_existe_o_falta_la_obligatoria(client, casa):
 
 
 @pytest.mark.django_db
-def test_sin_pedidos_por_el_qr_con_el_plan_menu_o_solo_meseros(client, casa):
-    """El plan «Menú digital» no tiene dónde ver los pedidos, y en modo «solo meseros» los
-    toma el mesero: el menú digital lo sabe por `recibe_pedidos` y Cloudin los rechaza."""
+def test_sin_pedidos_por_el_qr_cuando_el_restaurante_los_apaga(client, casa):
+    """El administrador apaga los pedidos por QR en su panel: el menú digital lo sabe por
+    `recibe_pedidos` y Cloudin rechaza los envíos, con o sin la app de meseros."""
     token = casa["mesa"].token
     base = f"/api/v1/mesa/{token}/"
     assert client.get(base + "estado/", **_llave(casa)).json()["recibe_pedidos"] is True
     client.put(base + "borrador/", {"items": [_linea(casa)]}, content_type="application/json", **_llave(casa))
-    for plan, modo, codigo in [("menu", "autoservicio", "sin_pedidos"), ("completo", "meseros", "solo_meseros")]:
-        casa["t"].plan, casa["t"].modo_servicio = plan, modo
+    for meseros in (False, True):
+        casa["t"].pedidos_qr, casa["t"].app_meseros = False, meseros
         casa["t"].save()
         assert client.get(base + "estado/", **_llave(casa)).json()["recibe_pedidos"] is False
         r = client.post(base + "enviar/", {"by": "Ana"}, content_type="application/json", **_llave(casa))
-        assert r.status_code == 403 and r.json()["codigo"] == codigo
+        assert r.status_code == 403 and r.json()["codigo"] == "sin_pedidos"
         r = client.post(f"/api/v1/tables/{token}/orders/", {"items": [_linea(casa)]},
                         content_type="application/json", **_llave(casa))
-        assert r.status_code == 403 and r.json()["codigo"] == codigo
+        assert r.status_code == 403 and r.json()["codigo"] == "sin_pedidos"
     assert client.get(base + "estado/", **_llave(casa)).json()["ocupada"] is False
+    # Al encenderlos otra vez, el mismo carrito se envía.
+    casa["t"].pedidos_qr = True
+    casa["t"].save()
+    r = client.post(base + "enviar/", {"by": "Ana"}, content_type="application/json", **_llave(casa))
+    assert r.status_code == 201
 
 
 @pytest.mark.django_db
@@ -178,7 +183,7 @@ def test_cors_para_la_pagina_del_menu_digital(client, casa):
 def test_el_mesero_envia_sin_turno_de_caja(client, casa, en_restaurante):
     from apps.waiters.models import Mesero
 
-    casa["t"].modo_servicio = "mixto"
+    casa["t"].app_meseros = True
     casa["t"].save()
     with en_restaurante(casa["t"]):
         mesero = Mesero(nombre="Laura", usuario="laura")

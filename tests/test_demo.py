@@ -21,7 +21,7 @@ def test_la_demo_queda_lista_y_reimportar_no_duplica(client, bases_creadas_en_la
     assert mail.outbox == []  # la demo no le escribe a nadie
 
     t = Tenant.objects.get(slug="demo-prueba")
-    assert t.plan == Tenant.PLAN_MENU and t.name == "Birriería La Demo"
+    assert t.pedidos_qr and t.name == "Birriería La Demo"
     dueno = TenantMembership.objects.get(tenant=t, role=TenantMembership.ROLE_OWNER).user
     assert dueno.email == "dueno@demo-prueba.test" and dueno.check_password("Birria-Demo-2026")
     with en_restaurante(t):

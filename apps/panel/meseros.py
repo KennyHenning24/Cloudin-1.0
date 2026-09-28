@@ -1,8 +1,9 @@
 """Meseros en el panel del administrador: cómo se toman los pedidos y quién.
 
-Aquí se decide el modo del restaurante (autoservicio, meseros o ambos) y se
-administran las cuentas de los meseros. Las cuentas son de la tablet, no del
-panel: crear un mesero no le da acceso a nada de esta pantalla.
+Aquí se encienden o apagan los pedidos desde el QR de la mesa (también desde el
+Inicio y Códigos QR) y la app de meseros, y se administran las cuentas de los
+meseros. Las cuentas son de la tablet, no del panel: crear un mesero no le da
+acceso a nada de esta pantalla.
 """
 
 from decimal import Decimal
@@ -17,10 +18,10 @@ from django.utils import timezone
 from django.views.decorators.http import require_POST
 
 from apps.orders.models import Order, OrderItem
-from apps.tenants.models import Tenant
 from apps.waiters.forms import MeseroForm
 from apps.waiters.models import Mesero
 
+from .seguridad import volver_seguro
 from .views import _qr_data_uri, panel_view
 
 LINEA = ExpressionWrapper(F("unit_price") * F("quantity"),
@@ -28,21 +29,31 @@ LINEA = ExpressionWrapper(F("unit_price") * F("quantity"),
 
 
 @panel_view(solo_admin=True)
+@require_POST
+def pedidos_qr(request):
+    """Enciende o apaga los pedidos desde el QR de la mesa. Apagados, el menú digital
+    sigue mostrando la carta pero sin el botón «Agregar» (Cloudin responde
+    `recibe_pedidos: false` y rechaza los envíos con `403 sin_pedidos`)."""
+    tenant = request.tenant
+    tenant.pedidos_qr = request.POST.get("activo") == "1"
+    tenant.save(update_fields=["pedidos_qr"])
+    if tenant.pedidos_qr:
+        messages.success(request, "Pedidos por QR encendidos: los clientes ya pueden pedir desde el menú.")
+    else:
+        messages.success(request, "Pedidos por QR apagados: el menú queda solo para mirar.")
+    return redirect(volver_seguro(request, request.POST.get("next"), reverse("panel:inicio")))
+
+
+@panel_view(solo_admin=True)
 def meseros(request):
     tenant = request.tenant
     enlace = request.build_absolute_uri(reverse("mesero:app", kwargs={"slug": tenant.slug}))
 
-    if request.method == "POST" and request.POST.get("accion") == "modo":
-        modo = request.POST.get("modo")
-        if modo in dict(Tenant.MODOS_SERVICIO):
-            tenant.modo_servicio = modo
-            tenant.save(update_fields=["modo_servicio"])
-            textos = {
-                Tenant.AUTOSERVICIO: "Solo autoservicio: la app de meseros queda apagada.",
-                Tenant.MESEROS: "Solo meseros: el QR ya no recibe pedidos del cliente.",
-                Tenant.MIXTO: "QR y meseros funcionando a la vez.",
-            }
-            messages.success(request, textos[modo])
+    if request.method == "POST" and request.POST.get("accion") == "app_meseros":
+        tenant.app_meseros = request.POST.get("activo") == "1"
+        tenant.save(update_fields=["app_meseros"])
+        messages.success(request, "App de meseros encendida: los meseros ya pueden entrar y tomar pedidos."
+                         if tenant.app_meseros else "App de meseros apagada: los meseros ya no pueden entrar.")
         return redirect("panel:meseros")
 
     hoy = timezone.localdate()
@@ -71,7 +82,6 @@ def meseros(request):
         "pedidos_hoy": sum(e["pedidos"] for e in equipo),
         "enlace": enlace,
         "qr": _qr_data_uri(enlace),
-        "MODOS": Tenant.MODOS_SERVICIO,
         "clave_confirmada": request.session.get(f"meseros_clave_ok:{tenant.slug}", 0)
         > timezone.now().timestamp(),
     })

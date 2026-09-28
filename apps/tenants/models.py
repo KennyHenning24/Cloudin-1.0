@@ -40,35 +40,17 @@ class Tenant(models.Model):
     # Última vez que ese sitio llamó a la API: es la señal de "está conectado".
     site_last_seen = models.DateTimeField(null=True, blank=True, editable=False)
 
-    # Cómo se toman los pedidos. Es configuración del restaurante, no un dato de
-    # su operación, por eso vive aquí y no en su base.
-    AUTOSERVICIO = "autoservicio"
-    MESEROS = "meseros"
-    MIXTO = "mixto"
-    MODOS_SERVICIO = [
-        (AUTOSERVICIO, "Autoservicio: el cliente pide desde el QR"),
-        (MESEROS, "Meseros: el mesero toma el pedido en la tablet"),
-        (MIXTO, "Ambos: QR y meseros a la vez"),
-    ]
-    modo_servicio = models.CharField(
-        "Cómo se toman los pedidos", max_length=14, choices=MODOS_SERVICIO, default=AUTOSERVICIO
-    )
-
-    # Qué contrató: solo el menú digital, o Cloudin completo (además recibe los
-    # pedidos del menú digital, ve sus mesas ocupadas y usa la app de meseros).
-    # Define qué secciones ve en su panel.
-    PLAN_MENU = "menu"
-    PLAN_COMPLETO = "completo"
-    PLANES = [
-        (PLAN_MENU, "Menú digital"),
-        (PLAN_COMPLETO, "Cloudin completo"),
-    ]
-    plan = models.CharField("Plan", max_length=12, choices=PLANES, default=PLAN_MENU)
+    # Cómo se toman los pedidos: dos interruptores que el administrador del restaurante
+    # cambia en su panel (Inicio, Códigos QR o Meseros). Todos los restaurantes tienen
+    # Cloudin completo; con los dos apagados, el menú digital queda solo para mirar. Es
+    # configuración del restaurante, no un dato de su operación: vive aquí y no en su base.
+    pedidos_qr = models.BooleanField("Recibe pedidos desde el QR de la mesa", default=True)
+    app_meseros = models.BooleanField("Usa la app de meseros", default=False)
 
     # Página del menú para las mesas (la del QR), p. ej. https://x.pages.dev/menu.html.
     # El QR de cada mesa es esta dirección + ?mesa=<token>. Cloudin no sirve un menú
-    # propio: si está vacía, el QR usa site_url (plan completo) o todavía no hay QR
-    # (dining/qr.py). Ver GUIA-MENU-DIGITAL.md.
+    # propio: si está vacía, el QR usa site_url o todavía no hay QR (dining/qr.py).
+    # Ver GUIA-MENU-DIGITAL.md.
     menu_page = models.URLField("Página del menú (QR)", max_length=500, blank=True)
     # Otros orígenes autorizados además de site_url (dominio propio, pages.dev…).
     allowed_origins = models.JSONField("Otros sitios autorizados", default=list, blank=True)
@@ -89,10 +71,6 @@ class Tenant(models.Model):
         return self.name
 
     @property
-    def es_plan_menu(self) -> bool:
-        return self.plan == self.PLAN_MENU
-
-    @property
     def origenes_permitidos(self) -> set[str]:
         """Los sitios que pueden llamar a la API desde el navegador: site_url, la página
         del menú digital (menu_page, la del QR) y allowed_origins (p. ej. el dominio
@@ -105,20 +83,6 @@ class Tenant(models.Model):
             if partes.scheme in ("http", "https") and partes.netloc:
                 origenes.add(f"{partes.scheme}://{partes.netloc}")
         return origenes
-
-    @property
-    def usa_meseros(self) -> bool:
-        return self.modo_servicio in (self.MESEROS, self.MIXTO)
-
-    @property
-    def usa_autoservicio(self) -> bool:
-        return self.modo_servicio in (self.AUTOSERVICIO, self.MIXTO)
-
-    @property
-    def recibe_pedidos_del_menu(self) -> bool:
-        """Si el menú digital (el QR de la mesa) puede mandar pedidos. Con el plan «Menú
-        digital» el panel no tiene dónde verlos, y en modo «solo meseros» los toma el mesero."""
-        return not self.es_plan_menu and self.usa_autoservicio
 
     def save(self, *args, **kwargs):
         if not self.db_name:

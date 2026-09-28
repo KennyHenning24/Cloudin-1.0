@@ -105,8 +105,8 @@ para cuando haya presupuesto.
 
 1. Abre `https://<tu-servicio>.onrender.com/master/` y entra con el superusuario. Si el
    servicio estaba dormido, la primera carga tarda un minuto.
-2. **Nuevo restaurante**, con el plan **«Cloudin completo»** si va a recibir pedidos. El
-   panel maestro muestra una sola vez el usuario, la contraseña y el enlace del panel
+2. **Nuevo restaurante** (todos tienen Cloudin completo; los pedidos por QR vienen
+   encendidos y el restaurante los apaga o enciende en su panel). El panel maestro muestra una sola vez el usuario, la contraseña y el enlace del panel
    (`https://<tu-servicio>.onrender.com/panel/login/`: Cloudin toma la dirección del
    servicio de `RENDER_EXTERNAL_HOSTNAME`, que Render define solo).
 3. Entra al panel con esos datos: **Códigos QR** para crear las mesas y **Mi menú** para

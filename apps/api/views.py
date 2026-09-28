@@ -146,18 +146,13 @@ def table_detail(request, token):
 
 
 def pedidos_del_menu_apagados(tenant):
-    """La respuesta para el menú digital cuando el restaurante no recibe pedidos por el
-    QR, o None si sí los recibe (ver Tenant.recibe_pedidos_del_menu)."""
-    if tenant.es_plan_menu:
+    """La respuesta para el menú digital cuando el restaurante tiene apagados los pedidos
+    por el QR (su panel → «Pedidos desde el QR de la mesa»), o None si los recibe."""
+    if not tenant.pedidos_qr:
         return Response(
-            {"detail": "Este restaurante todavía no recibe pedidos desde el menú. Pídele al mesero.",
+            {"detail": "En este momento el restaurante no recibe pedidos desde el menú. "
+                       "Pídele tu pedido al mesero.",
              "codigo": "sin_pedidos"},
-            status=status.HTTP_403_FORBIDDEN,
-        )
-    if not tenant.usa_autoservicio:
-        return Response(
-            {"detail": "En este restaurante los pedidos los toma el mesero. Llámalo y con gusto te atiende.",
-             "codigo": "solo_meseros"},
             status=status.HTTP_403_FORBIDDEN,
         )
     return None

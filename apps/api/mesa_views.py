@@ -59,14 +59,14 @@ def _pedidos_de(session):
 def _estado(table) -> dict:
     """La foto completa de la mesa: lo pedido, lo que se está armando y avisos.
 
-    `recibe_pedidos` le dice al menú digital si muestra el carrito: es falso con el
-    plan «Menú digital» o si el restaurante trabaja solo con meseros."""
+    `recibe_pedidos` le dice al menú digital si muestra el carrito: es falso cuando el
+    restaurante apagó los pedidos por el QR en su panel."""
     session = table.open_session
     draft = _borrador(table)
     tenant = get_current_tenant()
     return {
         "mesa": table.number,
-        "recibe_pedidos": bool(tenant and tenant.recibe_pedidos_del_menu),
+        "recibe_pedidos": bool(tenant and tenant.pedidos_qr),
         "ocupada": session is not None,
         "cuenta": (
             {

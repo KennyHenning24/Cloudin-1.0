@@ -55,7 +55,6 @@ def restaurante_nuevo(request):
             tenant = crear_restaurante(
                 nombre=form.cleaned_data["name"],
                 slug=form.cleaned_data["slug"],
-                plan=form.cleaned_data["plan"],
                 menu_page=form.cleaned_data["menu_page"],
                 legal_name=form.cleaned_data["legal_name"],
                 nit=form.cleaned_data["nit"],

@@ -84,6 +84,14 @@ Al entrar por primera vez, cambien la contraseña.</textarea>
         recarga esta página: si sigue así, al menú le falta el código de abajo o apunta a otro servidor.
       {% endif %}
     </p>
+    <p class="small" style="margin-bottom:var(--sp-3)">
+      {% if t.pedidos_qr %}<span class="pill ok"><i class="dot"></i>Pedidos por QR encendidos</span>
+        Los clientes piden desde el QR de su mesa.
+      {% else %}<span class="pill neutro"><i class="dot"></i>Pedidos por QR apagados</span>
+        El menú queda solo para mirar.
+      {% endif %}
+      Lo cambia el administrador del restaurante en su panel (Inicio, Códigos QR o Meseros).
+    </p>
 
     <form method="post" action="{% url 'master:restaurante-menu' t.slug %}">
       {% csrf_token %}
@@ -102,7 +110,7 @@ Al entrar por primera vez, cambien la contraseña.</textarea>
     api: "{{ carta }}",
     hideSoldOut: false,
     cacheTtl: 60,
-    apiKey: "{% if not t.es_plan_menu %}{{ t.api_key }}{% endif %}"
+    apiKey: "{{ t.api_key }}"
   };
 &lt;/script&gt;
 &lt;script src="{{ servidor }}/static/cloudin-menu.v1.js" defer&gt;&lt;/script&gt;
@@ -116,8 +124,8 @@ Al entrar por primera vez, cambien la contraseña.</textarea>
       Reemplaza cualquier otro <code>CLOUDIN_CONFIG</code> que tenga la página. <code>carrito.js</code> se copia
       de <code>client/example/carrito.js</code> junto al <code>index.html</code>. El HTML de la carta lleva los
       atributos <code>data-cloudin</code>: <code>PASO-A-PASO-NUEVO-RESTAURANTE.md</code>, parte 3.
-      {% if t.es_plan_menu %}Con el plan «Menú digital» la carta es solo para mirar: por eso
-      <code>apiKey</code> va vacía.{% endif %}
+      La <code>apiKey</code> va siempre: si el restaurante apaga los pedidos por QR, el menú esconde
+      los botones solo, y al encenderlos vuelve a pedir sin tocar la página.
     </p>
   </div>
 

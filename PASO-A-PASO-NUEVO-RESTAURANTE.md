@@ -71,7 +71,6 @@ Parte 6. Imprimir los QR y probar ........ su panel → Códigos QR
    |---|---|---|
    | **Nombre del restaurante** | `La Casa` | Obligatorio. Es el título del menú (`business.name`). Se corrige después en `/admin/` |
    | **Identificador (subdominio)** | `la-casa` | Obligatorio y único. Solo minúsculas, números y guiones: sin espacios ni tildes. No se permiten `www`, `api`, `admin`, `app`, `master`, `panel` ni `static`. Va dentro de la dirección de la carta y es el nombre de su base de datos: **no lo cambies después** |
-   | **Plan** | **Cloudin completo** | Para recibir pedidos por el QR. Con **Menú digital** la carta queda solo para mirar: no hay pedidos, y su panel no tiene Mesas, Mensajes, Cocina ni Meseros |
    | **Ciudad**, **Teléfono**, **Dirección** | Los del local | Opcionales. La primera vez que se abre **Personalizar** pasan a «Contacto y WhatsApp»; desde ahí se cambian allá |
    | **Página del menú digital** | Vacía por ahora | La dirección del menú publicado (`https://la-casa-menu.pages.dev/`). Como todavía no está publicado, se pone en la Parte 5 |
    | **Razón social**, **NIT** | Si los tienes | Opcionales |
@@ -114,15 +113,17 @@ contraseña de Cloudin → **Entrar en modo soporte**.
 3. La primera vez aparece «Hola, … Antes de empezar…»: marca las dos casillas (términos y
    condiciones, y política de privacidad) → **Acepto y continúo**.
 
-En la barra lateral, con el plan **Cloudin completo**, verás: *Día a día* (Inicio, Mesas,
-Mensajes, Cocina), *Tu menú* (Mi menú, Personalizar, Códigos QR) y *Administración*
-(Meseros, Configuración). Con el plan **Menú digital**: Inicio, Mi menú, Personalizar,
-Mesas y QR, y Cuenta.
+La primera vez, el panel abre el asistente «Empecemos por tu marca» (logo y colores,
+datos del negocio, primera categoría y primer producto). Se puede seguir o tocar
+**Saltar por ahora**; se retoma desde el Inicio.
+
+En la barra lateral verás: *Día a día* (Inicio, Mesas, Mensajes, Cocina), *Tu menú* (Mi
+menú, Personalizar, Códigos QR) y *Administración* (Meseros, Configuración). Todos los
+restaurantes tienen todo: no hay planes.
 
 ### 2.2 Las mesas
 
-**Códigos QR** (con el plan Menú digital se llama **Mesas y QR**) → en «¿Cuántas mesas
-tienes?» escribe el número (p. ej. `12`) → **Guardar**. Cloudin crea las mesas 1 a 12,
+**Códigos QR** → en «¿Cuántas mesas tienes?» escribe el número (p. ej. `12`) → **Guardar**. Cloudin crea las mesas 1 a 12,
 cada una con su token. Nunca borra una mesa ni le cambia el QR.
 
 Todavía no se ven los QR: cada mesa dice «Su QR aparece cuando tu menú digital esté
@@ -188,15 +189,19 @@ El **nombre** del restaurante no está en Personalizar: es el de la Parte 1. «M
 bienvenida» no llega al menú digital, y «Servicios y medios de pago» llegan solo en los
 datos (`window.Cloudin.data.business`), sin campo para el HTML.
 
-### 2.5 Quién toma los pedidos (solo plan Cloudin completo)
+### 2.5 Quién toma los pedidos
 
-**Meseros** → «¿Cómo se toman los pedidos?» → elige una (se guarda al tocarla):
+Son dos interruptores; se cambian al tocarlos (solo el administrador; el resto del
+equipo ve cómo están):
 
-| Opción | Qué pasa con el menú digital |
-|---|---|
-| **Autoservicio** | El cliente pide desde el QR. Es la que viene elegida |
-| **Meseros** | El QR ya no envía pedidos: la carta queda para mirar y el mesero pide en su app |
-| **Ambos** | El cliente pide por QR y los meseros también toman pedidos |
+| Interruptor | Dónde | Encendido | Apagado |
+|---|---|---|---|
+| **Pedidos desde el QR de la mesa** (viene encendido) | **Inicio** (en «Pedidos y mesas»), **Códigos QR** y **Meseros** | El cliente pide desde el menú y el pedido llega a Mensajes y Cocina | El menú muestra la carta, pero no deja pedir |
+| **App de meseros** (viene apagada) | **Meseros** | Los meseros toman pedidos en su app y van a la misma cuenta de la mesa | Los meseros no pueden entrar |
+
+Sirve, por ejemplo, para pausar los pedidos por QR cuando la cocina está llena o el local
+cerró: el menú abierto en los teléfonos esconde el botón «Agregar» en segundos, y al
+encenderlo vuelve solo. No hay que tocar ni volver a publicar el menú.
 
 ### 2.6 Comprobar la carta
 
@@ -483,7 +488,7 @@ dentro de las suyas.
 7. **El botón «Agregar» lo pone `carrito.js`**: al final del elemento `.dish__body` del
    plato, o al final de la tarjeta si no hay `.dish__body`. Solo en platos disponibles y con
    precio, solo si la página se abrió desde un QR (`?mesa=<token>`) con `apiKey`, y solo si
-   el restaurante recibe pedidos por QR (plan Cloudin completo, modo Autoservicio o Ambos).
+   el restaurante tiene encendidos los pedidos por QR (Parte 2.5).
 8. **El QR lleva el token, no el número.** `?mesa=td8vIrnwaZPF` permite pedir; `?mesa=3`
    muestra «Mesa 3» pero no deja pedir. Los QR de la Parte 6 ya traen el token.
 9. **Define `--fondo`** con el color de fondo de tu página (Parte 3.2, paso 8).
@@ -632,7 +637,7 @@ Para ver los errores del menú en el computador: abre la página → clic derech
 | Se queda en «Cargando la carta…» (o la carta sale vacía) y no hay errores | El restaurante todavía no tiene productos | Parte 2.3 |
 | Se ve tu diseño con las secciones vacías | Una `<template>` está mal: fuera de su zona, con dos elementos, o sin `data-cloudin="products"` dentro de la categoría | Compara con el esqueleto de 3.2 |
 | Un dato no aparece (p. ej. el horario) | No está lleno en Personalizar, o el atributo está mal escrito | Parte 2.4; revisa el nombre en la tabla 3.5 |
-| No aparece **Agregar** en ningún plato | Falta `?mesa=<token>` en la dirección, o `apiKey` está vacía o equivocada, o no se cargó `carrito.js` (en la consola: 404), o el plan es «Menú digital», o el modo es «Meseros» | Abre desde un QR de la Parte 6; revisa `apiKey` contra la del panel maestro; revisa que `carrito.js` esté junto a `index.html`; revisa Partes 1 y 2.5 |
+| No aparece **Agregar** en ningún plato | Falta `?mesa=<token>` en la dirección, o `apiKey` está vacía o equivocada, o no se cargó `carrito.js` (en la consola: 404), o los pedidos por QR están apagados | Abre desde un QR de la Parte 6; revisa `apiKey` contra la del panel maestro; revisa que `carrito.js` esté junto a `index.html`; enciende los pedidos por QR (Parte 2.5) |
 | **Agregar** falta en un solo plato | Está agotado o no tiene precio | Mi menú → el plato → Precio y Disponible |
 | En la consola: «blocked by CORS policy» | La dirección desde la que abriste el menú no coincide **exactamente** con «Página del menú (QR)» (`http` o `https`, `www`, otra dirección de Pages) | Corrige la Parte 5. Abre el menú con `https://<proyecto>.pages.dev`, no con la dirección de un despliegue (la que tiene letras y números antes del nombre del proyecto) |
 | Dice «Enviaste muchos pedidos seguidos…» | Más de 20 envíos (o 240 cambios al carrito) en 10 minutos desde la misma conexión; el wifi del local cuenta como una sola | Esperar unos minutos (`GUIA-MENU-DIGITAL.md` §8) |
@@ -649,13 +654,13 @@ Para ver los errores del menú en el computador: abre la página → clic derech
 ## Parte 8. Checklist por restaurante
 
 ```
-[ ] 1. /master/ → Nuevo restaurante, plan «Cloudin completo»
+[ ] 1. /master/ → Nuevo restaurante
 [ ] 1. Copiados: usuario, contraseña, enlace del panel y API key (ck_…)
 [ ] 2. Términos aceptados en su panel
 [ ] 2. Mesas creadas (Códigos QR → ¿Cuántas mesas tienes?)
 [ ] 2. Categorías y productos con precio y foto (Mi menú)
 [ ] 2. Logo, colores, contacto, WhatsApp y horario (Personalizar)
-[ ] 2. Meseros → «Autoservicio» o «Ambos»
+[ ] 2. Pedidos por QR encendidos (Inicio); app de meseros si la van a usar (Meseros)
 [ ] 2. https://<servidor-cloudin>/api/public/<slug>/menu/ muestra la carta
 [ ] 3. index.html con el código de «Menú digital» → Copiar código; carrito.js al lado
 [ ] 4. Publicado en Pages; https://<proyecto>.pages.dev muestra la carta

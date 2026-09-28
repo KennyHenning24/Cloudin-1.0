@@ -1,0 +1,21 @@
+{% load cloudin %}{% comment %}
+Interruptor de los pedidos desde el QR de la mesa (Tenant.pedidos_qr), en Inicio, Códigos QR
+y Meseros. Lo cambia el administrador; el resto del equipo solo ve cómo está.
+{% include "components/pedidos_qr.html" with es_admin=es_admin %}
+{% endcomment %}<form class="card interruptor" method="post" action="{% url 'panel:pedidos-qr' %}" data-pedidos-qr>
+  {% csrf_token %}
+  <input type="hidden" name="next" value="{{ request.get_full_path }}">
+  <input type="hidden" name="activo" value="{{ tenant.pedidos_qr|yesno:'0,1' }}">
+  <span class="chip-ico {% if tenant.pedidos_qr %}menta{% else %}gris{% endif %}">{% icono "qr" %}</span>
+  <span class="interruptor-texto">
+    <strong>Pedidos desde el QR de la mesa</strong>
+    <span class="dim small">{% if tenant.pedidos_qr %}Encendidos: el cliente arma su pedido en el menú y llega a Mensajes y Cocina.{% else %}Apagados: el menú muestra la carta, pero no deja pedir.{% endif %}</span>
+  </span>
+  {% if es_admin %}
+    <label class="switch"><input type="checkbox" role="switch"{% if tenant.pedidos_qr %} checked{% endif %}
+      aria-label="Pedidos desde el QR de la mesa" onchange="this.form.submit()"></label>
+    <noscript><button class="btn sm" type="submit">{% if tenant.pedidos_qr %}Apagar{% else %}Encender{% endif %}</button></noscript>
+  {% else %}
+    <span class="chip {% if tenant.pedidos_qr %}disponible{% else %}alerta{% endif %}">{% if tenant.pedidos_qr %}Encendidos{% else %}Apagados{% endif %}</span>
+  {% endif %}
+</form>

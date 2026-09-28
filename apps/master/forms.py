@@ -31,9 +31,8 @@ class RestauranteForm(forms.ModelForm):
 
     class Meta:
         model = Tenant
-        fields = ["name", "slug", "plan", "menu_page", "legal_name", "nit", "address", "city", "phone"]
+        fields = ["name", "slug", "menu_page", "legal_name", "nit", "address", "city", "phone"]
         labels = {
-            "plan": "Plan",
             "name": "Nombre del restaurante",
             "slug": "Identificador (subdominio)",
             "menu_page": "Página del menú digital",
@@ -44,8 +43,6 @@ class RestauranteForm(forms.ModelForm):
             "phone": "Teléfono",
         }
         help_texts = {
-            "plan": "Menú digital: carta, fotos, personalización y QR. Completo: además recibe los "
-            "pedidos del menú digital, ve sus mesas y usa la app de meseros.",
             "slug": "Solo minúsculas, números y guiones. Es su subdominio y el nombre de su base de datos.",
             "menu_page": "Donde está publicado su menú (Cloudflare Pages). Con ella salen los QR de "
             "las mesas y ese menú puede enviar pedidos. Si todavía no está publicado, déjala vacía: "

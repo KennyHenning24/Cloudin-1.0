@@ -21,7 +21,7 @@ def _volver():
     return reverse("panel:configuracion") + "?paso=menu"
 
 
-@panel_view(solo_admin=True, menu=True)
+@panel_view(solo_admin=True)
 def producto_nuevo(request):
     """La ficha de antes: ahora los productos se crean en el editor de Mi menú."""
     destino = reverse("panel:carta-producto-nuevo")
@@ -30,7 +30,7 @@ def producto_nuevo(request):
     return redirect(f"{destino}?categoria={categoria.uuid}" if categoria else destino)
 
 
-@panel_view(solo_admin=True, menu=True)
+@panel_view(solo_admin=True)
 def producto_editar(request, producto_id):
     """Los enlaces viejos (Configuración → Menú) abren el editor nuevo."""
     producto = get_object_or_404(Product, pk=producto_id, eliminado=False)

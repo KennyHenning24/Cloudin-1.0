@@ -1,7 +1,7 @@
 """Alta de un restaurante con su dueño (el que recibe la invitación por correo).
 
     python manage.py create_restaurant --name "La Esquina" --slug la-esquina \
-        --owner-email dueno@correo.com --owner-name "Ana Ruiz" [--plan menu|completo]
+        --owner-email dueno@correo.com --owner-name "Ana Ruiz"
 
 Crea el restaurante en la base de control, su base de datos (migrada), el menú
 «Carta» y al dueño, y le envía la invitación para crear su contraseña. Para
@@ -24,7 +24,6 @@ class Command(BaseCommand):
     def add_arguments(self, parser):
         parser.add_argument("--name", required=True, help="Nombre comercial")
         parser.add_argument("--slug", help="Identificador en kebab-case (por defecto, del nombre)")
-        parser.add_argument("--plan", choices=[p for p, _ in Tenant.PLANES], default=Tenant.PLAN_MENU)
         parser.add_argument("--owner-email", required=True)
         parser.add_argument("--owner-name", default="")
         parser.add_argument("--nit", default="")
@@ -45,7 +44,7 @@ class Command(BaseCommand):
         except ValidationError:
             raise CommandError("El correo del dueño no es válido.")
 
-        tenant = crear_restaurante(nombre=o["name"], slug=slug, plan=o["plan"], nit=o["nit"],
+        tenant = crear_restaurante(nombre=o["name"], slug=slug, nit=o["nit"],
                                    legal_name=o["legal_name"], city=o["city"], address=o["address"],
                                    phone=o["phone"])
         aprovisionar(tenant)
@@ -66,4 +65,4 @@ class Command(BaseCommand):
             enviar_invitacion(user, tenant)
             self.stdout.write(f"Invitación enviada a {o['owner_email']}.")
         self.stdout.write(self.style.SUCCESS(
-            f"Listo: {tenant.name} ({tenant.slug}) · plan {tenant.get_plan_display()} · usuario {user.username}"))
+            f"Listo: {tenant.name} ({tenant.slug}) · usuario {user.username}"))

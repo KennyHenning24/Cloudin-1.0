@@ -903,6 +903,9 @@ a.avatar{text-decoration:none}
 .tarjeta-asistente{display:flex;align-items:center;gap:var(--space-3);margin-bottom:var(--space-4);border-color:var(--brand-line);
   background:var(--brand-soft);flex-wrap:wrap}
 .tarjeta-asistente>span:nth-child(2){display:grid;flex:1;min-width:180px}
+/* Interruptores de «cómo se toman los pedidos» (components/pedidos_qr.html y Meseros). */
+.interruptor{display:flex;align-items:center;gap:var(--space-3);flex-wrap:wrap;margin:0 0 var(--space-4)}
+.interruptor-texto{display:grid;gap:2px;flex:1;min-width:180px}
 .tarjeta-asistente .btn .ico{width:16px;height:16px}
 .kpis-menu{display:grid;gap:var(--space-3);grid-template-columns:repeat(3,minmax(0,1fr));margin-bottom:var(--space-5)}
 .kpi-menu{display:grid;gap:2px;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:var(--space-3) var(--space-4);

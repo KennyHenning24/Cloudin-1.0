@@ -38,7 +38,7 @@ urlpatterns = [
     # Guía viva del sistema de diseño (solo con DEBUG=True)
     path("design-system/", design_system.pagina, name="design-system"),
 
-    # Panel del dueño: el menú digital (los dos planes)
+    # Panel del dueño: el menú digital
     path("bienvenida/", duenio.bienvenida, name="bienvenida"),
     path("mi-menu/", duenio.mi_menu, name="mi-menu"),
     path("mi-menu/producto/nuevo/", duenio.producto, name="carta-producto-nuevo"),
@@ -47,7 +47,7 @@ urlpatterns = [
     path("mesas-y-qr/", duenio.mesas_y_qr, name="qr"),
     path("cuenta/", duenio.cuenta, name="cuenta"),
 
-    # Pedidos y mesas (plan completo)
+    # Pedidos y mesas
     path("mesas/", views.tables, name="tables"),
     path("mesa/<int:table_id>/", views.table_detail, name="table-detail"),
     path("cocina/", views.kitchen, name="kitchen"),
@@ -59,7 +59,9 @@ urlpatterns = [
     path("menu/producto/<int:producto_id>/eliminar/", menu.producto_eliminar, name="producto-eliminar"),
     path("menu/importar/", menu.menu_importar, name="menu-importar"),
 
-    # Cloudin Meseros (la app de la tablet vive en /mesero/<slug>/)
+    # Cómo se toman los pedidos: el QR de la mesa y Cloudin Meseros (la app de la tablet
+    # vive en /mesero/<slug>/)
+    path("pedidos-qr/", meseros.pedidos_qr, name="pedidos-qr"),
     path("meseros/", meseros.meseros, name="meseros"),
     path("meseros/nuevo/", meseros.mesero_nuevo, name="mesero-nuevo"),
     path("meseros/<int:mesero_id>/editar/", meseros.mesero_editar, name="mesero-editar"),
