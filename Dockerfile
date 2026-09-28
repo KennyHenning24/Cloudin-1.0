@@ -32,4 +32,7 @@ EXPOSE 8000
 # Al arrancar: migraciones (control y restaurantes) y superusuario inicial; luego
 # gunicorn. Un proceso con hilos: la caché de Django vive en su memoria y debe ser una.
 # El puerto: el que diga PORT (Render pone 10000) o 8000 (Cloudflare no lo define).
-CMD ["sh", "-c", "python manage.py preparar_servidor && exec gunicorn config.wsgi --bind 0.0.0.0:${PORT:-8000} --workers 1 --threads 8 --timeout 120 --forwarded-allow-ips='*' --access-logfile - --error-logfile -"]
+# --keep-alive 120: el proxy de Render reutiliza las conexiones con el servidor. Con los 2 s
+# de gunicorn por defecto, gunicorn las cerraba mientras el proxy mandaba otra petición por
+# ellas y el navegador recibía un 502 suelto (Render pide 120 s para servidores Node).
+CMD ["sh", "-c", "python manage.py preparar_servidor && exec gunicorn config.wsgi --bind 0.0.0.0:${PORT:-8000} --workers 1 --threads 8 --timeout 120 --keep-alive 120 --forwarded-allow-ips='*' --access-logfile - --error-logfile -"]
