@@ -809,7 +809,7 @@ cambia el administrador del restaurante en su panel:
 | Interruptor | Dónde | Encendido | Apagado |
 |---|---|---|---|
 | **Pedidos desde el QR de la mesa** (viene encendido) | Inicio, Códigos QR y Meseros | El menú deja pedir | La carta queda para mirar (`recibe_pedidos: false`, `403 sin_pedidos`) |
-| **App de meseros** (viene apagada) | Meseros | Los meseros toman pedidos en su app, a la misma cuenta de la mesa | Los meseros no pueden entrar |
+| **App de meseros** (viene encendida; sin cuentas de meseros nadie entra) | Meseros | Los meseros toman pedidos en su app, a la misma cuenta de la mesa | Los meseros no pueden entrar |
 
 La misma plantilla y la misma `apiKey` sirven para todos: `carrito.js` consulta el estado
 cada 5 segundos y esconde o muestra los botones solo cuando el restaurante cambia el

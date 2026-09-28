@@ -233,6 +233,93 @@ def test_personalizar_guarda_datos_y_horario(navegador, panel):
 
 
 @pytest.mark.django_db(transaction=True)
+def test_eliminar_desde_mi_menu_pregunta_antes(navegador, panel):
+    contexto, page, errores = _abrir(navegador, panel, "/panel/mi-menu/", ancho=1440, alto=900)
+    fila = page.locator(f'li.producto[data-id="{panel.taco.uuid}"]')
+
+    def pedir_eliminar():
+        fila.locator("details.desplegable > summary").click()
+        fila.locator('[data-accion="eliminar"]').click()
+        dialogo = page.locator("#dialogo-confirmar[open]")
+        dialogo.get_by_text("«Taco de birria» sale de tu menú").wait_for()
+        return dialogo
+
+    pedir_eliminar().get_by_role("button", name="Cancelar").click()
+    assert fila.count() == 1 and not _producto(panel, pk=panel.taco.pk).eliminado
+    pedir_eliminar().get_by_role("button", name="Sí, eliminar").click()
+    page.get_by_text("Taco de birria salió de tu menú").wait_for()
+    assert _esperar(lambda: _producto(panel, pk=panel.taco.pk).eliminado)
+    contexto.close()
+    assert errores == []
+
+
+@pytest.mark.django_db(transaction=True)
+def test_el_editor_pregunta_antes_de_eliminar(navegador, panel):
+    contexto, page, errores = _abrir(navegador, panel, f"/panel/mi-menu/producto/{panel.taco.uuid}/",
+                                     ancho=1440, alto=900)
+    page.locator("[data-eliminar]").click()
+    page.locator("#dialogo-confirmar[open]").get_by_role("button", name="Cancelar").click()
+    assert not _producto(panel, pk=panel.taco.pk).eliminado and "/producto/" in page.url
+    page.locator("[data-eliminar]").click()
+    with page.expect_navigation():
+        page.locator("#dialogo-confirmar[open]").get_by_role("button", name="Sí, eliminar").click()
+    page.get_by_text("«Taco de birria» salió de tu menú").wait_for()
+    assert "/panel/mi-menu/" in page.url and _producto(panel, pk=panel.taco.pk).eliminado
+    page.wait_for_load_state("networkidle")  # nada en camino cuando se borra la base de la prueba
+    contexto.close()
+    assert errores == []
+
+
+def _celular_lento(navegador, panel, tmp_path):
+    """Un contexto donde preparar la foto (canvas → WebP) tarda 1,5 s, como en un celular
+    lento, y una foto de prueba para elegir."""
+    from PIL import Image
+
+    foto = tmp_path / "plato.jpg"
+    Image.new("RGB", (1600, 1200), (180, 90, 40)).save(foto)
+    contexto = navegador.new_context(viewport={"width": 1440, "height": 900})
+    contexto.add_cookies([{"name": "sessionid", "value": panel.sesion, "url": panel.url}])
+    contexto.add_init_script("""(() => {
+      const original = HTMLCanvasElement.prototype.toBlob;
+      HTMLCanvasElement.prototype.toBlob = function (...args) { setTimeout(() => original.apply(this, args), 1500); };
+    })();""")
+    page = contexto.new_page()
+    errores = []
+    page.on("pageerror", lambda e: errores.append(str(e)))
+    page.on("console", lambda m: errores.append(m.text) if m.type == "error" else None)
+    return contexto, page, errores, str(foto)
+
+
+@pytest.mark.django_db(transaction=True)
+def test_guardar_espera_la_foto_que_se_esta_preparando(navegador, panel, tmp_path):
+    contexto, page, errores, foto = _celular_lento(navegador, panel, tmp_path)
+    page.goto(panel.url + f"/panel/mi-menu/producto/{panel.taco.uuid}/")
+    page.locator("[data-subir-foto] input[type=file]:not([capture])").set_input_files(foto)
+    page.locator("#dialogo-recorte [data-usar]").click()
+    page.locator("[data-guardar]").click()  # enseguida: la foto todavía se está preparando
+    page.get_by_text("Cambios guardados").wait_for(timeout=10000)
+    assert _producto(panel, pk=panel.taco.pk).imagen
+    contexto.close()
+    assert errores == []
+
+
+@pytest.mark.django_db(transaction=True)
+def test_el_asistente_espera_la_foto_del_plato(navegador, panel, tmp_path):
+    contexto, page, errores, foto = _celular_lento(navegador, panel, tmp_path)
+    page.goto(panel.url + "/panel/bienvenida/?paso=4")
+    page.locator("#foto-plato input[type=file]:not([capture])").set_input_files(foto)
+    page.locator("#dialogo-recorte [data-usar]").click()
+    page.locator('input[name="name"]').fill("Birria con foto")
+    page.locator('input[name="price"]').fill("15000")
+    with page.expect_navigation():
+        page.get_by_role("button", name="Terminar").click()
+    assert _producto(panel, name="Birria con foto").imagen
+    page.wait_for_load_state("networkidle")
+    contexto.close()
+    assert errores == []
+
+
+@pytest.mark.django_db(transaction=True)
 @pytest.mark.parametrize("ancho", [375, 768])
 def test_ninguna_pantalla_se_sale_de_lo_ancho(navegador, panel, ancho):
     for ruta in PANTALLAS:

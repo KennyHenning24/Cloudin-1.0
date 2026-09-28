@@ -142,9 +142,9 @@ def test_origenes_permitidos_y_como_se_toman_los_pedidos(crear_restaurante):
     t = crear_restaurante("con-sitio", site_url="https://x.pages.dev/menu.html",
                           allowed_origins=["https://mi-restaurante.com/", "ftp://no.sirve"])
     assert t.origenes_permitidos == {"https://x.pages.dev", "https://mi-restaurante.com"}
-    # Todos tienen Cloudin completo: un restaurante nuevo recibe pedidos por el QR y la app
-    # de meseros queda apagada hasta que su administrador la encienda.
-    assert t.pedidos_qr and not t.app_meseros
+    # Todos tienen Cloudin completo: un restaurante nuevo recibe pedidos por el QR y tiene la
+    # app de meseros encendida (sin cuentas de meseros nadie entra; se apaga en Meseros).
+    assert t.pedidos_qr and t.app_meseros
 
 
 @pytest.mark.django_db

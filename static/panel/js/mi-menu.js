@@ -289,6 +289,12 @@
     contar();
   }
   async function eliminar(filas) {
+    const uno = filas.length === 1;
+    const seguro = await C.confirmar(uno
+      ? `«${nombreDe(filas[0])}» sale de tu menú y tus clientes dejan de verlo. Justo después puedes deshacerlo.`
+      : `Salen de tu menú y tus clientes dejan de verlos. Justo después puedes deshacerlo.`,
+    { titulo: uno ? "¿Eliminar este producto?" : `¿Eliminar ${filas.length} productos?`, boton: "Sí, eliminar" });
+    if (!seguro) return;
     const ids = filas.map((f) => f.dataset.id);
     const lugares = filas.map((fila) => ({ fila, padre: fila.parentElement, siguiente: fila.nextElementSibling }));
     filas.forEach((f) => f.remove());
@@ -418,17 +424,7 @@
   });
 
   // ------------------------------------------------------ confirmar (diálogo)
-  function confirmar(texto, boton) {
-    const d = $("#dialogo-confirmar");
-    $("#confirmar-texto").textContent = texto;
-    $("button[type=submit]", d).textContent = boton;
-    return new Promise((resolver) => {
-      let si = false;
-      $("form", d).onsubmit = () => { si = true; };
-      d.addEventListener("close", () => resolver(si), { once: true });
-      C.abrir(d);
-    });
-  }
+  const confirmar = (texto, boton) => C.confirmar(texto, { boton });
 
   // ------------------------------------------------ categorías y menús
   let renombrando = null;
