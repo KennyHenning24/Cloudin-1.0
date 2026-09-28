@@ -164,9 +164,11 @@ Cómo se ve cada cosa en el menú:
 | **Destacar en el menú** | Sale también en la zona de destacados, si tu diseño la tiene (Parte 3.4) |
 | Una categoría sin productos | No se muestra |
 
-Los cambios de la carta (precios, fotos, agotados) se ven en el menú **sin volver a
-publicarlo**, en cuanto alguien lo abre o lo recarga: al instante desde el QR, y en máximo
-un minuto sin QR (la carta guardada en el teléfono, `cacheTtl`).
+Los cambios de la carta (platos nuevos o eliminados, precios, fotos, agotados) se ven en el
+menú **sin volver a publicarlo y sin recargarlo**: quien lo abre los ve al instante, y quien
+ya lo tiene abierto, en máximo 15 segundos (la «carta en vivo», `live`). Esto funciona solo
+si el menú pinta la carta con las plantillas de Cloudin; compruébalo con
+`https://<tu-menu>/?cloudin-check=1` (Parte 3.8).
 
 ### 2.4 Los datos del negocio
 
@@ -260,6 +262,7 @@ datos de Cloudin cada vez que alguien la abre.
        api: "https://cloudin-abcd.onrender.com/api/public/la-casa/menu/",
        hideSoldOut: false,
        cacheTtl: 60,
+       live: 15,
        apiKey: "ck_Xa3…"
      };
    </script>
@@ -353,6 +356,7 @@ El esqueleto mínimo que funciona (todo lo demás es diseño):
 | `apiKey` | Para pedir | La API key `ck_…`. Vacía: la carta queda solo para mirar |
 | `hideSoldOut` | No | `false` (lo normal): lo agotado se ve apagado. `true`: lo agotado no se muestra |
 | `cacheTtl` | No | Segundos que la carta guardada se da por buena cuando se abre **sin** QR (por defecto `60`). Con QR siempre se pide la carta al día |
+| `live` | No | Carta en vivo: cada cuántos segundos el menú abierto pregunta si la carta cambió (por defecto `15`). Así un agotado o un plato nuevo aparecen sin recargar. `0` la apaga |
 
 En otros ejemplos verás `contract`, `locale` y `currency`: el runtime no las usa; puedes
 dejarlas o quitarlas.
@@ -511,6 +515,43 @@ Abre `http://localhost:8080/`: debe verse la carta del restaurante con sus datos
 se puede leer desde cualquier dirección). Los pedidos se prueban después de publicar
 (Parte 6).
 
+### 3.8 ¿Está conectado de verdad? La revisión `?cloudin-check=1`
+
+Un menú puede verse bien y aun así tener la carta **escrita a mano** en su HTML. Entonces lo
+que cambies en el panel (un plato nuevo, una foto, un precio, un color) no aparece, y a lo
+sumo se notan los agotados. Para saberlo, abre el menú con `?cloudin-check=1` al final de
+la dirección:
+
+- En tu computador: `http://localhost:8080/?cloudin-check=1`
+- Ya publicado: `https://<tu-menu>.pages.dev/?cloudin-check=1`
+
+Sale un informe (no cambia nada de la carta ni del panel): ✅ bien, ❌ no se actualiza desde
+el panel, ⚠️ para revisar. Si hay algún ❌, o no sale ningún informe, el menú no está
+conectado del todo. **Copiar informe** lo deja listo para pegárselo a Claude Code.
+
+**Para arreglarlo con Claude Code:**
+
+1. Copia `CLAUDE-MENU-DIGITAL.md` (de este repositorio) a la carpeta del proyecto del menú
+   con el nombre `CLAUDE.md`. Si el menú está en una subcarpeta `site/`, va en la carpeta de
+   arriba (la que contiene `site`), y ahí abres Claude Code.
+2. Pídele esto (llena lo que va entre `< >`):
+
+   ```
+   Lee CLAUDE.md completo antes de empezar. Este menú tiene la carta escrita a mano y lo
+   que cambio en el panel de Cloudin no se ve. Conviértelo siguiendo la sección 0, sin
+   cambiar el diseño: platos, precios, fotos, categorías, agotados, logo, colores y datos
+   del negocio tienen que salir de Cloudin y actualizarse solos, sin recargar la página.
+   Servidor: https://<servidor-cloudin> · restaurante: <slug>. Este es el bloque de
+   conexión: <pega lo de «Copiar código» del panel maestro>. Trabaja en una rama y no
+   publiques sin preguntarme. Termina cuando http://localhost:8080/?cloudin-check=1
+   salga sin ❌, y muéstrame el informe.
+   ```
+
+3. Mira el resultado en tu computador, publícalo (Parte 4) y repite la revisión en la
+   dirección publicada.
+4. La prueba real: abre el menú en tu teléfono, agota un plato en el panel y míralo sin
+   tocar nada: en máximo 15 segundos sale «Agotado». Vuelve a ponerlo disponible y regresa.
+
 ---
 
 ## Parte 4. Publicar el menú en Cloudflare Pages
@@ -646,7 +687,8 @@ Para ver los errores del menú en el computador: abre la página → clic derech
 | El enlace del panel sale como `https://<slug>.localhost/panel/login/` | El servidor todavía no tiene el arreglo que usa la dirección de Render | El enlace correcto es `https://<servidor-cloudin>/panel/login/`. Para que el panel maestro lo muestre bien: en Render → el servicio → **Environment** → agrega `CLOUDIN_PUBLIC_URL` = `https://<servidor-cloudin>` → guardar |
 | La ventana del carrito sale oscura con letra oscura | Falta `--fondo` en tu CSS | Parte 3.2, paso 8 |
 | Un cambio de diseño no se ve | No se subió a `main`, o el navegador tiene la página vieja | Revisa en Pages → el proyecto → **Deployments**; recarga la página |
-| Un cambio de precio no se ve | La carta guardada en el teléfono (hasta `cacheTtl` segundos sin QR) | Espera un minuto y recarga |
+| Un cambio de precio no se ve | Espera 15 segundos: el menú abierto se actualiza solo | Si no cambia nunca, la carta está escrita a mano en el menú: `?cloudin-check=1` lo dice (Parte 3.8) |
+| En el panel se crea un plato o se cambia una foto y el menú no cambia (solo los agotados, o nada) | El menú tiene la carta escrita a mano en su HTML | Parte 3.8: la revisión y cómo pedirle a Claude Code que lo convierta |
 | Las fotos no salen | No se subieron en Mi menú, o R2 no tiene la dirección pública | `DESPLIEGUE-GRATIS.md` §3.2 |
 
 ---

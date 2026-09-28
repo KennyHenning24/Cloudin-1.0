@@ -222,9 +222,15 @@ Lo mismo con un producto que ya se vendió: se elimina de la carta pero se conse
 ## El menú digital y los sitios conectados
 
 - **[CLAUDE-MENU-DIGITAL.md](CLAUDE-MENU-DIGITAL.md)** — las instrucciones para Claude
-  Code cuando crea un menú digital: pintar la carta, pedidos de la mesa, cargar y cambiar
-  la carta (panel e importación de `menu.seed.json`), vista previa, publicar, probar y
-  diagnosticar. Se copia al repositorio del menú como `CLAUDE.md`.
+  Code cuando crea un menú digital (o convierte uno con la carta escrita a mano, sección
+  0): pintar la carta, pedidos de la mesa, cargar y cambiar la carta (panel e importación
+  de `menu.seed.json`), vista previa, publicar, probar y diagnosticar. Se copia al
+  repositorio del menú como `CLAUDE.md`.
+- **Carta en vivo y revisión:** el runtime (`static/src/cloudin-menu.v1.src.js`) vuelve a
+  preguntar por la carta cada 15 s mientras el menú está abierto (`304` si no cambió), así
+  un agotado o un plato nuevo se ven sin recargar. Con `?cloudin-check=1` en la dirección
+  del menú, `static/cloudin-check.v1.js` prueba con cartas de mentira si todo lo del panel
+  se ve y lista lo que está escrito a mano.
 - **[PASO-A-PASO-NUEVO-RESTAURANTE.md](PASO-A-PASO-NUEVO-RESTAURANTE.md)** — el
   recorrido completo para un cliente nuevo: registrarlo en el panel maestro, cargar su
   carta, armar su menú con `client/plantilla/index.html` (qué atributos lleva el HTML),

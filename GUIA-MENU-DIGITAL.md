@@ -64,9 +64,11 @@
 | El restaurante | Ve la mesa ocupada, el pedido en **Mensajes** y la comanda en **Cocina**; cierra la cuenta | Panel → **Mesas**, **Mensajes**, **Cocina** |
 | Los meseros | Ven las mismas mesas y suman pedidos a la misma cuenta | Cloudin Meseros (`/mesero/<slug>/`) |
 
-Cambiar un precio o marcar un plato agotado en el panel se ve en el menú al instante (a
-lo sumo en 30 s por la caché): **no hay que volver a publicar la página**. Solo se vuelve
-a publicar cuando cambias el diseño.
+Cambiar un precio, marcar un plato agotado o crear uno nuevo en el panel se ve en el menú
+sin volver a publicarlo **y sin recargarlo**: quien ya lo tiene abierto lo ve en máximo 15 s
+(la «carta en vivo»: el runtime pregunta si la carta cambió; si no, Cloudin responde `304`
+sin datos). Solo se vuelve a publicar cuando cambias el diseño. Compruébalo con
+`https://<tu-menu>/?cloudin-check=1` (ver `CLAUDE-MENU-DIGITAL.md`, sección 10.4).
 
 ---
 
@@ -168,6 +170,7 @@ Al final de `index.html`, en este orden:
     currency: "COP",
     hideSoldOut: false,   // true = no mostrar lo agotado (false = se ve apagado)
     cacheTtl: 60,         // segundos que la carta guardada en el teléfono se da por buena
+    live: 15,             // carta en vivo: cada cuántos segundos revisa si cambió (0 = nunca)
     apiKey: "ck_…"        // solo si el restaurante recibe pedidos por el QR (sección 3)
   };
 </script>
