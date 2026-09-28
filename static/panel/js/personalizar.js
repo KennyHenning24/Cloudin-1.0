@@ -195,6 +195,8 @@
     botonGuardar.setAttribute("aria-busy", "true");
     estado.textContent = "Guardando…";
     try {
+      // «Guardado» incluye el logo o la portada que todavía se estén subiendo.
+      if (C.fotosPendientes) await C.fotosPendientes(forma);
       const r = await C.pedir(URL_AJUSTES, { metodo: "PATCH", datos: datos() });
       // El servidor lo guarda como +573001234567; se muestra como se escribe: 300 123 4567.
       const celular = (n) => { const d = String(n || "").replace(/\D/g, "").replace(/^57(?=\d{10}$)/, ""); return d.length === 10 ? `${d.slice(0, 3)} ${d.slice(3, 6)} ${d.slice(6)}` : n || ""; };

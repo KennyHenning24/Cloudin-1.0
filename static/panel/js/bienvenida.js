@@ -93,7 +93,7 @@
   }
 
   // Sin nombre no se sigue (el servidor también lo revisa).
-  forma.addEventListener("submit", (ev) => {
+  forma.addEventListener("submit", async (ev) => {
     const requerido = $$("[required]", forma).find((i) => !i.value.trim());
     if (requerido) {
       ev.preventDefault();
@@ -104,5 +104,12 @@
     }
     const boton = $("button[type=submit]", forma);
     if (boton) boton.setAttribute("aria-busy", "true");
+    // El logo que se sube o la foto del plato que se prepara viajan con este paso: se
+    // espera a que estén y se vuelve a enviar (sin esperar se perdían en un celular lento).
+    if (C.fotoEnCamino && C.fotoEnCamino(document)) {
+      ev.preventDefault();
+      await C.fotosPendientes(document);
+      forma.requestSubmit ? forma.requestSubmit(ev.submitter || undefined) : forma.submit();
+    }
   });
 })();

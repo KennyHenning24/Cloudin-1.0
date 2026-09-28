@@ -112,10 +112,30 @@
     }, "image/webp", 0.85));
   }
 
-  async function procesar(caja, archivo) {
+  /* Guardar espera a la foto que todavía se prepara (recorte y compresión) o se sube: en un
+     celular lento tarda uno o dos segundos y, sin esperarla, el producto o el logo quedaban
+     sin foto y sin aviso. Cloudin.fotosPendientes(raiz) se resuelve cuando ya no hay ninguna. */
+  const enCamino = (raiz) => [...raiz.querySelectorAll("[data-subir-foto]")].filter((c) => c.pendiente);
+  C.fotoEnCamino = (raiz = document) => enCamino(raiz).length > 0;
+  C.fotosPendientes = (raiz = document) => Promise.all(enCamino(raiz).map((c) => c.pendiente));
+
+  function procesar(caja, archivo) {
     if (!archivo) return;
     if (!/^image\//.test(archivo.type)) return C.aviso("Ese archivo no es una foto. Elige una imagen.", { tipo: "error" });
     if (archivo.size > MAX_MB * 1024 * 1024) return C.aviso(`La foto pesa más de ${MAX_MB} MB.`, { tipo: "error" });
+    const tarea = preparar(caja, archivo).catch(() => {
+      C.aviso("No se pudo preparar la foto. Intenta de nuevo.", { tipo: "error" });
+    }).finally(() => {
+      if (caja.pendiente !== tarea) return;
+      caja.pendiente = null;
+      caja.removeAttribute("aria-busy");
+    });
+    caja.pendiente = tarea;
+    caja.setAttribute("aria-busy", "true");
+    return tarea;
+  }
+
+  async function preparar(caja, archivo) {
     let bitmap;
     try {
       bitmap = await createImageBitmap(archivo, { imageOrientation: "from-image" });

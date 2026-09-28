@@ -227,6 +227,13 @@
     // ----------------------------------------------------------- guardar
     async function guardar() {
       if (guardando) return;
+      if (C.fotoEnCamino && C.fotoEnCamino(raiz)) {
+        // La foto elegida todavía se está preparando: se guarda con ella, no sin ella.
+        guardando = true;
+        botonGuardar.setAttribute("aria-busy", "true");
+        estado.textContent = "Preparando la foto…";
+        try { await C.fotosPendientes(raiz); } finally { guardando = false; botonGuardar.removeAttribute("aria-busy"); }
+      }
       const d = datos();
       if (!d.name) { errorNombre(true); f.name.focus(); return C.aviso("Falta el nombre del producto.", { tipo: "error" }); }
       if (d.price === null && d.is_available) {
@@ -288,6 +295,10 @@
     const botonEliminar = $("[data-eliminar]", raiz);
     botonEliminar && botonEliminar.addEventListener("click", async () => {
       if (!producto) return;
+      const seguro = await C.confirmar(
+        `«${producto.name}» sale de tu menú y tus clientes dejan de verlo. Justo después puedes deshacerlo.`,
+        { titulo: "¿Eliminar este producto?", boton: "Sí, eliminar" });
+      if (!seguro) return;
       try {
         await C.pedir(`${API}products/${producto.id}/`, { metodo: "DELETE" });
         delete forma.dataset.sucio;

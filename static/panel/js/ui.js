@@ -5,6 +5,7 @@
  *   Cloudin.aviso(texto, {accion, alHacer, tipo, ms})         → toast («Deshacer»)
  *   Cloudin.pesos(12000)                                     → "$ 12.000"
  *   Cloudin.abrir(dialogo) / Cloudin.cerrar(dialogo)          → modal, bottom sheet o drawer
+ *   Cloudin.confirmar(texto, {titulo, boton})                 → «¿Seguro?»: promesa true/false
  *   Cloudin.enCola(url, opciones)                             → reintenta al volver la conexión
  * Y se enganchan solos por atributos: [data-abrir], [data-cerrar], [role=tablist],
  * details.desplegable, [data-precio], .color, form[data-avisar-cambios].
@@ -144,6 +145,33 @@
   C.cerrar = function (dialogo) {
     if (typeof dialogo === "string") dialogo = document.getElementById(dialogo);
     if (dialogo && dialogo.open) dialogo.close();
+  };
+
+  /* «¿Seguro?» antes de algo que el cliente nota (eliminar, archivar). Resuelve true solo si
+     se toca el botón de confirmar; Cancelar, Escape o tocar afuera resuelven false. Usa el
+     <dialog id="dialogo-confirmar"> de la página o lo crea (el editor de producto no lo trae). */
+  C.confirmar = function (texto, { titulo = "¿Seguro?", boton = "Sí, continuar" } = {}) {
+    let d = document.getElementById("dialogo-confirmar");
+    if (!d) {
+      d = document.createElement("dialog");
+      d.id = "dialogo-confirmar";
+      d.setAttribute("aria-labelledby", "t-dialogo-confirmar");
+      d.innerHTML = `<form method="dialog">
+        <h2 id="t-dialogo-confirmar"></h2>
+        <p id="confirmar-texto"></p>
+        <div class="acciones-dialogo"><button type="button" class="btn fantasma" data-cerrar>Cancelar</button>
+          <button class="btn peligro" type="submit"></button></div></form>`;
+      document.body.appendChild(d);
+    }
+    d.querySelector("#t-dialogo-confirmar").textContent = titulo;
+    d.querySelector("#confirmar-texto").textContent = texto;
+    d.querySelector("button[type=submit]").textContent = boton;
+    return new Promise((resolver) => {
+      let si = false;
+      d.querySelector("form").onsubmit = () => { si = true; };
+      d.addEventListener("close", () => resolver(si), { once: true });
+      C.abrir(d);
+    });
   };
   document.addEventListener("click", (ev) => {
     const abrir = ev.target.closest("[data-abrir]");
