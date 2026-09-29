@@ -6,6 +6,7 @@
 Sin Node ni bundler: usa rjsmin (Python). El contrato exige menos de 8 KB.
 """
 
+import re
 from pathlib import Path
 
 import rjsmin
@@ -21,7 +22,13 @@ def rutas() -> tuple[Path, Path]:
 
 
 def minificar(fuente: str) -> str:
-    return rjsmin.jsmin(fuente, keep_bang_comments=True).strip() + "\n"
+    js = rjsmin.jsmin(fuente, keep_bang_comments=True).strip()
+    # rjsmin solo quita espacios y comentarios. Tres pasos más, seguros en este archivo (sin esos
+    # textos dentro de cadenas; las pruebas del runtime corren sobre el resultado):
+    js = re.sub(r"\((\w+)\)=>", r"\1=>", js)  # (n)=> ... → n=> ...
+    js = re.sub(r",([}\]])", r"\1", js)       # la coma final de un objeto o una lista
+    js = js.replace(";}", "}")                  # el ; antes de cerrar un bloque
+    return js + "\n"
 
 
 class Command(BaseCommand):

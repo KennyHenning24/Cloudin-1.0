@@ -708,12 +708,13 @@ dialog.hoja[open]{animation:subir-hoja .28s var(--ease)}
 .desplegable{position:relative;display:inline-block}
 .desplegable>summary{list-style:none;cursor:pointer}
 .desplegable>summary::-webkit-details-marker{display:none}
-.desplegable .opciones{position:absolute;right:0;top:calc(100% + 6px);z-index:40;min-width:200px;background:var(--surface);
+.desplegable .opciones{position:absolute;right:0;top:calc(100% + 6px);z-index:45;min-width:200px;background:var(--surface);
   border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow-lg);padding:6px;display:grid}
 .desplegable .opciones button,.desplegable .opciones a{display:flex;align-items:center;gap:10px;min-height:var(--toque);
   padding:0 12px;border:0;background:none;border-radius:8px;font:600 14px var(--fuente);color:var(--text);cursor:pointer;text-align:left}
 .desplegable .opciones button:hover,.desplegable .opciones a:hover{background:var(--surface-3)}
 .desplegable .opciones .peligro{color:var(--danger-text)}
+.desplegable .opciones.hacia-arriba{top:auto;bottom:calc(100% + 6px)}
 [data-tip]{position:relative}
 [data-tip]:hover::after,[data-tip]:focus-visible::after{content:attr(data-tip);position:absolute;left:50%;bottom:calc(100% + 8px);
   transform:translateX(-50%);background:var(--color-ink);color:var(--color-snow);font:600 12px var(--fuente);padding:6px 10px;
@@ -978,7 +979,11 @@ a.kpi-menu:hover{border-color:var(--brand-line)}
   .seleccionando~.fab,.app-menu:has(.seleccionando) .fab{display:none}
 }
 .categorias{list-style:none;margin:0;padding:0;display:grid;gap:var(--space-4)}
-.categoria{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden}
+.categoria{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius)}
+/* Sin overflow:hidden (cortaba el menú «⋯» del último plato): las esquinas las ponen la
+   cabecera y la última fila. */
+.categoria-cab{border-radius:calc(var(--radius) - 1px) calc(var(--radius) - 1px) 0 0}
+.productos>:last-child{border-radius:0 0 calc(var(--radius) - 1px) calc(var(--radius) - 1px)}
 .categoria.arrastrando{box-shadow:var(--shadow-lg)}
 .categoria-cab{display:flex;align-items:center;gap:6px;padding:var(--space-2) var(--space-2) var(--space-2) var(--space-3);
   background:var(--surface-2);border-bottom:1px solid var(--line)}
@@ -1039,6 +1044,7 @@ a.kpi-menu:hover{border-color:var(--brand-line)}
 /* ---------- Editor de producto ---------- */
 .editor-cuerpo{display:grid;gap:var(--space-5);grid-template-columns:minmax(0,1fr)}
 @media (min-width:1024px){.editor-cuerpo{grid-template-columns:minmax(0,1fr) 360px;align-items:start}}
+@media (min-width:1280px){.editor-cuerpo{grid-template-columns:minmax(0,1fr) 425px}}
 .editor-form{display:grid;gap:var(--space-4);min-width:0}
 .editor-basico .h-card{margin-bottom:var(--space-3)}
 .basico-grid{display:grid;gap:var(--space-4);grid-template-columns:minmax(0,1fr)}
@@ -1068,6 +1074,8 @@ a.kpi-menu:hover{border-color:var(--brand-line)}
 .agregar-grupo{display:flex;gap:var(--space-2);flex-wrap:wrap;align-items:center}
 .agregar-grupo select{flex:1 1 200px;width:auto}
 .etiquetas{display:flex;flex-wrap:wrap;gap:6px;margin-top:var(--space-2)}
+.nueva-etiqueta{display:flex;gap:6px;margin-top:var(--space-2)}
+.nueva-etiqueta input{flex:1;min-width:0}
 .segmento label{display:inline-flex;margin:0;padding:0;border-radius:10px}
 .segmento label span{display:inline-flex;align-items:center;min-height:36px;padding:0 14px;border-radius:10px;cursor:pointer}
 .segmento input:focus-visible+span{outline:2px solid var(--focus);outline-offset:2px}
@@ -1094,8 +1102,17 @@ body.vista-abierta::after{content:"";position:fixed;inset:0;background:var(--ove
 .vista-cab{display:flex;align-items:center;gap:var(--space-2);justify-content:space-between}
 .telefono{flex:1;min-height:0;border:9px solid var(--color-ink);border-radius:34px;overflow:hidden;background:#fff;
   box-shadow:0 20px 50px rgba(19,21,28,.25);aspect-ratio:9/17;max-height:680px;width:100%;margin:0 auto}
-.editor-vista.abierta .telefono{aspect-ratio:auto;max-width:400px}
-.telefono iframe{width:100%;height:100%;border:0;display:block}
+.editor-vista.abierta .telefono{aspect-ratio:auto;max-width:425px}
+/* El menú se dibuja al ancho de un teléfono de verdad: 390 px, más los 17 de la barra de
+   desplazamiento de Windows. Si el recuadro es más angosto, el menú se desliza a los lados con
+   la barra de abajo; antes se dibujaba a ~320 px y se cortaba su lado derecho. */
+.telefono:has(iframe){overflow-x:auto;overflow-y:hidden}
+/* La barra para ver el menú de lado, siempre a la vista (también en Mac, donde se esconde sola). */
+.telefono:has(iframe)::-webkit-scrollbar{height:12px}
+.telefono:has(iframe)::-webkit-scrollbar-track{background:var(--surface-2)}
+.telefono:has(iframe)::-webkit-scrollbar-thumb{background:var(--text-3);border:3px solid var(--surface-2);border-radius:99px}
+@supports not selector(::-webkit-scrollbar){.telefono:has(iframe){scrollbar-color:var(--text-3) var(--surface-2)}}
+.telefono iframe{width:max(100%,407px);height:100%;border:0;display:block}
 /* Sin página publicada: el aviso, con los colores del panel (no un recuadro blanco vacío). */
 .telefono.sin-pagina{display:grid;place-items:center;background:var(--surface-2)}
 
@@ -1111,7 +1128,7 @@ body.vista-abierta::after{content:"";position:fixed;inset:0;background:var(--ove
   .indice-ajustes a{min-height:40px;display:flex;align-items:center;padding:0 12px;border-radius:10px;color:var(--text-2);font-weight:600;font-size:14px}
   .indice-ajustes a:hover{background:var(--surface);color:var(--text)}
 }
-@media (min-width:1280px){.personalizar{grid-template-columns:200px minmax(0,1fr) 360px}}
+@media (min-width:1280px){.personalizar{grid-template-columns:200px minmax(0,1fr) 425px}}
 .seccion-ajustes{padding:0;scroll-margin-top:90px}
 .seccion-ajustes>summary{display:flex;align-items:center;gap:var(--space-3);min-height:56px;padding:var(--space-2) var(--space-4);cursor:pointer;list-style:none}
 .seccion-ajustes>summary::-webkit-details-marker{display:none}
@@ -1223,6 +1240,7 @@ body.vista-abierta::after{content:"";position:fixed;inset:0;background:var(--ove
 }
 .final-grid{display:grid;gap:var(--space-6);grid-template-columns:minmax(0,1fr);align-items:center;padding-top:var(--space-5)}
 @media (min-width:1024px){.final-grid{grid-template-columns:minmax(0,1fr) 360px}}
+@media (min-width:1280px){.final-grid{grid-template-columns:minmax(0,1fr) 425px}}
 .final-texto{display:grid;gap:var(--space-3);justify-items:start}
 .chip-grande{min-height:34px;padding:4px 14px;font-size:13.5px}
 .titulo-final{font-size:clamp(30px,5vw,40px);font-weight:800;letter-spacing:-.025em;line-height:1.1}

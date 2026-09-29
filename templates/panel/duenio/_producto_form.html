@@ -82,9 +82,15 @@
 
           <section aria-labelledby="t-etiquetas">
             <h3 id="t-etiquetas">Etiquetas</h3>
-            <div class="etiquetas" role="group" aria-labelledby="t-etiquetas">
-              {% for t in etiquetas %}<button type="button" class="chip" data-etiqueta="{{ t.key }}" aria-pressed="{% if t.key in marcadas %}true{% else %}false{% endif %}">{{ t.name }}</button>{% empty %}<span class="dim small">Aún no hay etiquetas.</span>{% endfor %}
+            <div class="etiquetas" role="group" aria-labelledby="t-etiquetas" data-etiquetas>
+              {% for t in etiquetas %}<button type="button" class="chip" data-etiqueta="{{ t.key }}" aria-pressed="{% if t.key in marcadas %}true{% else %}false{% endif %}">{{ t.name }}</button>{% empty %}<span class="dim small" data-sin-etiquetas>Aún no hay etiquetas.</span>{% endfor %}
             </div>
+            <div class="nueva-etiqueta">
+              <label class="sr-only" for="e-etiqueta-nueva">Nueva etiqueta</label>
+              <input id="e-etiqueta-nueva" maxlength="40" placeholder="Nueva etiqueta, ej. Ahumado" data-etiqueta-nueva enterkeyhint="done">
+              <button type="button" class="btn secundario sm" data-crear-etiqueta>{% icono "mas" %}Agregar</button>
+            </div>
+            <p class="dim small">La etiqueta nueva queda en la lista para todos tus platos.</p>
           </section>
 
           <section aria-labelledby="t-impuesto">

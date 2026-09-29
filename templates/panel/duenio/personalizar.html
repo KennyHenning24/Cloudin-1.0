@@ -116,6 +116,7 @@
       <summary><h2>Servicios y medios de pago</h2>{% icono "abajo" "ico chevron" %}</summary>
       <div class="seccion-cuerpo">
         <fieldset class="opciones-chip"><legend>Servicios</legend>
+          <p class="dim small">Cómo más te pueden pedir, además de en la mesa. Si apagas uno, tu menú digital deja de ofrecerlo.</p>
           {% for k, nombre, activo in servicios %}<label class="chip-opcion"><input type="checkbox" name="services" value="{{ k }}"{% if activo %} checked{% endif %}><span>{{ nombre }}</span></label>{% endfor %}
         </fieldset>
         <fieldset class="opciones-chip"><legend>Medios de pago</legend>

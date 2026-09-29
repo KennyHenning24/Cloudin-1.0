@@ -189,6 +189,10 @@ class TagViewSet(BaseCarta):
         return Tag.objects.annotate(uso=Count("products", filter=Q(products__eliminado=False))).order_by(
             "position", "name")
 
+    def perform_create(self, serializer):
+        # Una etiqueta nueva (el editor de producto la crea al vuelo) va al final de la lista.
+        serializer.save(position=services.siguiente_posicion(Tag.objects.all()))
+
 
 class ReordenarView(APIView):
     """POST {"kind": "categories" | "products" | "menus" | "modifier-groups", "ids": [uuid, …]}"""

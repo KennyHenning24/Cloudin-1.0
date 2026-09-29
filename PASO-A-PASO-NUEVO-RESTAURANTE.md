@@ -164,11 +164,16 @@ Cómo se ve cada cosa en el menú:
 | **Destacar en el menú** | Sale también en la zona de destacados, si tu diseño la tiene (Parte 3.4) |
 | Una categoría sin productos | No se muestra |
 
-Los cambios de la carta (platos nuevos o eliminados, precios, fotos, agotados) se ven en el
-menú **sin volver a publicarlo y sin recargarlo**: quien lo abre los ve al instante, y quien
-ya lo tiene abierto, en máximo 15 segundos (la «carta en vivo», `live`). Esto funciona solo
-si el menú pinta la carta con las plantillas de Cloudin; compruébalo con
-`https://<tu-menu>/?cloudin-check=1` (Parte 3.8).
+Los cambios de la carta (menús nuevos, platos nuevos o eliminados, precios, fotos,
+etiquetas, agotados) se ven en el menú **sin volver a publicarlo y sin recargarlo**: quien lo
+abre los ve al instante, y quien ya lo tiene abierto, en máximo 15 segundos (la «carta en
+vivo», `live`). Esto funciona solo si el menú pinta la carta con las plantillas de Cloudin;
+compruébalo con `https://<tu-menu>/?cloudin-check=1` (Parte 3.8).
+
+**Otro menú** (Almuerzos, Bebidas…): **Mi menú** → **Nuevo menú**, y dentro sus categorías y
+platos. Sale en la carta como otra sección, con su nombre, en cuanto tiene su primer plato.
+**Una etiqueta nueva:** en el editor del plato, «Nueva etiqueta» → **Agregar**; queda en la
+lista para todos los platos.
 
 ### 2.4 Los datos del negocio
 
@@ -178,18 +183,22 @@ En **Personalizar** (se guarda solo: arriba dice «Todo guardado»):
 |---|---|---|
 | Logo y colores | Logo (cuadrado; se ve redondo) | `business.logo` |
 | Logo y colores | Principal, Secundario, Fondo, Texto | Las variables CSS `--cloudin-primary`, `--cloudin-secondary`, `--cloudin-background` y `--cloudin-text` |
-| Portada | Una foto horizontal | `business.cover` |
+| Portada | Una foto horizontal | `business.cover` (en un `<img>`) o la variable CSS `--cloudin-cover` (como fondo) |
 | Datos del negocio | Frase corta | `business.tagline` |
 | Datos del negocio | Descripción | `business.description` |
+| Datos del negocio | Mensaje de bienvenida | `business.welcome_message` |
 | Contacto y WhatsApp | WhatsApp | `business.whatsapp` y `business.whatsapp_link` (`https://wa.me/57…`) |
 | Contacto y WhatsApp | Teléfono | `business.phone` y `business.phone_link` (`tel:+57…`) |
-| Contacto y WhatsApp | Correo, Dirección, Ciudad, Enlace de Google Maps | `business.email`, `business.address`, `business.city`, `business.maps_url` |
+| Contacto y WhatsApp | Correo | `business.email` y `business.email_link` (`mailto:…`) |
+| Contacto y WhatsApp | Dirección, Ciudad, Enlace de Google Maps | `business.address`, `business.city`, `business.maps_url` |
 | Horario | Los tramos de cada día | `business.hours_today` («Hoy: 12:00 – 21:00») y `business.open_now` |
 | Redes sociales | Instagram, Facebook, TikTok | `business.instagram`, `business.facebook`, `business.tiktok` |
+| Servicios y medios de pago | **Recoger** y **Domicilio** (los dos vienen encendidos) | `business.takeaway` y `business.delivery`: si apagas uno, el menú deja de ofrecerlo (en la carta de la mesa y en la de domicilios) |
+| Servicios y medios de pago | Medios de pago | `business.payment_methods_text` («Efectivo, Nequi y Tarjeta») |
 
-El **nombre** del restaurante no está en Personalizar: es el de la Parte 1. «Mensaje de
-bienvenida» no llega al menú digital, y «Servicios y medios de pago» llegan solo en los
-datos (`window.Cloudin.data.business`), sin campo para el HTML.
+El **nombre** del restaurante no está en Personalizar: es el de la Parte 1. Todo lo de esta
+tabla tiene que verse en el menú: si cambias algo aquí y el menú no cambia, el menú no está
+conectado del todo (Parte 3.8).
 
 ### 2.5 Quién toma los pedidos
 
@@ -220,9 +229,10 @@ Un menú conectado a Cloudin es una página HTML normal con tu diseño, más **c
 
 1. **La configuración** (`window.CLOUDIN_CONFIG`) y **dos scripts**: el runtime
    `cloudin-menu.v1.js` (pinta la carta) y `carrito.js` (el carrito y el pedido).
-2. **Las zonas** que el runtime llena: `data-cloudin="menu"`, y adentro
-   `data-cloudin="categories"`.
-3. **Las plantillas**: un `<template>` para una categoría y otro para un plato.
+2. **Las zonas** que el runtime llena: `data-cloudin="menus"` (todos los menús), y dentro de
+   cada menú `data-cloudin="categories"`.
+3. **Las plantillas**: un `<template>` para un menú, otro para una categoría y otro para un
+   plato.
 4. **Los campos**: atributos `data-cloudin-field`, `data-cloudin-src`, `data-cloudin-href`
    y `data-cloudin-if` donde va cada dato.
 
@@ -274,10 +284,14 @@ datos de Cloudin cada vez que alguien la abre.
    (en una carpeta `assets/`). La regla es **conservar los atributos `data-cloudin…` y las
    `<template>`**.
 
-La plantilla ya trae: encabezado con logo, nombre, frase, horario de hoy y botón de
-WhatsApp; barra de categorías; cada plato con foto, descripción, presentaciones, precio y
-«Agotado»; y pie con dirección y teléfono. Lo que el restaurante no llenó en su panel
-desaparece solo (por eso cada dato opcional lleva `data-cloudin-if`).
+La plantilla ya trae **todo lo del panel**: portada, logo, nombre, frase, horario de hoy,
+Recoger y Domicilio, botón de WhatsApp y mensaje de bienvenida; todos los menús (con su
+barra, que se esconde si hay uno solo) y la barra de categorías de cada uno; cada plato con
+foto, descripción, etiquetas, presentaciones, precio y «Agotado»; y pie con descripción,
+dirección, ciudad, Google Maps, teléfono, correo, Instagram, Facebook, TikTok y medios de
+pago. Usa los 4 colores de Personalizar. Lo que el restaurante no llenó en su panel (o
+apagó) no se ve, y aparece solo, sin recargar, cuando lo llena (por eso cada dato opcional
+lleva `data-cloudin-if`).
 
 ### 3.2 Camino largo: conectar un menú que ya diseñaste
 
@@ -286,54 +300,64 @@ Si ya tienes un menú hecho (con los platos escritos a mano en el HTML), convié
 1. **Configuración y scripts.** Pega antes de `</body>` el bloque de 3.1 (paso 3) con tus
    datos, y copia `carrito.js` junto a tu `index.html`.
 2. **La raíz.** Al elemento que envuelve toda la carta (p. ej. tu `<main>`) ponle
-   `data-cloudin="menu"`.
-3. **El contenedor de categorías.** Al elemento **dentro de la raíz** que contiene todas
-   las categorías ponle `data-cloudin="categories"`. Tiene que ser **otro elemento**, dentro
-   de la raíz: no pongas los dos atributos en el mismo.
+   `data-cloudin="menus"`: ahí se pintan **todos** los menús de «Mi menú».
+3. **La plantilla de menú.** Dentro de la raíz, `<template data-cloudin-template="menu">`
+   con **un** elemento (p. ej. `<section>`) que tenga el título del menú
+   (`data-cloudin-field="menu.name"`) y una caja vacía con `data-cloudin="categories"`. Esa
+   sección **no** lleva `data-cloudin="menu"`.
 4. **La plantilla de categoría.** Toma el HTML de **una** de tus categorías (el título y la
    caja de sus platos) y mételo en `<template data-cloudin-template="category">…</template>`
-   dentro del contenedor de categorías. En esa copia:
+   dentro de la raíz. En esa copia:
    - al título, `data-cloudin-field="category.name"`;
    - a la caja donde van los platos, `data-cloudin="products"` y déjala **vacía**.
 5. **La plantilla de plato.** Toma el HTML de **un** plato y mételo en
-   `<template data-cloudin-template="product">…</template>`, también dentro del contenedor
-   de categorías. Cambia cada texto fijo por su campo (tabla de 3.5): el nombre por
+   `<template data-cloudin-template="product">…</template>`, también dentro de la raíz.
+   Cambia cada texto fijo por su campo (tabla de 3.5): el nombre por
    `data-cloudin-field="product.name"`, el precio por `data-cloudin-field="product.price"`,
-   la foto por `data-cloudin-src="product.image"`, etc. Si quieres que el botón **Agregar**
-   quede en un lugar preciso, ponle `class="dish__body"` a la caja de textos del plato.
-6. **Borra los platos escritos a mano** que quedaron en el contenedor de categorías, o
-   déjalos como respaldo: el runtime borra todo lo que hay ahí (menos las `<template>`) y
-   pinta la carta real en cuanto Cloudin responde.
-7. **Encabezado y pie.** Cambia el nombre, el teléfono, la dirección, etc. por sus campos
-   `business.…` (tabla de 3.5). Esos funcionan en cualquier parte de la página.
-8. **El color de fondo.** En tu CSS, define `--fondo` con el color de fondo de tu página
-   (`:root { --fondo: #1A1110; }`). La ventana del carrito usa ese fondo y el color de texto
-   de tu página: si no lo defines, sale oscura (`#1A1110`) y en una página clara el texto
-   queda ilegible.
+   la foto por `data-cloudin-src="product.image"`, las etiquetas con `data-cloudin="tags"`,
+   etc. Si quieres que el botón **Agregar** quede en un lugar preciso, ponle
+   `class="dish__body"` a la caja de textos del plato.
+6. **Borra los platos escritos a mano** que quedaron en la raíz, o déjalos como respaldo: el
+   runtime borra todo lo que hay ahí (menos las `<template>`) y pinta la carta real en cuanto
+   Cloudin responde.
+7. **Encabezado y pie: todo lo de Personalizar** (tabla de 2.4). Cambia el nombre, el logo,
+   la portada, el teléfono, el correo, la dirección, las redes, Recoger y Domicilio, etc. por
+   sus campos `business.…` (tabla de 3.5). Esos funcionan en cualquier parte de la página.
+8. **Los colores.** En tu CSS, cambia los colores de la marca por
+   `var(--cloudin-primary, <tu color>)`, `var(--cloudin-secondary, …)`,
+   `var(--cloudin-background, …)` y `var(--cloudin-text, …)`, y define `--fondo` con el
+   fondo (`:root { --fondo: var(--cloudin-background, #1A1110); }`). La ventana del carrito
+   usa ese fondo y el color de texto de tu página: si no lo defines, sale oscura (`#1A1110`)
+   y en una página clara el texto queda ilegible.
 
 El esqueleto mínimo que funciona (todo lo demás es diseño):
 
 ```html
-<main data-cloudin="menu">
-  <div data-cloudin="categories">
-    <p>Cargando la carta…</p>
+<main data-cloudin="menus">
+  <p>Cargando la carta…</p>
 
-    <template data-cloudin-template="category">
-      <section>
-        <h2 data-cloudin-field="category.name"></h2>
-        <div data-cloudin="products"></div>
-      </section>
-    </template>
+  <template data-cloudin-template="menu">
+    <section>
+      <h2 data-cloudin-field="menu.name"></h2>
+      <div data-cloudin="categories"></div>
+    </section>
+  </template>
 
-    <template data-cloudin-template="product">
-      <article>
-        <div class="dish__body">
-          <h3 data-cloudin-field="product.name"></h3>
-          <strong data-cloudin-field="product.price"></strong>
-        </div>
-      </article>
-    </template>
-  </div>
+  <template data-cloudin-template="category">
+    <section>
+      <h3 data-cloudin-field="category.name"></h3>
+      <div data-cloudin="products"></div>
+    </section>
+  </template>
+
+  <template data-cloudin-template="product">
+    <article>
+      <div class="dish__body">
+        <h4 data-cloudin-field="product.name"></h4>
+        <strong data-cloudin-field="product.price"></strong>
+      </div>
+    </article>
+  </template>
 </main>
 
 <script>
@@ -373,17 +397,18 @@ que quieras conservar.
 
 | Zona | Dónde va | Plantilla que usa | ¿Obligatoria? |
 |---|---|---|---|
-| `data-cloudin="menu"` | En cualquier parte: la raíz de la carta | — | **Sí** |
-| `data-cloudin="categories"` | Dentro de la raíz | `category` | **Sí** |
+| `data-cloudin="menus"` | En cualquier parte: la raíz de la carta, con todos los menús | `menu` | **Sí** |
+| `data-cloudin="categories"` | Dentro de la plantilla `menu` | `category` | **Sí** |
 | `data-cloudin="products"` | Dentro de la plantilla `category` | `product` | **Sí** |
-| `data-cloudin="category-nav"` | Dentro de la raíz | `category-link` | No: la barra de categorías |
-| `data-cloudin="variants"` | Dentro de la plantilla `product` | `variant` | No: las presentaciones |
-| `data-cloudin="tags"` | Dentro de la plantilla `product` | `tag` | No: las etiquetas |
+| `data-cloudin="menu-nav"` | En cualquier parte | `menu-link` | No: la barra de menús |
+| `data-cloudin="category-nav"` | Dentro de la plantilla `menu` | `category-link` | No: la barra de categorías de ese menú |
+| `data-cloudin="variants"` | Dentro de la plantilla `product` | `variant` | Las presentaciones |
+| `data-cloudin="tags"` | Dentro de la plantilla `product` | `tag` | **Sí**: las etiquetas (también las nuevas) |
 | `data-cloudin="featured"` | En cualquier parte | `featured`, o si no hay, `product` | No: los platos con «Destacar en el menú» |
 
 **Plantillas** (`<template data-cloudin-template="…">`): se buscan primero dentro de la
-zona, después hacia afuera hasta la raíz, y por último en toda la página. Lo más simple es
-ponerlas dentro de la zona que las usa, como en la plantilla.
+zona, después hacia afuera hasta el menú, y por último en toda la página. Pueden ir sueltas
+dentro de `menus`, como en la plantilla.
 
 - **Solo cuenta el primer elemento** de cada `<template>`. Envuelve todo en uno solo
   (`<article>…</article>`); si pones dos elementos seguidos, el segundo se ignora.
@@ -396,9 +421,11 @@ Lo que el runtime les pone a las copias (para tu CSS o tu JavaScript):
 | Cada copia (categoría, plato, presentación, etiqueta) | `data-cloudin-key="<clave>"` | `[data-cloudin-key="picante"] { color: red; }` en las etiquetas |
 | Cada plato | `data-available="true"` o `"false"` | `.plato[data-available="false"] { opacity: .55; }` |
 | Cada plato | `data-featured="true"` o `"false"` | Resaltar los destacados |
+| Cada menú | `id="menu-<clave>"` | El destino de los enlaces de la barra de menús (`#menu-almuerzos`) |
 | Cada categoría | `id="cat-<clave>"` | El destino de los enlaces de la barra (`#cat-hamburguesas`) |
-| `<html>` y cada raíz | `data-cloudin-state="static"`, `"cached"`, `"live"` o `"error"` | `[data-cloudin-state="error"] .cargando::after { content: "…"; }` |
+| `<html>` | `data-cloudin-state="static"`, `"cached"`, `"live"` o `"error"` | `[data-cloudin-state="error"] .cargando::after { content: "…"; }` |
 | `<html>` | Las variables `--cloudin-primary`, `--cloudin-secondary`, `--cloudin-background`, `--cloudin-text` | `color: var(--cloudin-primary, #B3261E);` (el segundo valor es por si el restaurante no eligió color) |
+| `<html>` | La variable `--cloudin-cover` (la portada, `url(…)`) | `background-image: var(--cloudin-cover, url(portada.jpg));` |
 
 Los estados: `static` = todavía no hay datos; `cached` = se pintó la carta guardada en el
 teléfono; `live` = se pintó la carta que acaba de responder Cloudin; `error` = Cloudin no
@@ -415,10 +442,16 @@ cuando no hay ninguno):
 <style>.destacados:not(:has([data-cloudin-key])) { display: none; }</style>
 ```
 
-Varios menús (p. ej. «Desayunos» y «Carta», creados en **Mi menú** → **Nuevo menú**): una
-raíz por menú, cada una con `data-cloudin-menu="<clave del menú>"`. La clave está en la
-carta (Parte 2.6), en `"menus": [{"key": "…"}]`. Sin ese atributo, la raíz pinta el primer
-menú.
+Varios menús (p. ej. «Desayunos» y «Carta», creados en **Mi menú** → **Nuevo menú**): la
+zona `menus` los pinta todos, cada uno con su plantilla `menu`, en el orden del panel. Uno
+nuevo aparece solo en cuanto tiene platos. La barra de menús, escondida si hay uno solo:
+
+```html
+<nav class="menus-nav" data-cloudin="menu-nav">
+  <template data-cloudin-template="menu-link"><a data-cloudin-href="menu.anchor" data-cloudin-field="menu.name"></a></template>
+</nav>
+<style>.menus-nav:not(:has(a + a)) { display: none; }</style>
+```
 
 ### 3.5 Los atributos y los campos
 
@@ -429,34 +462,44 @@ menú.
 | `data-cloudin-field="…"` | **Reemplaza todo el contenido** del elemento por el texto del campo | `<h3 data-cloudin-field="product.name"></h3>` |
 | `data-cloudin-src="…"` | Pone el `src` (para `<img>`). Si el campo está vacío, quita el `src`. Si el `<img>` no tiene `alt`, le pone el nombre | `<img data-cloudin-src="product.image">` |
 | `data-cloudin-href="…"` | Pone el `href` (para `<a>`). Si el campo está vacío, quita el `href` | `<a data-cloudin-href="business.whatsapp_link">` |
-| `data-cloudin-if="…"` | **Borra el elemento** si el campo está vacío | `<p data-cloudin-if="product.description" …>` |
-| `data-cloudin-if="!…"` | **Borra el elemento** si el campo **no** está vacío | `<span data-cloudin-if="!product.available">Agotado</span>` |
+| `data-cloudin-if="…"` | El elemento **no se ve** si el campo está vacío (o el servicio apagado) | `<p data-cloudin-if="product.description" …>` |
+| `data-cloudin-if="!…"` | El elemento **no se ve** si el campo **no** está vacío | `<span data-cloudin-if="!product.available">Agotado</span>` |
 
-«Vacío» es: sin dato, texto vacío, `false` o una lista sin elementos.
+«Vacío» es: sin dato, texto vacío, `false` o una lista sin elementos. Fuera de las
+plantillas (encabezado, pie), `data-cloudin-if` **esconde** el elemento y lo **vuelve a
+mostrar** solo cuando el dato llega, sin recargar: si apagas Domicilio el botón se va, y si
+lo enciendes, vuelve.
 
 **Campos por contexto.** `business.*` y `table.*` funcionan en cualquier parte de la
-página; `category.*` dentro de las plantillas `category`, `category-link` y de los platos
-de esa categoría; `product.*` dentro de la plantilla del plato; `variant.*` y `tag.*`
-dentro de las suyas.
+página; `menu.*` dentro de la plantilla `menu`, `menu-link` y todo lo de ese menú;
+`category.*` dentro de las plantillas `category`, `category-link` y de los platos de esa
+categoría; `product.*` dentro de la plantilla del plato; `variant.*` y `tag.*` dentro de las
+suyas.
 
 | Campo | Qué trae |
 |---|---|
 | `business.name` | Nombre del restaurante |
 | `business.tagline` | Frase corta |
 | `business.description` | Descripción |
+| `business.welcome_message` | Mensaje de bienvenida |
 | `business.logo` | Dirección de la imagen del logo (para `data-cloudin-src`) |
-| `business.cover` | Dirección de la foto de portada (para `data-cloudin-src`) |
+| `business.cover` | Dirección de la foto de portada (para `data-cloudin-src`; como fondo, `var(--cloudin-cover)`) |
 | `business.address`, `business.city` | Dirección y ciudad |
 | `business.phone` | Teléfono, como lo guarda Cloudin (`+573001234567`) |
 | `business.phone_link` | `tel:+573001234567` (para `data-cloudin-href`) |
 | `business.whatsapp` | Número de WhatsApp |
 | `business.whatsapp_link` | `https://wa.me/573001234567` (para `data-cloudin-href`) |
 | `business.email` | Correo |
+| `business.email_link` | `mailto:hola@turestaurante.com` (para `data-cloudin-href`) |
 | `business.maps_url` | Enlace de Google Maps (para `data-cloudin-href`) |
 | `business.instagram`, `business.facebook`, `business.tiktok` | Enlaces a las redes (para `data-cloudin-href`) |
 | `business.hours_today` | «Hoy: 12:00 – 21:00», «Hoy: 12:00 – 15:00 y 18:00 – 22:00» o «Hoy: cerrado». Vacío si no hay horario |
 | `business.open_now` | Si está abierto ahora, en hora de Colombia. Solo para `data-cloudin-if` (`"business.open_now"` / `"!business.open_now"`). Sin horario cargado cuenta como cerrado |
+| `business.takeaway`, `business.delivery` | Si ofrece Recoger / Domicilio. Solo para `data-cloudin-if` |
+| `business.payment_methods_text` | Medios de pago ya escritos («Efectivo, Nequi y Tarjeta») |
 | `table.number` | El número de la mesa, cuando la página se abrió desde su QR. Vacío sin QR |
+| `menu.name`, `menu.description` | Nombre y descripción del menú |
+| `menu.anchor` | `#menu-<clave>` (para la barra de menús, con `data-cloudin-href`) |
 | `category.name` | Nombre de la categoría |
 | `category.description` | Descripción de la categoría, si tiene |
 | `category.image` | Foto de la categoría, si tiene |
@@ -480,15 +523,14 @@ dentro de las suyas.
 2. **`data-cloudin-field` borra lo que el elemento tenga adentro.** No pongas otros
    elementos dentro. Para «Mesa 3», el texto fijo afuera y el campo en su propio elemento:
    `Mesa <span data-cloudin-field="table.number"></span>`.
-3. **`data-cloudin-if` borra, no esconde.** El elemento no vuelve hasta que se recarga la
-   página.
-4. **No uses `data-cloudin-if` con `table.number`.** Desde la segunda visita, la carta
-   guardada se pinta antes de que Cloudin diga el número de la mesa y el elemento se
-   borraría. Muéstralo sin condición (la barra del carrito ya dice «Mesa 3»).
-5. **Un solo elemento por `<template>`**, y las zonas `products`, `variants` y `tags`
-   **dentro** de su plantilla.
-6. **La raíz (`menu`) y el contenedor (`categories`) son elementos distintos**, uno dentro
-   del otro.
+3. **A un elemento con `data-cloudin-if` no le pongas `display` en línea**: el runtime lo
+   maneja (lo esconde y lo vuelve a mostrar).
+4. **Las imágenes de Cloudin sin `srcset` ni `<picture>`**: si no, el navegador muestra la
+   foto vieja y no la del panel.
+5. **Un solo elemento por `<template>`**, y las zonas `categories`, `products`, `variants` y
+   `tags` **dentro** de su plantilla.
+6. **La plantilla `menu` no lleva `data-cloudin="menu"`** (esa es la raíz fija de un solo
+   menú, la forma vieja: con ella un menú nuevo del panel no sale).
 7. **El botón «Agregar» lo pone `carrito.js`**: al final del elemento `.dish__body` del
    plato, o al final de la tarjeta si no hay `.dish__body`. Solo en platos disponibles y con
    precio, solo si la página se abrió desde un QR (`?mesa=<token>`) con `apiKey`, y solo si
@@ -518,9 +560,10 @@ se puede leer desde cualquier dirección). Los pedidos se prueban después de pu
 ### 3.8 ¿Está conectado de verdad? La revisión `?cloudin-check=1`
 
 Un menú puede verse bien y aun así tener la carta **escrita a mano** en su HTML. Entonces lo
-que cambies en el panel (un plato nuevo, una foto, un precio, un color) no aparece, y a lo
-sumo se notan los agotados. Para saberlo, abre el menú con `?cloudin-check=1` al final de
-la dirección:
+que cambies en el panel (un menú o un plato nuevo, una foto, un precio, un color, la
+portada, el correo, Facebook, Domicilio apagado) no aparece, y a lo sumo se notan los
+agotados. Para saberlo, abre el menú con `?cloudin-check=1` al final de la dirección (revisa
+cada cosa de Mi menú y de Personalizar, una por una):
 
 - En tu computador: `http://localhost:8080/?cloudin-check=1`
 - Ya publicado: `https://<tu-menu>.pages.dev/?cloudin-check=1`
@@ -539,8 +582,11 @@ conectado del todo. **Copiar informe** lo deja listo para pegárselo a Claude Co
    ```
    Lee CLAUDE.md completo antes de empezar. Este menú tiene la carta escrita a mano y lo
    que cambio en el panel de Cloudin no se ve. Conviértelo siguiendo la sección 0, sin
-   cambiar el diseño: platos, precios, fotos, categorías, agotados, logo, colores y datos
-   del negocio tienen que salir de Cloudin y actualizarse solos, sin recargar la página.
+   cambiar el diseño: todos los menús (uno nuevo tiene que aparecer solo), categorías,
+   platos, precios, fotos, etiquetas, agotados, y todo lo de Personalizar de la tabla 4.8
+   (logo, portada, los 4 colores, frase, descripción, bienvenida, WhatsApp, teléfono, correo,
+   dirección, Maps, horario, Instagram, Facebook, TikTok, medios de pago, Recoger y
+   Domicilio) tienen que salir de Cloudin y actualizarse solos, sin recargar la página.
    Servidor: https://<servidor-cloudin> · restaurante: <slug>. Este es el bloque de
    conexión: <pega lo de «Copiar código» del panel maestro>. Trabaja en una rama y no
    publiques sin preguntarme. Termina cuando http://localhost:8080/?cloudin-check=1
@@ -551,6 +597,8 @@ conectado del todo. **Copiar informe** lo deja listo para pegárselo a Claude Co
    dirección publicada.
 4. La prueba real: abre el menú en tu teléfono, agota un plato en el panel y míralo sin
    tocar nada: en máximo 15 segundos sale «Agotado». Vuelve a ponerlo disponible y regresa.
+   Haz lo mismo con un menú nuevo (con una categoría y un plato), otro color, otra portada,
+   tu correo y tu Facebook, y apagando y encendiendo Domicilio.
 
 ---
 
@@ -689,6 +737,11 @@ Para ver los errores del menú en el computador: abre la página → clic derech
 | Un cambio de diseño no se ve | No se subió a `main`, o el navegador tiene la página vieja | Revisa en Pages → el proyecto → **Deployments**; recarga la página |
 | Un cambio de precio no se ve | Espera 15 segundos: el menú abierto se actualiza solo | Si no cambia nunca, la carta está escrita a mano en el menú: `?cloudin-check=1` lo dice (Parte 3.8) |
 | En el panel se crea un plato o se cambia una foto y el menú no cambia (solo los agotados, o nada) | El menú tiene la carta escrita a mano en su HTML | Parte 3.8: la revisión y cómo pedirle a Claude Code que lo convierta |
+| **Nuevo menú** no agrega nada a la carta | El menú usa la raíz vieja `data-cloudin="menu"` (un solo menú), o el menú nuevo no tiene platos todavía | Parte 3.4 (`data-cloudin="menus"`); agrégale una categoría y un plato |
+| Cambiar colores, portada o logo en Personalizar no hace nada | El diseño tiene los colores y las imágenes escritos a mano | Parte 3.2, pasos 7 y 8; `?cloudin-check=1` dice cuál falta |
+| El correo, Facebook o TikTok no salen | El menú no tiene un lugar para ese dato | Tabla de 2.4: todo tiene que estar en el menú |
+| Apagué Domicilio (o Recoger) y el menú lo sigue ofreciendo | Ese aviso está escrito a mano, sin `data-cloudin-if="business.delivery"` | Parte 3.8 |
+| En la vista previa del panel el menú se corta a la derecha | El menú no se ajusta a un teléfono | Usa la barra de abajo de la vista previa para verlo entero; que Claude Code lo arregle para 390 px de ancho |
 | Las fotos no salen | No se subieron en Mi menú, o R2 no tiene la dirección pública | `DESPLIEGUE-GRATIS.md` §3.2 |
 
 ---
@@ -701,7 +754,8 @@ Para ver los errores del menú en el computador: abre la página → clic derech
 [ ] 2. Términos aceptados en su panel
 [ ] 2. Mesas creadas (Códigos QR → ¿Cuántas mesas tienes?)
 [ ] 2. Categorías y productos con precio y foto (Mi menú)
-[ ] 2. Logo, colores, contacto, WhatsApp y horario (Personalizar)
+[ ] 2. Logo, colores, portada, contacto, WhatsApp, horario, redes, Recoger/Domicilio y pagos (Personalizar)
+[ ] 3. https://<menú>/?cloudin-check=1 sin ❌ (todo lo del panel se ve en el menú)
 [ ] 2. Pedidos por QR encendidos (Inicio); cuentas de meseros si los van a usar (Meseros)
 [ ] 2. https://<servidor-cloudin>/api/public/<slug>/menu/ muestra la carta
 [ ] 3. index.html con el código de «Menú digital» → Copiar código; carrito.js al lado

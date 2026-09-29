@@ -1,4 +1,4 @@
-/*! Cloudin · runtime de menús v1 · cloudin.menu/v1 */
+/*! cloudin-menu.v1.js */
 /*
  * Pinta un menú digital con los datos vivos de Cloudin sobre el HTML del sitio.
  * Este es el archivo LEGIBLE; el que se publica es static/cloudin-menu.v1.js
@@ -12,9 +12,10 @@
  *  4. Lee ?mesa= y lo expone en window.Cloudin.table.
  *  5. Pone data-cloudin-state = static | cached | live | error.
  *  6. Dispara cloudin:ready, cloudin:rendered (detail.root) y cloudin:error.
- *  7. Pone los colores del restaurante (business.brand) como variables CSS en <html>:
- *     --cloudin-primary, --cloudin-secondary, --cloudin-background, --cloudin-text.
- *     El sitio los usa así: color: var(--cloudin-primary, #B3261E).
+ *  7. Pone los colores del restaurante (business.brand) y su portada (business.cover) como
+ *     variables CSS en <html>: --cloudin-primary, --cloudin-secondary, --cloudin-background,
+ *     --cloudin-text y --cloudin-cover (un url(…)). El sitio los usa con su valor de siempre de
+ *     respaldo: color: var(--cloudin-primary, #B3261E); background-image: var(--cloudin-cover, url(portada.jpg)).
  *  8. Vista previa del panel: con ?cloudin-preview=1 y dentro de un iframe, acepta
  *     (solo del origen de la API) los datos que el dueño está editando y los pinta.
  *  9. Con ?cloudin-check=1 carga el revisor de Cloudin (cloudin-check.v1.js): prueba con
@@ -53,74 +54,72 @@
 
   // ---------------------------------------------------------------- formatos
   // «$ 12.000»: símbolo, espacio, punto de miles, sin decimales (igual que en Python).
-  const pesos = (n) => (n == null || n === "" ? "" : "$ " + String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, "."));
-
-  // Hora de Colombia: siempre UTC−5 (no hay horario de verano).
-  const ahora = () => {
-    const t = new Date(Date.now() - 18e6);
-    return [(t.getUTCDay() + 6) % 7, t.getUTCHours() * 60 + t.getUTCMinutes()];
-  };
-  const mins = (h) => h.split(":").reduce((a, b) => a * 60 + +b, 0);
-  const tramos = (hs, dia) => (hs || []).filter((h) => h.day == DIAS[dia] && !h.closed && h.open);
+  const pesos = (n) => (n == null || n === "" ? "" : "$ " + String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, ".")),
+    // Hora de Colombia: siempre UTC−5 (no hay horario de verano).
+    ahora = () => {
+      const t = new Date(Date.now() - 18e6);
+      return [(t.getUTCDay() + 6) % 7, t.getUTCHours() * 60 + t.getUTCMinutes()];
+    },
+    mins = (h) => h.split(":").reduce((a, b) => a * 60 + +b, 0),
+    tramos = (hs, dia) => (hs || []).filter((h) => h.day == DIAS[dia] && !h.closed && h.open);
   const hoy = (hs) => {
-    if (!hs?.length) return "";
-    const t = tramos(hs, ahora()[0]);
-    return "Hoy: " + (t.length ? t.map((h) => h.open + " – " + h.close).join(" y ") : "cerrado");
-  };
-  const abierto = (hs) => {
-    const [dia, m] = ahora();
-    return (
-      tramos(hs, dia).some(({ open, close }) => {
-        const a = mins(open), c = mins(close);
-        return m >= a && (a >= c || m < c);
-      }) ||
-      // un tramo de anoche que pasó la medianoche
-      tramos(hs, (dia + 6) % 7).some(({ open, close }) => mins(close) <= mins(open) && m < mins(close))
-    );
-  };
+      if (!hs?.length) return "";
+      const t = tramos(hs, ahora()[0]);
+      return "Hoy: " + (t.length ? t.map((h) => h.open + " – " + h.close).join(" y ") : "cerrado");
+    },
+    abierto = (hs) => {
+      const [dia, m] = ahora();
+      return (
+        tramos(hs, dia).some(({ open, close }) => {
+          const a = mins(open), c = mins(close);
+          return m >= a && (a >= c || m < c);
+        }) ||
+        // un tramo de anoche que pasó la medianoche
+        tramos(hs, (dia + 6) % 7).some(({ open, close }) => mins(close) <= mins(open) && m < mins(close))
+      );
+    };
 
   // ------------------------------------------------------- lo que ve el HTML
+  // business.*: lo del negocio (name, tagline, description, logo, cover), su contacto (address,
+  // city, email, maps_url, phone, whatsapp) y sus redes (instagram, facebook, tiktok), más los
+  // enlaces ya armados, el horario de hoy y los servicios Recoger y Domicilio de Personalizar.
   const vNegocio = (n) => {
-    const c = n.contact || {}, s = n.social || {}, wa = String(c.whatsapp || "").replace(/\D/g, "");
+    const c = n.contact || {}, sv = n.services || {}, wa = String(c.whatsapp || "").replace(/\D/g, "");
     return {
-      ...s,
-      name: n.name, tagline: n.tagline, description: n.description, logo: n.logo, cover: n.cover,
-      address: c.address, city: c.city, email: c.email, maps_url: c.maps_url, phone: c.phone,
-      phone_link: c.phone ? "tel:" + c.phone : "", whatsapp: c.whatsapp, whatsapp_link: wa ? "https://wa.me/" + wa : "",
-      hours_today: hoy(n.hours), open_now: abierto(n.hours),
+      ...n, ...c, ...n.social,
+      email_link: c.email ? "mailto:" + c.email : "", phone_link: c.phone ? "tel:" + c.phone : "",
+      whatsapp_link: wa ? "https://wa.me/" + wa : "", hours_today: hoy(n.hours), open_now: abierto(n.hours),
+      takeaway: !!sv.takeaway, delivery: !!sv.delivery
     };
   };
-  const vCategoria = (c) => ({ ...c, products: 0, anchor: "#cat-" + c.key });
-  const vProducto = (p) => {
-    const vs = p.variants || [], ps = [p.price, ...vs.map((v) => v.price)].filter((x) => x != null);
-    return {
-      ...p,
-      price: vs.length && ps.length ? "Desde " + pesos(Math.min(...ps)) : pesos(p.price),
-      available: p.available !== false, featured: !!p.featured,
-    };
-  };
-  const vMesa = () => ({ number: Cloudin.table?.number || "" });
+  const vCategoria = (c) => ({ ...c, products: 0, anchor: "#cat-" + c.key }),
+    vMenu = (m) => ({ ...m, categories: 0, anchor: "#menu-" + m.key }),
+    vProducto = (p) => {
+      const vs = p.variants || [], ps = [p.price, ...vs.map((v) => v.price)].filter((x) => x != null);
+      return {
+        ...p,
+        price: vs.length && ps.length ? "Desde " + pesos(Math.min(...ps)) : pesos(p.price),
+        available: p.available !== false, featured: !!p.featured,
+      };
+    },
+    vMesa = () => ({ number: Cloudin.table?.number || "" });
 
   // -------------------------------------------------------------- plantillas
   // La <template data-cloudin-template="…"> más cercana: en el contenedor y luego hacia arriba.
   const molde = (nombres, el, tope) => {
-    for (const n of nombres) {
-      const s = 'template[data-cloudin-template="' + n + '"]';
-      for (let e = el; e; e = e == tope ? 0 : e.parentElement) {
-        const t = e.querySelector(s);
+    for (const n of nombres)
+      for (let e = el; e; e = e == d ? 0 : e == tope ? d : e.parentElement || d) {
+        const t = e.querySelector('template[data-cloudin-template="' + n + '"]');
         if (t) return t;
       }
-      const t = d.querySelector(s);
-      if (t) return t;
-    }
   };
 
   const valor = (ctx, ruta) => {
-    const [r, c] = ruta.split(".");
-    return ctx[r]?.[c];
-  };
-  const aplica = (ctx, ruta) => ruta.replace("!", "").split(".")[0] in ctx;
-  const lleno = (v) => !(v == null || v === "" || v === false || v?.length === 0);
+      const [r, c] = ruta.split(".");
+      return ctx[r]?.[c];
+    },
+    aplica = (ctx, ruta) => ruta.replace("!", "").split(".")[0] in ctx,
+    lleno = (v) => !(v == null || v === "" || v === false || v?.length === 0);
   const cada = (sel, raiz, fn) => {
     for (const el of [...(raiz.matches?.(sel) ? [raiz] : []), ...todos(sel, raiz)]) {
       const r = el.getAttribute(sel.slice(1, -1));
@@ -128,11 +127,14 @@
     }
   };
 
-  // Llena un nodo: primero quita lo que no aplica (data-cloudin-if), luego textos, src y href.
+  // Llena un nodo: primero lo que no aplica (data-cloudin-if), luego textos, src y href.
   // Solo toca rutas cuya raíz está en el contexto (el paso del negocio no toca productos).
-  const llenar = (raiz, ctx) => {
+  // Lo que no aplica: en un clon recién hecho se quita; en lo `fijo` (header, footer, botones
+  // fuera de las listas) se oculta y se vuelve a ver si el dato vuelve, sin recargar la página.
+  const llenar = (raiz, ctx, fijo) => {
     const f = (fn) => ((fn.ctx = ctx), fn);
-    cada("[data-cloudin-if]", raiz, f((el, r, v) => (r[0] == "!" ? lleno(v) : !lleno(v)) && el.remove()));
+    cada("[data-cloudin-if]", raiz, f((el, r, v, no = r[0] == "!" == lleno(v)) =>
+      fijo ? (el.style.display = no ? "none" : "") : no && el.remove()));
     cada("[data-cloudin-field]", raiz, f((el, r, v) => (el.textContent = v ?? "")));
     cada("[data-cloudin-href]", raiz, f((el, r, v) => (v ? el.setAttribute("href", v) : el.removeAttribute("href"))));
     cada("[data-cloudin-src]", raiz, f((el, r, v) => {
@@ -164,8 +166,8 @@
       return [
         ctx,
         (n) => {
-          n.setAttribute("data-available", vp.available);
-          n.setAttribute("data-featured", vp.featured);
+          n.dataset.available = vp.available; // data-available="true|false"
+          n.dataset.featured = vp.featured;
         },
         (n) => {
           lista(n.querySelector(zona("variants")), ["variant"], p.variants || [],
@@ -178,11 +180,11 @@
 
   const visibles = (ps) => (ps || []).filter((p) => !(C.hideSoldOut && p.available === false));
 
-  const pintarMenu = (raiz, x, base) => {
-    const m = x.menus.find((m) => m.key == raiz.getAttribute("data-cloudin-menu")) || x.menus[0];
+  // El menú `m` dentro de `raiz`: su barra de categorías y sus categorías con los platos.
+  const pintarMenu = (raiz, m, base) => {
     if (!m) return;
     const cats = (m.categories || []).map((c) => ({ ...c, products: visibles(c.products) })).filter((c) => c.products.length),
-      ctxDe = (c) => ({ ...base, category: vCategoria(c) });
+      ctxDe = (c) => ({ ...base, menu: vMenu(m), category: vCategoria(c) });
     lista(raiz.querySelector(zona("category-nav")), ["category-link"], cats, (c) => [ctxDe(c)], raiz);
     lista(raiz.querySelector(zona("categories")), ["category"], cats, (c) => [
       ctxDe(c),
@@ -192,11 +194,10 @@
   };
 
   const estado = (e) => {
-    Cloudin.state = e;
-    for (const el of [d.documentElement, ...todos(zona("menu"))]) el.setAttribute("data-cloudin-state", e);
-  };
-
-  const valido = (x) => x?.schema == "cloudin.menu/v1" && Array.isArray(x.menus);
+      Cloudin.state = e;
+      for (const el of [d.documentElement, ...todos(zona("menu"))]) el.setAttribute("data-cloudin-state", e);
+    },
+    valido = (x) => x?.schema == "cloudin.menu/v1" && Array.isArray(x.menus);
 
   function pintar(x, origen) {
     if (!valido(x)) throw Error("menú inválido");
@@ -204,39 +205,49 @@
     for (const t of x.tags || []) etiquetas[t.key] = t.name;
     Cloudin.data = x;
     if (x.table) Cloudin.table = { token: MESA, ...Cloudin.table, number: x.table.number };
-    const base = { business: vNegocio(x.business || {}), table: vMesa() };
+    const n = x.business || {}, base = { business: vNegocio(n), table: vMesa() };
     for (const raiz of todos(zona("menu"))) {
-      pintarMenu(raiz, x, base);
+      pintarMenu(raiz, x.menus.find((m) => m.key == raiz.getAttribute("data-cloudin-menu")) || x.menus[0], base);
       evento("rendered", { root: raiz });
+    }
+    // Todos los menús, cada uno con sus categorías: un menú nuevo del panel aparece solo.
+    const ms = x.menus.filter((m) => (m.categories || []).some((c) => visibles(c.products).length)),
+      ctxMenu = (m) => ({ ...base, menu: vMenu(m) });
+    for (const cont of todos(zona("menu-nav"))) lista(cont, ["menu-link"], ms, (m) => [ctxMenu(m)], cont);
+    for (const cont of todos(zona("menus"))) {
+      lista(cont, ["menu"], ms, (m) => [ctxMenu(m), (n) => (n.id = "menu-" + m.key), (n) => pintarMenu(n, m, base)], cont);
+      evento("rendered", { root: cont });
     }
     for (const cont of todos(zona("featured"))) {
       const ps = x.menus.flatMap((m) => (m.categories || []).flatMap((c) => visibles(c.products))).filter((p) => p.featured);
       productos(cont, ps, base, cont, ["featured", "product"]);
       evento("rendered", { root: cont });
     }
-    llenar(d.body, base); // datos del negocio en todo el sitio: header, footer, WhatsApp…
-    // Colores del panel (Personalizar) como variables CSS: el sitio decide dónde usarlos.
-    const marca = x.business?.brand || {}, raiz = d.documentElement.style;
-    for (const k of ["primary", "secondary", "background", "text"])
-      /^#[\da-f]{6}$/i.test(marca[k]) ? raiz.setProperty("--cloudin-" + k, marca[k]) : raiz.removeProperty("--cloudin-" + k);
+    llenar(d.body, base, 1); // datos del negocio en todo el sitio: header, footer, WhatsApp…
+    // Colores y portada de Personalizar como variables CSS: el sitio decide dónde usarlos.
+    // Sin valor se quita la variable y el sitio usa su respaldo: var(--cloudin-primary, #B3261E).
+    const marca = n.brand || {}, raiz = d.documentElement.style,
+      css = (k, v) => (v ? raiz.setProperty("--cloudin-" + k, v) : raiz.removeProperty("--cloudin-" + k));
+    for (const k of ["primary", "secondary", "background", "text"]) css(k, /^#[\da-f]{6}$/i.test(marca[k]) && marca[k]);
+    css("cover", n.cover && "url(" + JSON.stringify(n.cover) + ")");
     pintado = 1;
     estado(origen);
   }
 
   // ----------------------------------------------------------------- caché
   const leer = () => {
-    try {
-      const x = JSON.parse(localStorage.getItem(LLAVE));
-      return valido(x?.d) ? x : null;
-    } catch (e) {}
-  };
-  const guardar = (e, x) => {
-    try {
-      const { table, ...sinMesa } = x; // la mesa es de esta visita, no del menú
-      localStorage.setItem(LLAVE, JSON.stringify({ e, t: Date.now(), d: sinMesa }));
-    } catch (e) {}
-  };
-  const listo = () => avisado || ((avisado = 1), evento("ready", { state: Cloudin.state }));
+      try {
+        const x = JSON.parse(localStorage.getItem(LLAVE));
+        return valido(x?.d) ? x : null;
+      } catch (e) {}
+    },
+    guardar = (e, x) => {
+      try {
+        const { table, ...sinMesa } = x; // la mesa es de esta visita, no del menú
+        localStorage.setItem(LLAVE, JSON.stringify({ e, t: Date.now(), d: sinMesa }));
+      } catch (e) {}
+    },
+    listo = () => avisado || ((avisado = 1), evento("ready", { state: Cloudin.state }));
 
   function cargar(forzar) {
     const c = leer();
@@ -246,9 +257,10 @@
       } catch (e) {}
     if (c && !forzar && !MESA && Date.now() - c.t < TTL) return Promise.resolve(listo());
     // La vista previa del panel no cuenta como una visita al menú.
-    const extra = [MESA && "table=" + encodeURIComponent(MESA), PREVIA && "vista=panel"].filter(Boolean).join("&");
-    return fetch(C.api + (extra ? (C.api.includes("?") ? "&" : "?") + extra : ""),
-      { cache: "no-cache", credentials: "omit" })
+    const u = new URL(C.api, location.href), q = u.searchParams;
+    MESA && q.set("table", MESA);
+    PREVIA && q.set("vista", "panel");
+    return fetch(u, { cache: "no-cache", credentials: "omit" })
       .then((r) => {
         if (!r.ok) throw Error("HTTP " + r.status);
         const e = r.headers.get("ETag");

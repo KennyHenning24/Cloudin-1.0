@@ -2,8 +2,11 @@
 
 from datetime import datetime, time
 from decimal import Decimal
+from importlib import import_module
+from types import SimpleNamespace
 
 import pytest
+from django.apps import apps as django_apps
 from django.core.management import call_command
 
 from apps.business.models import OpeningHours, RestaurantSettings
@@ -23,7 +26,7 @@ def restaurante(crear_restaurante, en_restaurante):
         ajustes.whatsapp = "+573001234567"
         ajustes.city = "Cali"
         ajustes.color_primary = "#B3261E"
-        ajustes.services = {"dine_in": True, "takeaway": True}
+        ajustes.services = {"takeaway": True, "delivery": False}
         ajustes.payment_methods = ["efectivo", "nequi"]
         ajustes.save()
         OpeningHours.objects.create(day=1, opens=time(12), closes=time(21))
@@ -64,6 +67,9 @@ def test_la_respuesta_sigue_el_contrato(client, restaurante):
     assert negocio["contact"]["whatsapp"] == "+573001234567"
     assert negocio["brand"]["primary"] == "#B3261E"
     assert negocio["services"] == {"dine_in": True, "takeaway": True, "delivery": False}
+    assert negocio["payment_methods"] == ["efectivo", "nequi"]
+    assert negocio["payment_methods_text"] == "Efectivo y Nequi"
+    assert negocio["welcome_message"] is None
     assert {"day": "mon", "closed": True} in negocio["hours"]
     assert [h for h in negocio["hours"] if h["day"] == "sat"] == [
         {"day": "sat", "open": "12:00", "close": "15:00"}, {"day": "sat", "open": "18:00", "close": "22:00"}]
@@ -87,6 +93,26 @@ def test_la_respuesta_sigue_el_contrato(client, restaurante):
         assert len(entidad["id"]) == 36 and entidad["key"]
     assert hamb["products"][2]["available"] is False
     assert {"key": "recomendado", "name": "Recomendado"} in datos["tags"]
+
+
+@pytest.mark.django_db
+def test_recoger_y_domicilio_encendidos_por_defecto(client, crear_restaurante, en_restaurante):
+    t = crear_restaurante("recien-llegado")
+    negocio = client.get(URL.format(t.slug)).json()["business"]
+    assert negocio["services"] == {"dine_in": True, "takeaway": True, "delivery": True}
+    # Un restaurante de antes, con los dos apagados porque nadie los tocaba: la migración los
+    # enciende y sube la versión (los menús que guardaron la carta la vuelven a pedir).
+    with en_restaurante(t):
+        ajustes = RestaurantSettings.load()
+        ajustes.services = {"dine_in": True, "takeaway": False, "delivery": False}
+        ajustes.save()
+        antes, alias = RestaurantSettings.load().menu_version, ajustes._state.db
+    migracion = import_module("apps.business.migrations.0002_servicios_recoger_y_domicilio")
+    migracion.encender(django_apps, SimpleNamespace(connection=SimpleNamespace(alias=alias)))
+    with en_restaurante(t):
+        assert RestaurantSettings.load().menu_version == antes + 1
+    negocio = client.get(URL.format(t.slug)).json()["business"]
+    assert negocio["services"] == {"dine_in": True, "takeaway": True, "delivery": True}
 
 
 @pytest.mark.django_db

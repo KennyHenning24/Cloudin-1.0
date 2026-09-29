@@ -323,8 +323,10 @@ GET https://<servidor-cloudin>/api/public/<slug>/menu/?table=<token>
     "social": { "instagram": null, "facebook": null, "tiktok": null },
     "hours": [ { "day": "mon", "closed": true },
                { "day": "tue", "open": "12:00", "close": "21:00" } ],
-    "services": { "dine_in": true, "takeaway": false, "delivery": false },
-    "payment_methods": []
+    "services": { "dine_in": true, "takeaway": true, "delivery": true },
+    "payment_methods": [],
+    "payment_methods_text": null,
+    "welcome_message": null
   },
   "menus": [
     {
@@ -377,7 +379,9 @@ GET https://<servidor-cloudin>/api/public/<slug>/menu/?table=<token>
 | `options[].price` | **Lo que suma** al precio (0 si no cambia). |
 | `image` | Dirección absoluta, lista para `<img src>`. |
 | `tags` | Claves; el nombre para mostrar está en `tags` de la raíz. |
-| `business.*` | Datos del negocio para el encabezado, el pie, WhatsApp y el horario. |
+| `business.*` | Datos del negocio (todo lo de Personalizar) para el encabezado, el pie, WhatsApp, el horario, las redes y los medios de pago. |
+| `business.services` | `takeaway` (Recoger) y `delivery` (Domicilio): encendidos salvo que el restaurante los apague; lo apagado no se ofrece. `dine_in` siempre `true`. |
+| `menus[]` | Todos los menús de «Mi menú» (uno nuevo llega aquí), cada uno con sus categorías. |
 | `meta.version` | Sube con cada cambio de la carta (es parte del `ETag`). |
 
 El precio de una línea se calcula así, **igual que lo calcula Cloudin**:
@@ -393,9 +397,13 @@ Muéstralo en pantalla, pero el que se cobra es el que devuelve Cloudin.
 
 El runtime pinta la carta dentro de tu diseño con plantillas HTML. Lo mínimo:
 
-- Un contenedor `data-cloudin="menu"` con `data-cloudin="categories"` adentro, y las
-  plantillas `<template data-cloudin-template="category">`, `"product"`, `"variant"` y
-  `"tag"` (y `"category-link"` para la barra de categorías `data-cloudin="category-nav"`).
+- Un contenedor `data-cloudin="menus"` (todos los menús) con la plantilla
+  `<template data-cloudin-template="menu">` (con `data-cloudin="categories"` adentro), y las
+  plantillas `"category"`, `"product"`, `"variant"` y `"tag"` (y `"category-link"` para la
+  barra de categorías `data-cloudin="category-nav"`, `"menu-link"` para la de menús
+  `data-cloudin="menu-nav"`).
+- Todo lo de Personalizar con `business.*` y los colores y la portada con las variables
+  `--cloudin-*` (lista completa: `CLAUDE-MENU-DIGITAL.md`, tabla 4.8).
 - Campos: `data-cloudin-field="product.name"`, `"product.price"`, `"category.name"`,
   `"business.name"`…; imágenes con `data-cloudin-src="product.image"`; enlaces con
   `data-cloudin-href="business.whatsapp_link"`; condiciones con

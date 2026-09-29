@@ -8,7 +8,7 @@ from decimal import Decimal
 
 from rest_framework import serializers
 
-from apps.business.models import DIAS, MEDIOS_DE_PAGO, SERVICIOS, OpeningHours, RestaurantSettings
+from apps.business.models import DIAS, MEDIOS_DE_PAGO, SERVICIOS, OpeningHours, RestaurantSettings, servicios_de
 from apps.catalog.models import Category, Menu, ModifierGroup, Product, Tag
 from apps.common.keys import es_clave_valida
 
@@ -73,6 +73,17 @@ class TagSerializer(serializers.ModelSerializer):
     class Meta:
         model = Tag
         fields = ["id", "key", "name", "position", "products_count"]
+
+    def validate_name(self, valor):
+        valor = " ".join(valor.split())
+        if not valor:
+            raise serializers.ValidationError("Escribe el nombre de la etiqueta.")
+        otras = Tag.objects.filter(name__iexact=valor)
+        if self.instance is not None:
+            otras = otras.exclude(pk=self.instance.pk)
+        if otras.exists():
+            raise serializers.ValidationError(f"Ya existe la etiqueta «{valor}».")
+        return valor
 
 
 class VariantSerializer(serializers.Serializer):
@@ -213,6 +224,11 @@ class SettingsSerializer(serializers.ModelSerializer):
                   "onboarding_step", "onboarding_done_at", "hours", "hours_input"]
         read_only_fields = ["onboarding_done_at"]
 
+    def to_representation(self, ajustes):
+        datos = super().to_representation(ajustes)
+        datos["services"] = servicios_de(ajustes)  # los que nunca se tocaron salen encendidos
+        return datos
+
     def get_logo(self, obj):
         return _url(self.context.get("request"), obj.logo)
 
@@ -242,7 +258,9 @@ class SettingsSerializer(serializers.ModelSerializer):
     def validate_services(self, valor):
         if not isinstance(valor, dict):
             raise serializers.ValidationError("Formato inválido.")
-        return {k: bool(valor.get(k)) for k in SERVICIOS}
+        # El que no viene queda como estaba (encendido si nunca se tocó).
+        actuales = servicios_de(self.instance) if self.instance else dict.fromkeys(SERVICIOS, True)
+        return {k: bool(valor.get(k, actuales[k])) for k in SERVICIOS}
 
     def validate_payment_methods(self, valor):
         if not isinstance(valor, list) or any(m not in MEDIOS_DE_PAGO for m in valor):

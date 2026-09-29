@@ -23,7 +23,7 @@ DATOS = {
     "schema": "cloudin.menu/v1",
     "business": {
         "slug": "ejemplo", "name": "Restaurante Ejemplo", "tagline": "Comida casera, en Cali",
-        "logo": None, "cover": None,
+        "description": None, "welcome_message": None, "logo": None, "cover": None,
         "brand": {"primary": "#B3261E", "secondary": "#F2C14E", "background": "#1A1110", "text": "#FFF6EC"},
         "contact": {"whatsapp": "+573001234567", "phone": "+573001234567", "email": None,
                     "address": "Cra 00 # 00-00", "city": "Cali", "maps_url": None},
@@ -31,7 +31,7 @@ DATOS = {
         "hours": [{"day": d, "open": "12:00", "close": "21:00"} for d in ("mon", "tue", "wed", "thu", "fri", "sat")]
         + [{"day": "sun", "closed": True}],
         "services": {"dine_in": True, "takeaway": True, "delivery": False},
-        "payment_methods": ["efectivo"],
+        "payment_methods": ["efectivo"], "payment_methods_text": "Efectivo",
     },
     "menus": [
         {"id": "m1", "key": "carta", "name": "Carta", "description": None, "categories": [
@@ -64,6 +64,20 @@ DATOS = {
     "tags": [{"key": "recomendado", "name": "Recomendado"}, {"key": "nuevo", "name": "Nuevo"}],
     "meta": {"version": 1},
 }
+
+# Anota los eventos del runtime en window.__eventos (y re-engancha los reveals).
+EVENTOS = """
+<script>
+  window.__eventos = [];
+  ["ready", "rendered", "error"].forEach(function (n) {
+    document.addEventListener("cloudin:" + n, function (e) {
+      window.__eventos.push({ tipo: n, raiz: e.detail && e.detail.root ? (e.detail.root.id || e.detail.root.tagName) : null });
+      // Como en 10k-websites: los reveals se re-enganchan en los nodos nuevos.
+      if (n === "rendered") e.detail.root.querySelectorAll("[data-reveal]").forEach(function (el) { el.classList.add("is-visible"); });
+    });
+  });
+</script>
+"""
 
 # El marcado del ejemplo de la sección 5.4 del contrato, con un producto pre-renderizado.
 CUERPO = """
@@ -116,24 +130,56 @@ CUERPO = """
 </section>
 <div id="destacados" data-cloudin="featured"></div>
 <a class="cta-whatsapp" href="https://wa.me/570000000000" data-cloudin-href="business.whatsapp_link">Pide por WhatsApp</a>
-<script>
-  window.__eventos = [];
-  ["ready", "rendered", "error"].forEach(function (n) {
-    document.addEventListener("cloudin:" + n, function (e) {
-      window.__eventos.push({ tipo: n, raiz: e.detail && e.detail.root ? (e.detail.root.id || e.detail.root.tagName) : null });
-      // Como en 10k-websites: los reveals se re-enganchan en los nodos nuevos.
-      if (n === "rendered") e.detail.root.querySelectorAll("[data-reveal]").forEach(function (el) { el.classList.add("is-visible"); });
-    });
-  });
-</script>
-"""
+""" + EVENTOS
+
+# Todos los menús (data-cloudin="menus") y lo de Personalizar que va fuera de la carta.
+MENUS = """
+<p id="bienvenida" data-cloudin-if="business.welcome_message" data-cloudin-field="business.welcome_message"></p>
+<nav id="menus-nav" data-cloudin="menu-nav">
+  <a href="#menu-carta" data-cloudin-key="carta">Carta</a>
+  <template data-cloudin-template="menu-link"><a data-cloudin-href="menu.anchor" data-cloudin-field="menu.name"></a></template>
+</nav>
+<div id="menus" data-cloudin="menus">
+  <section class="menu" id="menu-carta" data-cloudin-key="carta"><h2>Carta</h2>
+    <div data-cloudin="categories"><section class="menu-cat" id="cat-hamburguesas"><h3>Hamburguesas</h3></section></div>
+  </section>
+  <template data-cloudin-template="menu">
+    <section class="menu">
+      <h2 data-cloudin-field="menu.name"></h2>
+      <p class="menu-desc" data-cloudin-if="menu.description" data-cloudin-field="menu.description"></p>
+      <nav class="menu-nav" data-cloudin="category-nav">
+        <template data-cloudin-template="category-link"><a data-cloudin-href="category.anchor" data-cloudin-field="category.name"></a></template>
+      </nav>
+      <div data-cloudin="categories"></div>
+    </section>
+  </template>
+  <template data-cloudin-template="category">
+    <section class="menu-cat"><h3 data-cloudin-field="category.name"></h3><div data-cloudin="products"></div></section>
+  </template>
+  <template data-cloudin-template="product">
+    <article class="dish"><h4 data-cloudin-field="product.name"></h4>
+      <strong class="dish__price" data-cloudin-field="product.price"></strong>
+      <small class="del-menu" data-cloudin-field="menu.name"></small></article>
+  </template>
+</div>
+<footer>
+  <a id="correo" data-cloudin-if="business.email_link" data-cloudin-href="business.email_link"><span data-cloudin-field="business.email"></span></a>
+  <a id="facebook" data-cloudin-if="business.facebook" data-cloudin-href="business.facebook">Facebook</a>
+  <a id="tiktok" data-cloudin-if="business.tiktok" data-cloudin-href="business.tiktok">TikTok</a>
+  <a id="mapa" data-cloudin-if="business.maps_url" data-cloudin-href="business.maps_url">Cómo llegar</a>
+  <p id="pagos" data-cloudin-if="business.payment_methods_text">Pagos: <span data-cloudin-field="business.payment_methods_text"></span></p>
+  <p id="recoger" data-cloudin-if="business.takeaway">Pide y recoge en el local</p>
+  <p id="domicilio" data-cloudin-if="business.delivery">Te lo llevamos a domicilio</p>
+</footer>
+<div id="portada" style="height:40px;background-image:var(--cloudin-cover, url(https://sitio.test/assets/portada.jpg))"></div>
+""" + EVENTOS
 
 
-def pagina(menu="carta", **config):
+def pagina(menu="carta", cuerpo=None, **config):
     cfg = {"restaurant": "ejemplo", "api": API, "contract": 1, "locale": "es-CO", "currency": "COP",
            "hideSoldOut": False, "cacheTtl": 0, **config}
     return (f'<!doctype html><html lang="es"><head><meta charset="utf-8"></head><body>'
-            f"{CUERPO.replace('{menu}', menu)}"
+            f"{(cuerpo or CUERPO).replace('{menu}', menu)}"
             f"<script>window.CLOUDIN_CONFIG = {json.dumps(cfg)};</script>"
             f'<script src="https://cloudin.test/static/cloudin-menu.v1.js" defer></script></body></html>')
 
@@ -169,7 +215,7 @@ def entorno(navegador):
     page.on("pageerror", lambda e: errores.append(str(e)))
 
     def abrir(ruta="/", esperar="live", **config):
-        if config or "menu" in config:
+        if config:
             html["actual"] = pagina(**config)
         page.goto("https://sitio.test" + ruta)
         page.wait_for_function("() => window.__eventos && window.__eventos.some(e => e.tipo === 'ready')")
@@ -218,7 +264,7 @@ def test_en_vivo_pinta_con_las_plantillas(entorno):
     assert platos[1]["precio"] == "$ 26.000" and platos[1]["desc"] is False
     assert page.get_attribute(".cta-whatsapp", "href") == "https://wa.me/573001234567"
     assert page.text_content("#hoy").startswith("Hoy: ")
-    assert page.query_selector("#mesa") is None  # sin ?mesa= no hay mesa
+    assert page.is_hidden("#mesa")  # sin ?mesa= no hay mesa (lo fijo se oculta, no se borra)
     assert page.eval_on_selector_all(".dish.is-visible", "d => d.length") >= 3  # reveals re-enganchados
     eventos = page.evaluate("window.__eventos")
     assert {"tipo": "rendered", "raiz": "menu"} in eventos and eventos[-1]["tipo"] == "ready"
@@ -261,7 +307,7 @@ def test_mesa_desde_el_qr(entorno):
     page = abrir("/menu.html?mesa=tok123")
     assert "table=tok123" in api.urls[-1]
     assert page.evaluate("Cloudin.table") == {"token": "tok123", "number": 5}
-    assert page.text_content("#mesa").strip() == "Mesa 5"
+    assert page.text_content("#mesa").strip() == "Mesa 5" and page.is_visible("#mesa")
 
 
 def test_ocultar_agotados(entorno):
@@ -301,6 +347,74 @@ def test_los_colores_del_panel_quedan_como_variables_css(entorno):
     page.evaluate("Cloudin.refresh()")
     page.wait_for_function("() => document.documentElement.style.getPropertyValue('--cloudin-primary') === '#0B6E4F'")
     assert page.evaluate("document.documentElement.style.getPropertyValue('--cloudin-secondary')") == ""
+    assert errores == []
+
+
+def _visibles(page, *selectores):
+    return [s for s in selectores if page.is_visible(s)]
+
+
+def test_todos_los_menus_y_un_menu_nuevo_aparece_sin_recargar(entorno):
+    abrir, api, page, errores = entorno
+    # Un menú sin platos todavía no sale (el dueño lo acaba de crear en Mi menú).
+    api.datos["menus"].append({"id": "m3", "key": "postres", "name": "Postres", "description": None, "categories": []})
+    page = abrir(cuerpo=MENUS, live=1)
+    assert page.eval_on_selector_all("#menus > section", "s => s.map(x => x.id)") == ["menu-carta", "menu-desayunos"]
+    assert textos(page, "#menus-nav a") == ["Carta", "Desayunos"]
+    assert page.eval_on_selector_all("#menus-nav a", "a => a.map(x => x.getAttribute('href'))") == [
+        "#menu-carta", "#menu-desayunos"]
+    assert textos(page, "#menu-carta .menu-nav a") == ["Hamburguesas", "Bebidas"]
+    assert textos(page, "#menu-desayunos h4") == ["Calentado paisa"]
+    assert textos(page, "#menu-desayunos .del-menu") == ["Desayunos"]  # el plato sabe de qué menú es
+    assert page.query_selector("#menu-desayunos .menu-desc") is None  # sin descripción: no se pone
+    assert {"tipo": "rendered", "raiz": "menus"} in page.evaluate("window.__eventos")
+    # En el panel: Mi menú → Nuevo menú «Almuerzos», con su categoría y su plato.
+    api.etag = 'W/"ejemplo-2"'
+    plato = {**DATOS["menus"][1]["categories"][0]["products"][0], "id": "p9", "key": "bandeja-paisa",
+             "name": "Bandeja paisa", "price": 25000}
+    api.datos["menus"].append({"id": "m4", "key": "almuerzos", "name": "Almuerzos", "description": "De 12 a 3",
+                               "categories": [{"id": "c9", "key": "ejecutivos", "name": "Ejecutivos",
+                                               "description": None, "image": None, "products": [plato]}]})
+    page.locator("#menu-almuerzos h4", has_text="Bandeja paisa").wait_for(timeout=5000)
+    assert textos(page, "#menus-nav a") == ["Carta", "Desayunos", "Almuerzos"]
+    assert textos(page, "#menu-almuerzos .menu-desc") == ["De 12 a 3"]
+    assert textos(page, "#menu-almuerzos .menu-nav a") == ["Ejecutivos"]
+    assert page.evaluate("performance.getEntriesByType('navigation').length") == 1  # nunca recargó
+    assert errores == []
+
+
+def test_lo_de_personalizar_se_esconde_y_vuelve_sin_recargar(entorno):
+    abrir, api, page, errores = entorno
+    page = abrir(cuerpo=MENUS, live=1)
+    todo = ("#bienvenida", "#correo", "#facebook", "#tiktok", "#mapa", "#pagos", "#recoger", "#domicilio")
+    assert _visibles(page, *todo) == ["#pagos", "#recoger"]  # Domicilio apagado; sin correo ni redes
+    assert page.text_content("#pagos").strip() == "Pagos: Efectivo"
+    fondo = "getComputedStyle(document.querySelector('#portada')).backgroundImage"
+    assert "portada.jpg" in page.evaluate(fondo)  # sin portada en el panel: la del sitio
+    # En Personalizar: correo, Facebook, TikTok, mapa, bienvenida y portada; enciende Domicilio y
+    # apaga Recoger.
+    api.etag = 'W/"ejemplo-2"'
+    b = api.datos["business"]
+    b["contact"].update(email="hola@ejemplo.co", maps_url="https://maps.app.goo.gl/abc")
+    b["social"].update(facebook="https://facebook.com/ejemplo", tiktok="https://tiktok.com/@ejemplo")
+    b.update(welcome_message="¡Bienvenido! Pide desde tu mesa.", cover="https://cloudin.test/media/portada.webp",
+             services={"dine_in": True, "takeaway": False, "delivery": True})
+    page.wait_for_function("() => document.querySelector('#domicilio').offsetParent !== null", timeout=5000)
+    assert _visibles(page, *todo) == ["#bienvenida", "#correo", "#facebook", "#tiktok", "#mapa", "#pagos", "#domicilio"]
+    assert page.get_attribute("#correo", "href") == "mailto:hola@ejemplo.co"
+    assert page.text_content("#correo").strip() == "hola@ejemplo.co"
+    assert page.get_attribute("#facebook", "href") == "https://facebook.com/ejemplo"
+    assert page.text_content("#bienvenida") == "¡Bienvenido! Pide desde tu mesa."
+    assert 'url("https://cloudin.test/media/portada.webp")' in page.evaluate(fondo)
+    # Lo vuelve a apagar: se esconde otra vez, y la portada vuelve a la del sitio.
+    api.etag = 'W/"ejemplo-3"'
+    b["contact"]["email"] = None
+    b["social"].update(facebook=None, tiktok=None)
+    b.update(cover=None, services={"dine_in": True, "takeaway": True, "delivery": False})
+    page.wait_for_function("() => document.querySelector('#domicilio').offsetParent === null", timeout=5000)
+    assert _visibles(page, *todo) == ["#bienvenida", "#mapa", "#pagos", "#recoger"]
+    assert "portada.jpg" in page.evaluate(fondo)
+    assert page.evaluate("performance.getEntriesByType('navigation').length") == 1
     assert errores == []
 
 
@@ -363,22 +477,73 @@ def test_horario_igual_que_en_python(entorno, cuando):
 
 REVISOR = (Path(__file__).resolve().parent.parent / "static" / "cloudin-check.v1.js").read_text(encoding="utf-8")
 
-# El ejemplo de arriba con todo lo del negocio conectado y los colores de Personalizar en el CSS.
-CONECTADO = CUERPO + """
+# Todo lo de Personalizar conectado (con data-cloudin-if: si queda vacío, no se ve) y los 4
+# colores en el CSS.
+NEGOCIO = """
 <header class="marca">
   <img class="logo" data-cloudin-if="business.logo" data-cloudin-src="business.logo" alt="">
+  <img class="portada" data-cloudin-if="business.cover" data-cloudin-src="business.cover" alt="">
   <p data-cloudin-if="business.tagline" data-cloudin-field="business.tagline"></p>
+  <p data-cloudin-if="business.welcome_message" data-cloudin-field="business.welcome_message"></p>
 </header>
 <footer>
+  <p data-cloudin-if="business.description" data-cloudin-field="business.description"></p>
   <span data-cloudin-field="business.address"></span> · <span data-cloudin-field="business.city"></span>
+  <a data-cloudin-if="business.maps_url" data-cloudin-href="business.maps_url">Cómo llegar</a>
   <a data-cloudin-if="business.phone_link" data-cloudin-href="business.phone_link"><span data-cloudin-field="business.phone"></span></a>
+  <a data-cloudin-if="business.email_link" data-cloudin-href="business.email_link"><span data-cloudin-field="business.email"></span></a>
   <a data-cloudin-if="business.instagram" data-cloudin-href="business.instagram">Instagram</a>
+  <a data-cloudin-if="business.facebook" data-cloudin-href="business.facebook">Facebook</a>
+  <a data-cloudin-if="business.tiktok" data-cloudin-href="business.tiktok">TikTok</a>
+  <p data-cloudin-if="business.payment_methods_text">Pagos: <span data-cloudin-field="business.payment_methods_text"></span></p>
+  <p data-cloudin-if="business.takeaway">Pide y recoge en el local</p>
+  <p data-cloudin-if="business.delivery">Te lo llevamos a domicilio</p>
 </footer>
 <style>
   body { background: var(--cloudin-background, #fff); color: var(--cloudin-text, #111); }
   .dish__price { color: var(--cloudin-primary, #B3261E); }
+  h3 { color: var(--cloudin-secondary, #F2C14E); }
 </style>
 """
+
+# Un menú bien conectado: todos los menús (data-cloudin="menus") y todo lo de Personalizar.
+CONECTADO = """
+<header><h1 data-cloudin-field="business.name">Restaurante Ejemplo</h1>
+<p id="hoy" data-cloudin-if="business.hours_today" data-cloudin-field="business.hours_today">Hoy: 12:00 – 21:00</p></header>
+<nav data-cloudin="menu-nav"><template data-cloudin-template="menu-link">
+  <a data-cloudin-href="menu.anchor" data-cloudin-field="menu.name"></a></template></nav>
+<main data-cloudin="menus">
+  <template data-cloudin-template="menu">
+    <section class="menu"><h2 data-cloudin-field="menu.name"></h2>
+      <nav class="menu-nav" data-cloudin="category-nav"><template data-cloudin-template="category-link">
+        <a data-cloudin-href="category.anchor" data-cloudin-field="category.name"></a></template></nav>
+      <div data-cloudin="categories"></div>
+    </section>
+  </template>
+  <template data-cloudin-template="category">
+    <section class="menu-cat"><h3 data-cloudin-field="category.name"></h3><div data-cloudin="products"></div></section>
+  </template>
+  <template data-cloudin-template="product">
+    <article class="dish">
+      <img data-cloudin-if="product.image" data-cloudin-src="product.image" width="80" height="80">
+      <div class="dish__body"><h4 data-cloudin-field="product.name"></h4>
+        <p class="desc" data-cloudin-if="product.description" data-cloudin-field="product.description"></p>
+        <strong class="dish__price" data-cloudin-field="product.price"></strong>
+        <span class="dish__soldout" data-cloudin-if="!product.available">Agotado</span></div>
+    </article>
+  </template>
+</main>
+<a class="cta-whatsapp" href="https://wa.me/570000000000" data-cloudin-if="business.whatsapp_link"
+   data-cloudin-href="business.whatsapp_link">Pide por WhatsApp</a>
+""" + NEGOCIO
+
+# Lo mismo con la carta a la antigua (una raíz data-cloudin="menu" fija): un menú nuevo no sale.
+UN_MENU_FIJO = CUERPO + NEGOCIO
+
+NEGOCIO_IDS = ("negocio-nombre", "negocio-frase", "negocio-descripcion", "negocio-bienvenida", "negocio-logo",
+               "negocio-portada", "negocio-whatsapp", "negocio-telefono", "negocio-correo", "negocio-direccion",
+               "negocio-ciudad", "negocio-mapa", "negocio-horario", "negocio-instagram", "negocio-facebook",
+               "negocio-tiktok", "negocio-pagos", "servicio-takeaway", "servicio-delivery", "colores")
 
 # Un menú «conectado» a medias: carga el runtime, pero la carta y el negocio están escritos a mano.
 A_MANO = """
@@ -397,18 +562,20 @@ A_MANO = """
       <div class="dish__body"><h3>Limonada de coco</h3><strong>$ 8.500</strong></div></article>
   </section>
 </main>
-<footer><a href="https://wa.me/573001234567">WhatsApp</a> <a href="tel:+573001234567">Llamar</a> Cra 00 # 00-00, Cali</footer>
+<footer><a href="https://wa.me/573001234567">WhatsApp</a> <a href="tel:+573001234567">Llamar</a> Cra 00 # 00-00, Cali
+  <a href="mailto:hola@ejemplo.co">hola@ejemplo.co</a> <a href="https://facebook.com/restauranteejemplo">Facebook</a>
+  <p>Domicilios al 300 123 4567</p></footer>
 <style>strong { color: #B3261E; }</style>
 """
 
 
-def _revisar(navegador, cuerpo, con_runtime=True, **config):
-    """Abre el menú con ?cloudin-check=1 y devuelve lo que dejó el revisor."""
+def _revisar(navegador, cuerpo, con_runtime=True, html=None, **config):
+    """Abre el menú con ?cloudin-check=1 y devuelve lo que dejó el revisor (`html`: la página entera)."""
     cfg = {"restaurant": "ejemplo", "api": API, "apiKey": "ck_prueba", "hideSoldOut": False, "cacheTtl": 0, **config}
-    html = ('<!doctype html><html lang="es"><head><meta charset="utf-8"></head><body>' + cuerpo
-            + (f"<script>window.CLOUDIN_CONFIG = {json.dumps(cfg)};</script>"
-               '<script src="https://cloudin.test/static/cloudin-menu.v1.js" defer></script>'
-               '<script src="/carrito.js" defer></script>' if con_runtime else "") + "</body></html>")
+    html = html or ('<!doctype html><html lang="es"><head><meta charset="utf-8"></head><body>' + cuerpo
+                    + (f"<script>window.CLOUDIN_CONFIG = {json.dumps(cfg)};</script>"
+                       '<script src="https://cloudin.test/static/cloudin-menu.v1.js" defer></script>'
+                       '<script src="/carrito.js" defer></script>' if con_runtime else "") + "</body></html>")
     contexto = navegador.new_context()
     contexto.route("https://sitio.test/carrito.js", lambda r: r.fulfill(status=200, body="", content_type="application/javascript"))
     contexto.route("https://sitio.test/assets/**", lambda r: r.fulfill(status=200, body=b"", content_type="image/png"))
@@ -435,18 +602,35 @@ def _revisar(navegador, cuerpo, con_runtime=True, **config):
 def test_el_revisor_aprueba_un_menu_conectado(navegador):
     contexto, page, informe, r, errores = _revisar(navegador, CONECTADO)
     assert informe["aprobado"], informe["texto"]
-    for id_ in ("carta", "carrito", "plato-nuevo", "categoria-nueva", "barra", "cambiar-nombre", "cambiar-precio",
-                "cambiar-descripcion", "cambiar-foto", "eliminar", "agotado", "a-mano", "colores", "negocio-nombre",
-                "negocio-frase", "negocio-logo", "negocio-whatsapp", "negocio-telefono", "negocio-direccion",
-                "negocio-horario", "negocio-redes"):
+    for id_ in ("carta", "carrito", "menu-nuevo", "plato-nuevo", "categoria-nueva", "barra", "cambiar-nombre",
+                "cambiar-precio", "cambiar-descripcion", "cambiar-foto", "eliminar", "agotado", "a-mano", *NEGOCIO_IDS):
         assert r[id_]["estado"] == "ok", r[id_]
-    # El logo está vacío en el panel (su <img> se quitó) pero está conectado: no es «escrito a mano».
-    assert "llénalo en Personalizar" in r["negocio-logo"]["texto"]
-    # Al terminar queda la carta real, y el informe está a la vista.
-    assert textos(page, "#menu [data-cloudin=categories] .dish h4") == [
-        "Hamburguesa clásica", "Hamburguesa vegetariana", "Limonada de coco"]
+    # Al terminar queda la carta real (los dos menús), y el informe está a la vista.
+    assert textos(page, "[data-cloudin=menus] .dish h4") == [
+        "Hamburguesa clásica", "Hamburguesa vegetariana", "Limonada de coco", "Calentado paisa"]
+    assert textos(page, "[data-cloudin=menu-nav] a") == ["Carta", "Desayunos"]
     assert "Plato nuevo" not in page.inner_text("body")  # el informe va fuera del <body>
     assert "Tu menú está conectado" in page.locator("#cloudin-check .resumen").inner_text()
+    contexto.close()
+    assert errores == []
+
+
+@pytest.mark.parametrize("archivo", ["plantilla/index.html", "example/index.html"])
+def test_la_plantilla_y_el_ejemplo_pasan_la_revision(navegador, archivo):
+    html = (Path(__file__).resolve().parent.parent / "client" / archivo).read_text(encoding="utf-8")
+    html = (html.replace("<servidor-cloudin>", "cloudin.test").replace("<slug>", "ejemplo")
+            .replace("http://localhost:8000", "https://cloudin.test").replace("restaurante-ejemplo/menu/", "ejemplo/menu/"))
+    contexto, page, informe, r, errores = _revisar(navegador, "", html=html)
+    assert informe["aprobado"], informe["texto"]
+    contexto.close()
+    assert errores == []
+
+
+def test_el_revisor_pide_todos_los_menus(navegador):
+    contexto, page, informe, r, errores = _revisar(navegador, UN_MENU_FIJO)
+    assert not informe["aprobado"]
+    assert [k for k, v in r.items() if v["estado"] == "falla"] == ["menu-nuevo"], informe["texto"]
+    assert 'data-cloudin="menus"' in r["menu-nuevo"]["texto"]
     contexto.close()
     assert errores == []
 
@@ -454,14 +638,19 @@ def test_el_revisor_aprueba_un_menu_conectado(navegador):
 def test_el_revisor_encuentra_lo_escrito_a_mano(navegador):
     contexto, page, informe, r, errores = _revisar(navegador, A_MANO)
     assert not informe["aprobado"]
-    for id_ in ("plato-nuevo", "categoria-nueva", "barra", "cambiar-nombre", "cambiar-precio", "cambiar-descripcion",
-                "cambiar-foto", "eliminar", "agotado", "a-mano", "colores", "negocio-nombre", "negocio-frase",
-                "negocio-logo", "negocio-whatsapp", "negocio-telefono", "negocio-direccion"):
+    for id_ in ("menu-nuevo", "plato-nuevo", "categoria-nueva", "barra", "cambiar-nombre", "cambiar-precio",
+                "cambiar-descripcion", "cambiar-foto", "eliminar", "agotado", "a-mano", *NEGOCIO_IDS):
         assert r[id_]["estado"] == "falla", r[id_]
     assert r["a-mano"]["texto"].startswith("3 platos están escritos a mano")
     for plato in ("«Hamburguesa clásica»", "«Hamburguesa vegetariana»", "«Limonada de coco»"):
         assert plato in r["a-mano"]["texto"]
     assert "«Hamburguesa clásica» sigue escrito a mano" in r["eliminar"]["texto"]
+    # Lo escrito a mano se distingue de lo que no se muestra.
+    for id_ in ("negocio-correo", "negocio-facebook", "negocio-whatsapp", "negocio-direccion", "servicio-delivery"):
+        assert "escrit" in r[id_]["texto"] and "a mano" in r[id_]["texto"], r[id_]
+    for id_ in ("negocio-portada", "negocio-tiktok", "negocio-pagos"):
+        assert "no se ve" in r[id_]["texto"], r[id_]
+    assert 'data-cloudin-if="business.takeaway"' in r["servicio-takeaway"]["texto"]
     assert informe["texto"].splitlines()[1].startswith("❌ Hay ")  # el resumen, listo para pegarle a Claude Code
     contexto.close()
     assert errores == []

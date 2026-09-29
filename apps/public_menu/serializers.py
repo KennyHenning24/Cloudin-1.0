@@ -6,7 +6,7 @@ cada entidad trae además su `id` (UUID) y no salen los datos privados (`owner`,
 runtime pinte el nombre de cada etiqueta) y `meta.version` (el ETag).
 """
 
-from apps.business.models import DIAS
+from apps.business.models import DIAS, MEDIOS_DE_PAGO, servicios_de
 from apps.common.money import a_pesos
 
 SCHEMA = "cloudin.menu/v1"
@@ -26,6 +26,14 @@ def _url(campo, construir_url):
 
 def _hora(t):
     return t.strftime("%H:%M")
+
+
+def _pagos_en_texto(claves) -> str | None:
+    """«Efectivo, Nequi y Tarjeta»: los medios de pago de Personalizar, listos para mostrar."""
+    nombres = [nombre for clave, nombre in MEDIOS_DE_PAGO.items() if clave in (claves or [])]
+    if len(nombres) > 1:
+        return ", ".join(nombres[:-1]) + " y " + nombres[-1]
+    return nombres[0] if nombres else None
 
 
 def horario_del_contrato(tramos) -> list:
@@ -52,6 +60,7 @@ def negocio(tenant, ajustes, tramos, construir_url=None) -> dict:
         "name": tenant.name,
         "tagline": ajustes.tagline or None,
         "description": ajustes.description or None,
+        "welcome_message": ajustes.welcome_message or None,
         "logo": _url(ajustes.logo, construir_url),
         "cover": _url(ajustes.cover, construir_url),
         "brand": {
@@ -74,8 +83,11 @@ def negocio(tenant, ajustes, tramos, construir_url=None) -> dict:
             "tiktok": ajustes.tiktok or None,
         },
         "hours": horario_del_contrato(tramos),
-        "services": {k: bool((ajustes.services or {}).get(k)) for k in ("dine_in", "takeaway", "delivery")},
+        # dine_in queda siempre en true (en la mesa se pide con el QR o el mesero), por los
+        # menús que ya lo leen; takeaway y delivery son los interruptores de Personalizar.
+        "services": {"dine_in": True, **servicios_de(ajustes)},
         "payment_methods": list(ajustes.payment_methods or []),
+        "payment_methods_text": _pagos_en_texto(ajustes.payment_methods),
     }
 
 

@@ -196,6 +196,39 @@
       b.setAttribute("aria-pressed", String(b.getAttribute("aria-pressed") !== "true"));
       marcar();
     });
+    // Una etiqueta nueva se crea al vuelo, queda marcada en este plato y en la lista de todos.
+    const entradaEtiqueta = $("[data-etiqueta-nueva]", raiz);
+    async function crearEtiqueta() {
+      const nombre = entradaEtiqueta.value.replace(/\s+/g, " ").trim();
+      if (!nombre) return entradaEtiqueta.focus();
+      const existente = $$("[data-etiqueta]", raiz).find((b) => b.textContent.trim().toLowerCase() === nombre.toLowerCase());
+      if (existente) {
+        existente.setAttribute("aria-pressed", "true");
+        entradaEtiqueta.value = "";
+        return marcar();
+      }
+      try {
+        const t = await C.pedir(`${API}tags/`, { metodo: "POST", datos: { name: nombre } });
+        const b = document.createElement("button");
+        b.type = "button";
+        b.className = "chip";
+        b.dataset.etiqueta = t.key;
+        b.setAttribute("aria-pressed", "true");
+        b.textContent = t.name;
+        const vacio = $("[data-sin-etiquetas]", raiz);
+        if (vacio) vacio.remove();
+        $("[data-etiquetas]", raiz).appendChild(b);
+        entradaEtiqueta.value = "";
+        marcar();
+        C.aviso(`Etiqueta «${t.name}» creada: ya está en la lista para todos tus platos.`);
+      } catch (e) { C.aviso(e.detalle, { tipo: "error" }); }
+    }
+    if (entradaEtiqueta) {
+      $("[data-crear-etiqueta]", raiz).addEventListener("click", crearEtiqueta);
+      entradaEtiqueta.addEventListener("keydown", (ev) => {
+        if (ev.key === "Enter") { ev.preventDefault(); crearEtiqueta(); }  // Enter no guarda el plato
+      });
+    }
 
     // ------------------------------------------------------------ datos
     function datos() {

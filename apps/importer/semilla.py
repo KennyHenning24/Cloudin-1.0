@@ -164,7 +164,7 @@ def validar(datos) -> tuple[dict, list[str]]:
         "facebook": r.url(redes.get("facebook"), "business.social.facebook"),
         "tiktok": r.url(redes.get("tiktok"), "business.social.tiktok"),
         "hours": horas,
-        "services": {k: bool(servicios.get(k)) for k in ("dine_in", "takeaway", "delivery")},
+        "services": {k: bool(servicios.get(k, True)) for k in ("takeaway", "delivery")},
         "payment_methods": pagos,
         "owner": {
             "name": r.texto(dueno.get("name"), "business.owner.name", 150),
