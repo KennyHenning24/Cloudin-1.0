@@ -186,6 +186,26 @@
     // Los menús desplegables se cierran al tocar afuera.
     $$("details.desplegable[open]").forEach((d) => { if (!d.contains(ev.target)) d.open = false; });
   });
+  // Un menú «⋯» que no cabe debajo (el último plato; en el celular, la barra de abajo y el botón
+  // «+ Producto» lo taparían) se abre hacia arriba; si tampoco cabe arriba, la página se corre
+  // lo justo para que se vean y se puedan tocar todas sus opciones.
+  document.addEventListener("toggle", (ev) => {
+    const d = ev.target;
+    if (!d.matches || !d.matches("details.desplegable") || !d.open) return;
+    const opciones = d.querySelector(".opciones");
+    if (!opciones) return;
+    opciones.classList.remove("hacia-arriba");
+    const bordes = (sel, lado) => $$(sel).filter((e) => e.getClientRects().length).map((e) => e.getBoundingClientRect()[lado]);
+    const techo = Math.max(0, ...bordes(".topbar", "bottom"));
+    const piso = Math.min(innerHeight, ...bordes(".barra-movil, .barra-inferior, .fab", "top"));
+    let caja = opciones.getBoundingClientRect();
+    if (caja.bottom > piso - 8 && d.getBoundingClientRect().top - caja.height - 12 > techo) {
+      opciones.classList.add("hacia-arriba");
+      caja = opciones.getBoundingClientRect();
+    }
+    if (caja.bottom > piso - 8) scrollBy({ top: caja.bottom - piso + 12 });
+    else if (caja.top < techo + 8) scrollBy({ top: caja.top - techo - 12 });
+  }, true);
   document.addEventListener("close", (ev) => {
     if (ev.target.tagName === "DIALOG" && ultimoFoco && document.contains(ultimoFoco)) ultimoFoco.focus();
   }, true);

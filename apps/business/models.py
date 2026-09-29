@@ -23,7 +23,10 @@ telefono_co = RegexValidator(r"^\+57\d{10}$", "Escribe el número con +57 y 10 d
 DIAS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"]
 NOMBRES_DIAS = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"]
 
-SERVICIOS = {"dine_in": "En la mesa", "takeaway": "Para llevar", "delivery": "Domicilio"}
+# Cómo más se puede pedir, además de en la mesa (la mesa la manejan los pedidos por QR y los
+# meseros). Los dos vienen encendidos; el restaurante los apaga en Personalizar y su menú digital
+# esconde esa opción (business.takeaway / business.delivery en el runtime).
+SERVICIOS = {"takeaway": "Recoger", "delivery": "Domicilio"}
 MEDIOS_DE_PAGO = {
     "efectivo": "Efectivo", "nequi": "Nequi", "daviplata": "Daviplata", "tarjeta": "Tarjeta",
     "transferencia": "Transferencia",
@@ -68,7 +71,8 @@ class RestaurantSettings(TimeStampedModel):
     facebook = models.URLField("Facebook", max_length=300, blank=True)
     tiktok = models.URLField("TikTok", max_length=300, blank=True)
 
-    # Servicios {"dine_in": true, "takeaway": true, "delivery": false} y medios de pago ["efectivo", …]
+    # Servicios {"takeaway": true, "delivery": false} (si falta, encendido: servicios_de) y
+    # medios de pago ["efectivo", …]
     services = models.JSONField("Servicios", default=dict, blank=True)
     payment_methods = models.JSONField("Medios de pago", default=list, blank=True)
 
@@ -134,6 +138,12 @@ class OpeningHours(TimeStampedModel):
 
     def __str__(self):
         return f"{NOMBRES_DIAS[self.day]} {self.opens:%H:%M}–{self.closes:%H:%M}"
+
+
+def servicios_de(ajustes) -> dict:
+    """{"takeaway": bool, "delivery": bool}: encendidos salvo que el restaurante los apague."""
+    guardados = ajustes.services or {}
+    return {k: bool(guardados.get(k, True)) for k in SERVICIOS}
 
 
 def normalizar_telefono(texto: str) -> str:

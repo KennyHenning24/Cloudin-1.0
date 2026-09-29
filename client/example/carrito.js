@@ -214,7 +214,9 @@
       return;
     }
     conocerProductos();
-    raiz.querySelectorAll("[data-cloudin-key]").forEach((tarjeta) => {
+    // Solo los platos (el runtime les pone data-available); los menús y las categorías también
+    // llevan data-cloudin-key y su clave puede ser igual a la de un plato.
+    raiz.querySelectorAll("[data-cloudin-key][data-available]").forEach((tarjeta) => {
       const p = productos[tarjeta.dataset.cloudinKey];
       const cuerpo = tarjeta.querySelector(".dish__body") || tarjeta;
       if (!p || !p.available || p.price == null || cuerpo.querySelector(".cl-agregar")) return;

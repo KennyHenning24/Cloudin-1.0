@@ -254,6 +254,56 @@ def test_eliminar_desde_mi_menu_pregunta_antes(navegador, panel):
 
 
 @pytest.mark.django_db(transaction=True)
+@pytest.mark.parametrize("ancho,alto", [(375, 812), (1440, 900)])
+def test_el_menu_del_ultimo_plato_se_ve_entero(navegador, panel, ancho, alto):
+    # El «⋯» del último plato, con la fila pegada al borde de abajo: la caja no queda cortada por
+    # la tarjeta de la categoría ni tapada por la barra del celular o el botón «+ Producto».
+    contexto, page, errores = _abrir(navegador, panel, "/panel/mi-menu/", ancho=ancho, alto=alto)
+    fila = page.locator("li.categoria").last.locator("li.producto").last
+    nombre = fila.get_attribute("data-nombre-producto")
+    fila.scroll_into_view_if_needed()
+    page.evaluate("(f) => scrollBy(0, f.getBoundingClientRect().bottom - innerHeight + 60)", fila.element_handle())
+    fila.locator("details.desplegable > summary").click()
+    eliminar = fila.locator('.opciones [data-accion="eliminar"]')
+    eliminar.wait_for()
+    tocable = page.evaluate("""(b) => { const r = b.getBoundingClientRect();
+        const p = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+        return r.bottom <= innerHeight && !!p && b.contains(p); }""", eliminar.element_handle())
+    assert tocable, "«Eliminar» queda cortado o tapado"
+    eliminar.click()
+    page.locator("#dialogo-confirmar[open]").get_by_text(f"«{nombre}» sale de tu menú").wait_for()
+    page.locator("#dialogo-confirmar[open]").get_by_role("button", name="Cancelar").click()
+    contexto.close()
+    assert errores == []
+
+
+@pytest.mark.django_db(transaction=True)
+def test_etiqueta_nueva_desde_el_editor_del_plato(navegador, panel):
+    contexto, page, errores = _abrir(navegador, panel, f"/panel/mi-menu/producto/{panel.taco.uuid}/",
+                                     ancho=1440, alto=900)
+    page.locator("details.avanzadas > summary").click()
+    page.locator("#e-etiqueta-nueva").fill("Ahumado")
+    page.locator("[data-crear-etiqueta]").click()
+    chip = page.locator("button.chip[data-etiqueta]", has_text="Ahumado")
+    chip.wait_for()
+    assert chip.get_attribute("aria-pressed") == "true"
+    page.locator("#e-etiqueta-nueva").fill("Picante suave")
+    page.locator("#e-etiqueta-nueva").press("Enter")  # Enter la crea; no guarda el plato
+    page.locator("button.chip[data-etiqueta]", has_text="Picante suave").wait_for()
+    page.locator("#e-etiqueta-nueva").fill("vegano")  # ya existe: solo la marca
+    page.locator("[data-crear-etiqueta]").click()
+    assert _esperar(lambda: page.locator('button.chip[data-etiqueta="vegano"]').get_attribute("aria-pressed") == "true")
+    assert page.locator("button.chip[data-etiqueta]", has_text="vegano").count() == 1
+    page.locator("[data-guardar]").click()
+    page.get_by_text("Cambios guardados").wait_for()
+    with panel.en():
+        taco = Product.objects.get(pk=panel.taco.pk)
+        assert sorted(taco.tags.values_list("key", flat=True)) == ["ahumado", "picante-suave", "vegano"]
+    contexto.close()
+    assert errores == []
+
+
+@pytest.mark.django_db(transaction=True)
 def test_el_editor_pregunta_antes_de_eliminar(navegador, panel):
     contexto, page, errores = _abrir(navegador, panel, f"/panel/mi-menu/producto/{panel.taco.uuid}/",
                                      ancho=1440, alto=900)

@@ -3,10 +3,14 @@
   Ejemplo del contrato cloudin.menu/v1 (para probar el runtime).
 
   - Las <template data-cloudin-template> son el molde; el HTML de adentro de
-    [data-cloudin="categories"] está PRE-RENDERIZADO desde menu.seed.json con la
+    [data-cloudin="menus"] está PRE-RENDERIZADO desde menu.seed.json con la
     misma estructura exacta, así el menú se ve completo aunque Cloudin no responda.
-  - Los datos del negocio (WhatsApp, horario, dirección) están conectados con
-    business.* en todo el sitio, no solo en el menú.
+  - data-cloudin="menus" pinta TODOS los menús de «Mi menú», cada uno con sus categorías:
+    un menú nuevo del panel aparece solo.
+  - Todo lo de Personalizar está conectado con business.* en todo el sitio (logo, portada,
+    frase, bienvenida, WhatsApp, teléfono, correo, dirección, mapa, horario, redes, pagos,
+    Recoger y Domicilio) y los 4 colores con var(--cloudin-*). Lo que está vacío en la
+    semilla va pre-renderizado con style="display:none": el runtime lo muestra si llega.
   - Para probarlo en local:
       1) python manage.py import_menu client/example/menu.seed.json --assets client/example --create-tenant
       2) python manage.py runserver
@@ -32,18 +36,30 @@
   body { margin: 0; background: var(--fondo); color: var(--texto); font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
   a { color: inherit; }
   .envoltura { max-width: 880px; margin: 0 auto; padding: 0 16px; }
-  .cab { display: flex; gap: 16px; align-items: center; padding: 32px 0 20px; }
-  .cab img { width: 72px; height: 72px; }
+  /* La portada de Personalizar como fondo; sin portada, un degradado con los colores. */
+  .portada { height: 160px; margin: 0 -16px; background: var(--cloudin-cover, linear-gradient(135deg, var(--primario), var(--secundario))) center / cover; }
+  .cab { display: flex; gap: 16px; align-items: center; padding: 20px 0; }
+  .cab img { width: 72px; height: 72px; border-radius: 50%; object-fit: cover; }
   .cab h1 { margin: 0; font: 700 28px/1.2 Georgia, serif; }
   .cab p { margin: 2px 0 0; color: var(--suave); }
+  .bienvenida { margin: 0 0 12px; padding: 10px 14px; border-radius: 12px; border: 1px solid var(--linea); }
+  .servicios { list-style: none; display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 0; padding: 0; }
+  .servicios li { padding: 2px 10px; border-radius: 999px; border: 1px solid var(--secundario); color: var(--secundario); font-size: 13px; font-weight: 600; }
   .cta-whatsapp { display: inline-flex; align-items: center; min-height: 44px; margin-top: 10px; padding: 0 18px; border-radius: 12px; background: var(--primario); color: var(--texto); font-weight: 700; text-decoration: none; }
+  /* La barra de menús solo se ve si hay más de uno. */
+  .menus-nav { display: flex; gap: 8px; overflow-x: auto; padding: 8px 0; }
+  .menus-nav:not(:has(a + a)) { display: none; }
+  .menus-nav a { flex: none; padding: 8px 16px; border-radius: 12px; background: var(--primario); text-decoration: none; font-weight: 700; }
+  .menu { scroll-margin-top: 8px; padding-top: 12px; }
+  .menu-titulo { margin: 12px 0 0; font: 700 26px/1.2 Georgia, serif; }
+  .menu > p { margin: 4px 0 0; color: var(--suave); }
   .menu-nav { position: sticky; top: 0; z-index: 2; display: flex; gap: 8px; overflow-x: auto; padding: 10px 0; background: var(--fondo); border-bottom: 1px solid var(--linea); }
   .menu-nav a { flex: none; padding: 8px 14px; border: 1px solid var(--linea); border-radius: 999px; text-decoration: none; font-weight: 600; }
   .menu-cat { scroll-margin-top: 64px; padding-top: 28px; }
   .menu-cat h3 { margin: 0; font: 700 22px/1.2 Georgia, serif; color: var(--secundario); }
   .menu-cat > p { margin: 4px 0 0; color: var(--suave); }
   .menu-grid { display: grid; gap: 12px; margin-top: 12px; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); }
-  .dish { display: flex; flex-direction: column; border: 1px solid var(--linea); border-radius: 16px; overflow: hidden; background: rgba(255,246,236,.04); }
+  .dish { display: flex; flex-direction: column; border: 1px solid var(--linea); border-radius: 16px; overflow: hidden; background: color-mix(in srgb, var(--texto) 4%, transparent); }
   .dish img { width: 100%; aspect-ratio: 1; object-fit: cover; }
   .dish__body { padding: 14px; display: flex; flex-direction: column; gap: 6px; }
   .dish__body h4 { margin: 0; font-size: 17px; line-height: 1.3; overflow-wrap: anywhere; }
@@ -56,116 +72,154 @@
   .dish[data-available="false"] { opacity: .55; }
   .dish[data-available="false"] img { filter: grayscale(1); }
   .dish__soldout { display: inline-flex; align-self: flex-start; padding: 2px 10px; border-radius: 999px; background: var(--linea); font-size: 12px; font-weight: 700; }
-  [data-cloudin="menu"][data-cloudin-state="error"] { /* nada: el menú estático sigue visible */ }
+  [data-cloudin="menus"][data-cloudin-state="error"] { /* nada: el menú estático sigue visible */ }
   /* Reveals (como en 10k-websites): parten ocultos y aparecen al entrar en pantalla */
   [data-reveal] { opacity: 0; transform: translateY(12px); transition: opacity .5s ease, transform .5s ease; }
   [data-reveal].is-visible { opacity: 1; transform: none; }
   @media (prefers-reduced-motion: reduce) { [data-reveal] { opacity: 1; transform: none; transition: none; } }
   .pie { margin: 48px 0 32px; padding-top: 20px; border-top: 1px solid var(--linea); color: var(--suave); font-size: 14px; }
+  .pie p { margin: 6px 0; }
+  .pie a { margin-right: 10px; }
 </style>
 </head>
 <body>
 <div class="envoltura">
+  <div class="portada" role="img" aria-label="Portada del restaurante"></div>
   <header class="cab">
     <img data-cloudin-if="business.logo" data-cloudin-src="business.logo" src="assets/brand/logo.svg"
          alt="Logo de Restaurante Ejemplo" width="72" height="72">
     <div>
       <h1 data-cloudin-field="business.name">Restaurante Ejemplo</h1>
-      <p data-cloudin-field="business.tagline">Comida casera, en Cali</p>
-      <p data-cloudin-field="business.hours_today">Hoy: 12:00 – 21:00</p>
-      <a class="cta-whatsapp" href="https://wa.me/573001234567" data-cloudin-href="business.whatsapp_link">Pide por WhatsApp</a>
+      <p data-cloudin-if="business.tagline" data-cloudin-field="business.tagline">Comida casera, en Cali</p>
+      <p data-cloudin-if="business.hours_today" data-cloudin-field="business.hours_today">Hoy: 12:00 – 21:00</p>
+      <ul class="servicios" aria-label="Servicios">
+        <li data-cloudin-if="business.takeaway">Pide y recoge</li>
+        <li data-cloudin-if="business.delivery" style="display:none">Domicilios</li>
+      </ul>
+      <a class="cta-whatsapp" href="https://wa.me/573001234567" data-cloudin-if="business.whatsapp_link"
+         data-cloudin-href="business.whatsapp_link">Pide por WhatsApp</a>
     </div>
   </header>
+  <p class="bienvenida" data-cloudin-if="business.welcome_message" data-cloudin-field="business.welcome_message" style="display:none"></p>
 
-  <section id="menu" data-cloudin="menu" data-cloudin-menu="carta">
-    <nav class="menu-nav" data-cloudin="category-nav" aria-label="Categorías">
-      <a href="#cat-hamburguesas" data-cloudin-key="hamburguesas">Hamburguesas</a>
-      <a href="#cat-bebidas" data-cloudin-key="bebidas">Bebidas</a>
-      <template data-cloudin-template="category-link">
-        <a data-cloudin-href="category.anchor" data-cloudin-field="category.name"></a>
-      </template>
-    </nav>
+  <!-- Los menús de «Mi menú» (Carta, Almuerzos, Bebidas…): un enlace por menú. -->
+  <nav class="menus-nav" data-cloudin="menu-nav" aria-label="Menús">
+    <a href="#menu-carta" data-cloudin-key="carta">Carta</a>
+    <template data-cloudin-template="menu-link">
+      <a data-cloudin-href="menu.anchor" data-cloudin-field="menu.name"></a>
+    </template>
+  </nav>
 
-    <div data-cloudin="categories">
-      <!-- PRE-RENDERIZADO desde menu.seed.json (SEO + funciona sin API) -->
-      <section class="menu-cat" id="cat-hamburguesas" data-cloudin-key="hamburguesas" data-reveal>
-        <h3 data-cloudin-field="category.name">Hamburguesas</h3>
-        <p data-cloudin-if="category.description" data-cloudin-field="category.description">Todas con papas a la francesa.</p>
-        <div class="menu-grid" data-cloudin="products">
-          <article class="dish" data-cloudin-key="hamburguesa-clasica" data-available="true" data-featured="true" data-reveal>
-            <div class="dish__body">
-              <h4 data-cloudin-field="product.name">Hamburguesa clásica</h4>
-              <p data-cloudin-if="product.description" data-cloudin-field="product.description">Carne de res, queso, lechuga, tomate y papas a la francesa.</p>
-              <ul class="dish__tags" data-cloudin="tags"><li data-cloudin-key="recomendado" data-cloudin-field="tag.name">Recomendado</li><template data-cloudin-template="tag"><li data-cloudin-field="tag.name"></li></template></ul>
-              <ul class="dish__variants" data-cloudin="variants"><li data-cloudin-key="doble"><span data-cloudin-field="variant.name">Doble carne</span> <span data-cloudin-field="variant.price">$ 32.000</span></li><template data-cloudin-template="variant"><li><span data-cloudin-field="variant.name"></span> <span data-cloudin-field="variant.price"></span></li></template></ul>
-              <strong class="dish__price" data-cloudin-field="product.price">Desde $ 24.000</strong>
-            </div>
-          </article>
-          <article class="dish" data-cloudin-key="hamburguesa-vegetariana" data-available="false" data-featured="false" data-reveal>
-            <div class="dish__body">
-              <h4 data-cloudin-field="product.name">Hamburguesa vegetariana</h4>
-              <ul class="dish__tags" data-cloudin="tags"><li data-cloudin-key="vegetariano" data-cloudin-field="tag.name">Vegetariano</li><template data-cloudin-template="tag"><li data-cloudin-field="tag.name"></li></template></ul>
-              <ul class="dish__variants" data-cloudin="variants"><template data-cloudin-template="variant"><li><span data-cloudin-field="variant.name"></span> <span data-cloudin-field="variant.price"></span></li></template></ul>
-              <strong class="dish__price" data-cloudin-field="product.price">$ 26.000</strong>
-              <span class="dish__soldout" data-cloudin-if="!product.available">Agotado</span>
-            </div>
-          </article>
-        </div>
-      </section>
-      <section class="menu-cat" id="cat-bebidas" data-cloudin-key="bebidas" data-reveal>
-        <h3 data-cloudin-field="category.name">Bebidas</h3>
-        <div class="menu-grid" data-cloudin="products">
-          <article class="dish" data-cloudin-key="limonada-de-coco" data-available="true" data-featured="false" data-reveal>
-            <div class="dish__body">
-              <h4 data-cloudin-field="product.name">Limonada de coco</h4>
-              <ul class="dish__tags" data-cloudin="tags"><li data-cloudin-key="nuevo" data-cloudin-field="tag.name">Nuevo</li><template data-cloudin-template="tag"><li data-cloudin-field="tag.name"></li></template></ul>
-              <ul class="dish__variants" data-cloudin="variants"><template data-cloudin-template="variant"><li><span data-cloudin-field="variant.name"></span> <span data-cloudin-field="variant.price"></span></li></template></ul>
-              <strong class="dish__price" data-cloudin-field="product.price">$ 8.500</strong>
-            </div>
-          </article>
-          <!-- Sin precio en la semilla: Cloudin lo importa como NO disponible hasta que el dueño lo complete. -->
-          <article class="dish" data-cloudin-key="jugo-natural" data-available="false" data-featured="false" data-reveal>
-            <div class="dish__body">
-              <h4 data-cloudin-field="product.name">Jugo natural</h4>
-              <p data-cloudin-if="product.description" data-cloudin-field="product.description">En agua o en leche.</p>
-              <ul class="dish__tags" data-cloudin="tags"><template data-cloudin-template="tag"><li data-cloudin-field="tag.name"></li></template></ul>
-              <ul class="dish__variants" data-cloudin="variants"><template data-cloudin-template="variant"><li><span data-cloudin-field="variant.name"></span> <span data-cloudin-field="variant.price"></span></li></template></ul>
-              <strong class="dish__price" data-cloudin-field="product.price"></strong>
-              <span class="dish__soldout" data-cloudin-if="!product.available">Agotado</span>
-            </div>
-          </article>
-        </div>
-      </section>
-
-      <!-- PLANTILLAS: el runtime las usa para pintar datos en vivo -->
-      <template data-cloudin-template="category">
-        <section class="menu-cat" data-reveal>
-          <h3 data-cloudin-field="category.name"></h3>
-          <p data-cloudin-if="category.description" data-cloudin-field="category.description"></p>
-          <div class="menu-grid" data-cloudin="products"></div>
-        </section>
-      </template>
-
-      <template data-cloudin-template="product">
-        <article class="dish" data-reveal>
-          <img data-cloudin-if="product.image" data-cloudin-src="product.image" loading="lazy" width="800" height="800">
-          <div class="dish__body">
-            <h4 data-cloudin-field="product.name"></h4>
-            <p data-cloudin-if="product.description" data-cloudin-field="product.description"></p>
-            <ul class="dish__tags" data-cloudin="tags"><template data-cloudin-template="tag"><li data-cloudin-field="tag.name"></li></template></ul>
-            <ul class="dish__variants" data-cloudin="variants"><template data-cloudin-template="variant"><li><span data-cloudin-field="variant.name"></span> <span data-cloudin-field="variant.price"></span></li></template></ul>
-            <strong class="dish__price" data-cloudin-field="product.price"></strong>
-            <span class="dish__soldout" data-cloudin-if="!product.available">Agotado</span>
+  <main id="menu" data-cloudin="menus">
+    <!-- PRE-RENDERIZADO desde menu.seed.json (SEO + funciona sin API) -->
+    <section class="menu" id="menu-carta" data-cloudin-key="carta">
+      <h2 class="menu-titulo" data-cloudin-field="menu.name">Carta</h2>
+      <nav class="menu-nav" data-cloudin="category-nav" aria-label="Categorías">
+        <a href="#cat-hamburguesas" data-cloudin-key="hamburguesas">Hamburguesas</a>
+        <a href="#cat-bebidas" data-cloudin-key="bebidas">Bebidas</a>
+      </nav>
+      <div data-cloudin="categories">
+        <section class="menu-cat" id="cat-hamburguesas" data-cloudin-key="hamburguesas" data-reveal>
+          <h3 data-cloudin-field="category.name">Hamburguesas</h3>
+          <p data-cloudin-if="category.description" data-cloudin-field="category.description">Todas con papas a la francesa.</p>
+          <div class="menu-grid" data-cloudin="products">
+            <article class="dish" data-cloudin-key="hamburguesa-clasica" data-available="true" data-featured="true" data-reveal>
+              <div class="dish__body">
+                <h4 data-cloudin-field="product.name">Hamburguesa clásica</h4>
+                <p data-cloudin-if="product.description" data-cloudin-field="product.description">Carne de res, queso, lechuga, tomate y papas a la francesa.</p>
+                <ul class="dish__tags" data-cloudin="tags"><li data-cloudin-key="recomendado" data-cloudin-field="tag.name">Recomendado</li></ul>
+                <ul class="dish__variants" data-cloudin="variants"><li data-cloudin-key="doble"><span data-cloudin-field="variant.name">Doble carne</span> <span data-cloudin-field="variant.price">$ 32.000</span></li></ul>
+                <strong class="dish__price" data-cloudin-field="product.price">Desde $ 24.000</strong>
+              </div>
+            </article>
+            <article class="dish" data-cloudin-key="hamburguesa-vegetariana" data-available="false" data-featured="false" data-reveal>
+              <div class="dish__body">
+                <h4 data-cloudin-field="product.name">Hamburguesa vegetariana</h4>
+                <ul class="dish__tags" data-cloudin="tags"><li data-cloudin-key="vegetariano" data-cloudin-field="tag.name">Vegetariano</li></ul>
+                <ul class="dish__variants" data-cloudin="variants"></ul>
+                <strong class="dish__price" data-cloudin-field="product.price">$ 26.000</strong>
+                <span class="dish__soldout" data-cloudin-if="!product.available">Agotado</span>
+              </div>
+            </article>
           </div>
-        </article>
-      </template>
-    </div>
-  </section>
+        </section>
+        <section class="menu-cat" id="cat-bebidas" data-cloudin-key="bebidas" data-reveal>
+          <h3 data-cloudin-field="category.name">Bebidas</h3>
+          <div class="menu-grid" data-cloudin="products">
+            <article class="dish" data-cloudin-key="limonada-de-coco" data-available="true" data-featured="false" data-reveal>
+              <div class="dish__body">
+                <h4 data-cloudin-field="product.name">Limonada de coco</h4>
+                <ul class="dish__tags" data-cloudin="tags"><li data-cloudin-key="nuevo" data-cloudin-field="tag.name">Nuevo</li></ul>
+                <ul class="dish__variants" data-cloudin="variants"></ul>
+                <strong class="dish__price" data-cloudin-field="product.price">$ 8.500</strong>
+              </div>
+            </article>
+            <!-- Sin precio en la semilla: Cloudin lo importa como NO disponible hasta que el dueño lo complete. -->
+            <article class="dish" data-cloudin-key="jugo-natural" data-available="false" data-featured="false" data-reveal>
+              <div class="dish__body">
+                <h4 data-cloudin-field="product.name">Jugo natural</h4>
+                <p data-cloudin-if="product.description" data-cloudin-field="product.description">En agua o en leche.</p>
+                <ul class="dish__tags" data-cloudin="tags"></ul>
+                <ul class="dish__variants" data-cloudin="variants"></ul>
+                <strong class="dish__price" data-cloudin-field="product.price"></strong>
+                <span class="dish__soldout" data-cloudin-if="!product.available">Agotado</span>
+              </div>
+            </article>
+          </div>
+        </section>
+      </div>
+    </section>
+
+    <!-- PLANTILLAS: el runtime las usa para pintar datos en vivo. La raíz de la plantilla
+         "menu" NO lleva data-cloudin="menu" (esa es la raíz fija de un solo menú). -->
+    <template data-cloudin-template="menu">
+      <section class="menu">
+        <h2 class="menu-titulo" data-cloudin-field="menu.name"></h2>
+        <p data-cloudin-if="menu.description" data-cloudin-field="menu.description"></p>
+        <nav class="menu-nav" data-cloudin="category-nav" aria-label="Categorías">
+          <template data-cloudin-template="category-link">
+            <a data-cloudin-href="category.anchor" data-cloudin-field="category.name"></a>
+          </template>
+        </nav>
+        <div data-cloudin="categories"></div>
+      </section>
+    </template>
+
+    <template data-cloudin-template="category">
+      <section class="menu-cat" data-reveal>
+        <h3 data-cloudin-field="category.name"></h3>
+        <p data-cloudin-if="category.description" data-cloudin-field="category.description"></p>
+        <div class="menu-grid" data-cloudin="products"></div>
+      </section>
+    </template>
+
+    <template data-cloudin-template="product">
+      <article class="dish" data-reveal>
+        <img data-cloudin-if="product.image" data-cloudin-src="product.image" loading="lazy" width="800" height="800">
+        <div class="dish__body">
+          <h4 data-cloudin-field="product.name"></h4>
+          <p data-cloudin-if="product.description" data-cloudin-field="product.description"></p>
+          <ul class="dish__tags" data-cloudin="tags"><template data-cloudin-template="tag"><li data-cloudin-field="tag.name"></li></template></ul>
+          <ul class="dish__variants" data-cloudin="variants"><template data-cloudin-template="variant"><li><span data-cloudin-field="variant.name"></span> <span data-cloudin-field="variant.price"></span></li></template></ul>
+          <strong class="dish__price" data-cloudin-field="product.price"></strong>
+          <span class="dish__soldout" data-cloudin-if="!product.available">Agotado</span>
+        </div>
+      </article>
+    </template>
+  </main>
 
   <footer class="pie">
-    <p><span data-cloudin-field="business.address">Cra 00 # 00-00</span> · <span data-cloudin-field="business.city">Cali</span></p>
-    <p><a href="tel:+573001234567" data-cloudin-href="business.phone_link" data-cloudin-field="business.phone">+573001234567</a>
-      · <a href="https://instagram.com/restauranteejemplo" data-cloudin-if="business.instagram" data-cloudin-href="business.instagram">Instagram</a></p>
+    <p data-cloudin-if="business.description" data-cloudin-field="business.description" style="display:none"></p>
+    <p><span data-cloudin-field="business.address">Cra 00 # 00-00</span> · <span data-cloudin-field="business.city">Cali</span>
+      <a data-cloudin-if="business.maps_url" data-cloudin-href="business.maps_url" style="display:none">Cómo llegar</a></p>
+    <p><a href="tel:+573001234567" data-cloudin-if="business.phone_link" data-cloudin-href="business.phone_link"
+          data-cloudin-field="business.phone">+573001234567</a>
+      <a data-cloudin-if="business.email_link" data-cloudin-href="business.email_link" data-cloudin-field="business.email"
+         style="display:none"></a></p>
+    <p><a href="https://instagram.com/restauranteejemplo" data-cloudin-if="business.instagram" data-cloudin-href="business.instagram">Instagram</a>
+      <a data-cloudin-if="business.facebook" data-cloudin-href="business.facebook" style="display:none">Facebook</a>
+      <a data-cloudin-if="business.tiktok" data-cloudin-href="business.tiktok" style="display:none">TikTok</a></p>
+    <p data-cloudin-if="business.payment_methods_text">Pagos: <span data-cloudin-field="business.payment_methods_text">Efectivo, Nequi y Tarjeta</span></p>
   </footer>
 </div>
 

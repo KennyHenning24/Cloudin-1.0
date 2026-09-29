@@ -26,6 +26,14 @@ API = "http://localhost:8000/api/public/restaurante-ejemplo/menu/"
 # Lo que ve el cliente de cada plato, en orden.
 FOTO = """() => ({
   estado: document.documentElement.dataset.cloudinState || null,
+  menus: [...document.querySelectorAll('[data-cloudin=menus] > section')].map(s => [s.id, s.querySelector('h2').textContent.trim()]),
+  barraMenus: [...document.querySelectorAll('.menus-nav a')].map(a => [a.getAttribute('href'), a.textContent.trim()]),
+  // Lo de Personalizar: qué se ve, con qué texto y a dónde lleva.
+  negocio: [...document.querySelectorAll('[data-cloudin-if^="business."]')].map(e => [e.getAttribute('data-cloudin-if'),
+    getComputedStyle(e).display !== 'none', e.textContent.replace(/\\s+/g, ' ').trim(), e.getAttribute('href')]),
+  portada: getComputedStyle(document.querySelector('.portada')).backgroundImage,
+  colores: ['.cta-whatsapp', 'body', '.menu-cat h3'].map(s => [getComputedStyle(document.querySelector(s)).color,
+    getComputedStyle(document.querySelector(s)).backgroundColor]),
   nav: [...document.querySelectorAll('.menu-nav a')].map(a => [a.getAttribute('href'), a.textContent.trim()]),
   categorias: [...document.querySelectorAll('[data-cloudin=categories] > section')].map(s => ({
     id: s.id, titulo: s.querySelector('h3').textContent.trim(),
@@ -102,6 +110,11 @@ def test_sin_salto_visual_entre_lo_pre_renderizado_y_lo_vivo(navegador, datos_vi
     platos = [p["key"] for c in vivo["categorias"] for p in c["platos"]]
     assert platos == ["hamburguesa-clasica", "hamburguesa-vegetariana", "limonada-de-coco", "jugo-natural"]
     assert vivo["categorias"][0]["platos"][0]["precio"] == "Desde $ 24.000"
+    assert vivo["menus"] == [["menu-carta", "Carta"]]
+    visibles = {ruta: texto for ruta, se_ve, texto, _ in vivo["negocio"] if se_ve}
+    assert visibles["business.takeaway"] == "Pide y recoge" and "business.delivery" not in visibles
+    assert visibles["business.payment_methods_text"] == "Pagos: Efectivo, Nequi y Tarjeta"
+    assert "business.email_link" not in visibles and "business.facebook" not in visibles
 
 
 @pytest.mark.django_db

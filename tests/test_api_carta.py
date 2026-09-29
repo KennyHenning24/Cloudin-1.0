@@ -56,6 +56,28 @@ def test_el_dueno_crea_y_edita_sin_turno(client, local, en_restaurante):
 
 
 @pytest.mark.django_db
+def test_etiqueta_nueva_desde_el_editor(client, local):
+    client.force_login(local["dueno"])
+    r = client.post(B + "catalog/tags/", {"name": "  Ahumado   al carbón "}, content_type="application/json")
+    assert r.status_code == 201, r.content
+    assert r.json()["name"] == "Ahumado al carbón" and r.json()["key"] == "ahumado-al-carbon"
+    # La misma con otras mayúsculas no se duplica; vacía, tampoco.
+    r = client.post(B + "catalog/tags/", {"name": "ahumado AL carbón"}, content_type="application/json")
+    assert r.status_code == 400 and "Ya existe la etiqueta" in str(r.json())
+    assert client.post(B + "catalog/tags/", {"name": "   "}, content_type="application/json").status_code == 400
+    # Queda en la lista para todos los platos y un plato la puede llevar.
+    assert "ahumado-al-carbon" in [t["key"] for t in client.get(B + "catalog/tags/").json()]
+    r = client.patch(B + f"catalog/products/{local['bandeja'].uuid}/", {"tags": ["ahumado-al-carbon"]},
+                     content_type="application/json")
+    assert r.status_code == 200 and r.json()["tags"] == ["ahumado-al-carbon"]
+    publico = client.get(f"/api/public/{local['t'].slug}/menu/").json()
+    assert {"key": "ahumado-al-carbon", "name": "Ahumado al carbón"} in publico["tags"]
+    # El cajero no crea etiquetas.
+    client.force_login(local["cajero"])
+    assert client.post(B + "catalog/tags/", {"name": "Otra"}, content_type="application/json").status_code == 403
+
+
+@pytest.mark.django_db
 def test_el_cajero_agota_pero_no_edita(client, local):
     client.force_login(local["cajero"])
     bandeja = local["bandeja"]
@@ -167,14 +189,15 @@ def test_ajustes_del_negocio(client, local):
     client.force_login(local["dueno"])
     r = client.patch(B + "settings/", {"whatsapp": "300 123 4567", "color_primary": "#B3261E",
                                        "payment_methods": ["efectivo", "nequi"],
-                                       "services": {"dine_in": True, "delivery": True},
+                                       "services": {"dine_in": True, "delivery": False},
                                        "hours": [{"day": "tue", "open": "12:00", "close": "21:00"},
                                                  {"day": "sat", "open": "18:00", "close": "02:00"}]},
                      content_type="application/json")
     assert r.status_code == 200, r.content
     datos = r.json()
     assert datos["whatsapp"] == "+573001234567"
-    assert datos["services"] == {"dine_in": True, "takeaway": False, "delivery": True}
+    # Solo Recoger y Domicilio; el que no viene queda como estaba (encendido por defecto).
+    assert datos["services"] == {"takeaway": True, "delivery": False}
     assert datos["hours"][1] == {"day": "sat", "open": "18:00", "close": "02:00"}
     assert client.patch(B + "settings/", {"whatsapp": "123"}, content_type="application/json").status_code == 400
     assert client.patch(B + "settings/", {"color_primary": "rojo"}, content_type="application/json").status_code == 400
@@ -184,6 +207,14 @@ def test_ajustes_del_negocio(client, local):
     assert r.status_code == 200 and r.json()["logo"].endswith(".webp")
     publico = client.get(f"/api/public/{local['t'].slug}/menu/").json()["business"]
     assert publico["contact"]["whatsapp"] == "+573001234567" and publico["logo"].endswith(".webp")
+    assert publico["services"] == {"dine_in": True, "takeaway": True, "delivery": False}
+    assert publico["payment_methods_text"] == "Efectivo y Nequi"
+    r = client.patch(B + "settings/", {"services": {"takeaway": False}, "welcome_message": "¡Bienvenido!"},
+                     content_type="application/json")
+    assert r.json()["services"] == {"takeaway": False, "delivery": False}
+    publico = client.get(f"/api/public/{local['t'].slug}/menu/").json()["business"]
+    assert publico["services"] == {"dine_in": True, "takeaway": False, "delivery": False}
+    assert publico["welcome_message"] == "¡Bienvenido!"
 
 
 @pytest.mark.django_db

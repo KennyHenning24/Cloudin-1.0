@@ -36,6 +36,7 @@ from apps.business.models import (
     OpeningHours,
     RestaurantSettings,
     normalizar_telefono,
+    servicios_de,
 )
 from apps.catalog import images, selectors
 from apps.catalog.models import TAX_CHOICES, Category, Menu, ModifierGroup, Product, Tag
@@ -317,7 +318,7 @@ def personalizar(request):
         "logo_url": ajustes.logo.url if ajustes.logo else "",
         "portada_url": ajustes.cover.url if ajustes.cover else "",
         "dias": _horario_por_dia(),
-        "servicios": [(k, v, bool((ajustes.services or {}).get(k))) for k, v in SERVICIOS.items()],
+        "servicios": [(k, v, servicios_de(ajustes)[k]) for k, v in SERVICIOS.items()],
         "medios": [(k, v, k in (ajustes.payment_methods or [])) for k, v in MEDIOS_DE_PAGO.items()],
         **vista_previa(request.tenant),
         "enlace": qr.enlace_del_menu(request.tenant),

@@ -228,9 +228,11 @@ Lo mismo con un producto que ya se vendió: se elimina de la carta pero se conse
   repositorio del menú como `CLAUDE.md`.
 - **Carta en vivo y revisión:** el runtime (`static/src/cloudin-menu.v1.src.js`) vuelve a
   preguntar por la carta cada 15 s mientras el menú está abierto (`304` si no cambió), así
-  un agotado o un plato nuevo se ven sin recargar. Con `?cloudin-check=1` en la dirección
-  del menú, `static/cloudin-check.v1.js` prueba con cartas de mentira si todo lo del panel
-  se ve y lista lo que está escrito a mano.
+  un agotado, un plato o un menú nuevo, otro color o Domicilio apagado se ven sin recargar
+  (`data-cloudin="menus"` pinta todos los menús; `data-cloudin-if` esconde y vuelve a
+  mostrar). Con `?cloudin-check=1` en la dirección del menú, `static/cloudin-check.v1.js`
+  prueba con cartas de mentira si todo lo del panel (Mi menú y Personalizar, fila por fila:
+  tabla 4.8 de la guía) se ve y lista lo que está escrito a mano.
 - **[PASO-A-PASO-NUEVO-RESTAURANTE.md](PASO-A-PASO-NUEVO-RESTAURANTE.md)** — el
   recorrido completo para un cliente nuevo: registrarlo en el panel maestro, cargar su
   carta, armar su menú con `client/plantilla/index.html` (qué atributos lleva el HTML),
