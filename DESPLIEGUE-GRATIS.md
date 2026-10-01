@@ -109,7 +109,7 @@ para cuando haya presupuesto.
    encendidos y el restaurante los apaga o enciende en su panel). El panel maestro muestra una sola vez el usuario, la contraseña y el enlace del panel
    (`https://<tu-servicio>.onrender.com/panel/login/`: Cloudin toma la dirección del
    servicio de `RENDER_EXTERNAL_HOSTNAME`, que Render define solo).
-3. Entra al panel con esos datos: **Códigos QR** para crear las mesas y **Mi menú** para
+3. Entra al panel con esos datos: **Códigos QR** para crear las mesas y **Personalizar** para
    la carta y las fotos. Al subir una foto, su dirección empieza con
    `https://pub-….r2.dev/`: así sabes que quedó en R2.
 4. El recorrido completo, con el menú en Cloudflare Pages y el pedido de prueba:

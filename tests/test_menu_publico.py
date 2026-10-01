@@ -65,7 +65,8 @@ def test_la_respuesta_sigue_el_contrato(client, restaurante):
     for privado in ("owner", "legal_name", "nit", "900123456", "La Esquina SAS"):
         assert privado not in texto
     assert negocio["contact"]["whatsapp"] == "+573001234567"
-    assert negocio["brand"]["primary"] == "#B3261E"
+    # Los colores son del diseño de cada menú: aunque estén guardados, no se mandan.
+    assert negocio["brand"] == {"primary": None, "secondary": None, "background": None, "text": None}
     assert negocio["services"] == {"dine_in": True, "takeaway": True, "delivery": False}
     assert negocio["payment_methods"] == ["efectivo", "nequi"]
     assert negocio["payment_methods_text"] == "Efectivo y Nequi"

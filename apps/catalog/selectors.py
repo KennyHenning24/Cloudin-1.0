@@ -20,7 +20,7 @@ def categorias_del_panel(menu=None):
 
 
 def productos_del_panel(categoria=None, menu=None, texto="", estado="", incluir_eliminados=False):
-    """Productos para Mi menú, con todo lo que la lista y el editor necesitan."""
+    """Productos para Personalizar → Platos y categorías, con todo lo que la lista y el editor necesitan."""
     qs = (Product.objects.select_related("category", "category__menu")
           .prefetch_related(
               "tags",

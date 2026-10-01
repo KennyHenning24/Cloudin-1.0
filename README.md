@@ -163,8 +163,7 @@ python manage.py build_runtime
 | **Mesas** (`/panel/mesas/`) | Tablero: mesa libre u ocupada, cliente y total en curso. Desde la mesa se agregan pedidos, se registran novedades y se **cierra la cuenta** |
 | **Mensajes** (`/panel/mensajes/`) | Los pedidos que llegan del menú digital y de los meseros, con mesa y cliente. Marca los nuevos y lleva un contador en la barra |
 | **Cocina** (`/panel/cocina/`) | Comandas por hacer, con semáforo por tiempo de espera |
-| **Mi menú** (`/panel/mi-menu/`) | La carta: categorías, productos, precios, fotos, presentaciones, adiciones y agotados |
-| **Personalizar** (`/panel/personalizar/`) | Marca, colores, portada, datos del negocio y horario, con vista previa del menú digital |
+| **Personalizar** (`/panel/personalizar/`) | Dos pestañas. **Platos y categorías**: la carta (menús, categorías, productos, precios, fotos, presentaciones, adiciones y agotados). **Datos del negocio** (`/panel/personalizar/datos/`): frase, contacto y WhatsApp, horario, redes, servicios y medios de pago, con vista previa del menú digital. Los colores, el logo y la portada son del diseño de cada menú: el panel no los cambia. Las direcciones de antes (`/panel/mi-menu/…`) llevan aquí |
 | **Códigos QR** (`/panel/mesas-y-qr/`) | Cuántas mesas hay, el QR de cada una (PNG, SVG o PDF) y el interruptor de los pedidos por QR |
 | **Meseros** (`/panel/meseros/`) | Cómo se toman los pedidos (los interruptores de pedidos por QR y app de meseros) y las cuentas de los meseros |
 | **Configuración** (`/panel/configuracion/`) | Mesas, importación de la carta y el sitio web conectado (con su llave) |
@@ -228,10 +227,10 @@ Lo mismo con un producto que ya se vendió: se elimina de la carta pero se conse
   repositorio del menú como `CLAUDE.md`.
 - **Carta en vivo y revisión:** el runtime (`static/src/cloudin-menu.v1.src.js`) vuelve a
   preguntar por la carta cada 15 s mientras el menú está abierto (`304` si no cambió), así
-  un agotado, un plato o un menú nuevo, otro color o Domicilio apagado se ven sin recargar
+  un agotado, un plato o un menú nuevo, otro precio o Domicilio apagado se ven sin recargar
   (`data-cloudin="menus"` pinta todos los menús; `data-cloudin-if` esconde y vuelve a
   mostrar). Con `?cloudin-check=1` en la dirección del menú, `static/cloudin-check.v1.js`
-  prueba con cartas de mentira si todo lo del panel (Mi menú y Personalizar, fila por fila:
+  prueba con cartas de mentira si todo lo del panel (Personalizar, fila por fila:
   tabla 4.8 de la guía) se ve y lista lo que está escrito a mano.
 - **[PASO-A-PASO-NUEVO-RESTAURANTE.md](PASO-A-PASO-NUEVO-RESTAURANTE.md)** — el
   recorrido completo para un cliente nuevo: registrarlo en el panel maestro, cargar su

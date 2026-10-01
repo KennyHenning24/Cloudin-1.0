@@ -31,6 +31,15 @@ def semilla(**cambios):
     return datos
 
 
+def semilla_de_antes():
+    """Una semilla de antes, con logo y colores: se aceptan, pero el menú no los usa (el
+    diseño es del sitio)."""
+    datos = semilla()
+    datos["business"].update(logo="assets/brand/logo.svg", brand={
+        "primary": "#B3261E", "secondary": "#F2C14E", "background": "#1A1110", "text": "#FFF6EC"})
+    return datos
+
+
 def productos(datos):
     return {p["key"]: p for m in datos["menus"] for c in m["categories"] for p in c["products"]}
 
@@ -67,7 +76,7 @@ def test_errores_de_la_semilla_dicen_donde_estan():
 def test_importa_el_ejemplo_creando_el_restaurante(client, bases_creadas_en_la_prueba, en_restaurante, settings):
     settings.CLOUDIN_PUBLIC_URL = "https://cloudin.example"
     bases_creadas_en_la_prueba.append("restaurante-ejemplo")
-    r = importar_semilla(semilla(), Carpeta(EJEMPLO), crear_restaurante=True)
+    r = importar_semilla(semilla_de_antes(), Carpeta(EJEMPLO), crear_restaurante=True)
     assert r.creado and r.contadores["productos"]["creados"] == 4
     t = Tenant.objects.get(slug="restaurante-ejemplo")
     assert t.pedidos_qr and t.site_url == "http://localhost:4431"
@@ -92,7 +101,8 @@ def test_importa_el_ejemplo_creando_el_restaurante(client, bases_creadas_en_la_p
     for privado in ("owner", "nit", "legal_name"):
         assert privado not in api["business"]
     assert api["business"]["contact"] == {k: v for k, v in SEMILLA["business"]["contact"].items()}
-    assert api["business"]["brand"] == SEMILLA["business"]["brand"]
+    # Los colores son del diseño del sitio: la carta no los manda.
+    assert api["business"]["brand"] == {"primary": None, "secondary": None, "background": None, "text": None}
     assert api["business"]["hours"][0] == {"day": "mon", "closed": True}
     assert [m["key"] for m in api["menus"]] == [m["key"] for m in SEMILLA["menus"]]
     esperados, vivos = productos(SEMILLA), productos(api)
@@ -201,7 +211,7 @@ def test_endpoint_de_superadmin(client, crear_restaurante, django_user_model, en
         z.writestr("../../fuera.png", b"no")
     zip_fotos.seek(0)
     zip_fotos.name = "assets.zip"
-    semilla_archivo = io.BytesIO(json.dumps(SEMILLA).encode())
+    semilla_archivo = io.BytesIO(json.dumps(semilla_de_antes()).encode())
     semilla_archivo.name = "menu.seed.json"
     assert client.post("/api/admin/import-menu/", {"seed": semilla_archivo},
                        HTTP_AUTHORIZATION="Bearer cld_malo").status_code == 401

@@ -1,7 +1,8 @@
 {% extends "panel/_base.html" %}
 {% load cloudin static %}
-{% block title %}Mi menú · Cloudin{% endblock %}
-{% block titulo %}Mi menú{% endblock %}
+{% block title %}Personalizar · Cloudin{% endblock %}
+{% block titulo %}Personalizar{% endblock %}
+{% block subtitulo %}<div class="sub">Tus platos, tus categorías y los datos de tu negocio</div>{% endblock %}
 {% block acciones %}
   <a class="btn secundario solo-pc" href="{{ enlace }}" target="_blank" rel="noopener">{% icono "ojo" %}Vista previa</a>
   {% if es_admin %}
@@ -11,6 +12,7 @@
 {% endblock %}
 
 {% block content %}
+{% include "panel/duenio/_pestanas_personalizar.html" with pestana="platos" %}
 <div class="mi-menu" id="mi-menu" data-menu="{{ menu.uuid }}" data-admin="{{ es_admin|yesno:'1,0' }}">
 
   <div class="menus-cab">

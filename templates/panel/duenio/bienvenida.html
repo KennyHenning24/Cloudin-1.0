@@ -28,33 +28,6 @@
         <input type="hidden" name="paso" value="{{ paso }}">
 
         {% if paso == 1 %}
-        <h1 class="titulo-paso">Empecemos por tu marca</h1>
-        <p class="dim">Sube tu logo y elige los colores de tu menú. Puedes cambiarlos cuando quieras.</p>
-        <div class="logo-circulo">
-          {% url 'api:ajustes-logo' as url_logo %}
-          {% include "components/subir_foto.html" with url=url_logo foto=logo_url proporcion=1 lado=512 titulo="Subir logo" id="subir-logo" sin_camara=True %}
-        </div>
-        <div class="sugeridos" data-sugeridos hidden>
-          <h2 class="h-card">Colores sugeridos de tu logo</h2>
-          <div class="paletas" data-paletas role="group" aria-label="Combinaciones sugeridas"></div>
-        </div>
-        <details class="elegir-otros"{% if not logo_url %} open{% endif %}>
-          <summary class="enlace">Elegir los colores a mano</summary>
-          <div class="colores">
-            {% include "components/color.html" with nombre="color_primary" etiqueta="Principal" valor=ajustes.color_primary|default:"#C2410C" %}
-            {% include "components/color.html" with nombre="color_secondary" etiqueta="Secundario" valor=ajustes.color_secondary|default:"#F59E0B" %}
-            {% include "components/color.html" with nombre="color_background" etiqueta="Fondo" valor=ajustes.color_background|default:"#FFFFFF" %}
-            {% include "components/color.html" with nombre="color_text" etiqueta="Texto" valor=ajustes.color_text|default:"#1D2029" %}
-          </div>
-        </details>
-        <div class="cabecera-muestra" data-muestra>
-          <span class="muestra-logo" aria-hidden="true">{% if logo_url %}<img src="{{ logo_url }}" alt="">{% else %}{{ tenant.name|slice:":1"|upper }}{% endif %}</span>
-          <span><strong>{{ tenant.name }}</strong><small>Así se verá la cabecera de tu menú</small></span>
-          <span class="muestra-boton">Pedir por WhatsApp</span>
-        </div>
-        <p class="contraste" data-contraste="texto" aria-live="polite"></p>
-
-        {% elif paso == 2 %}
         <h1 class="titulo-paso">Datos de tu negocio</h1>
         <p class="dim">Lo que tus clientes necesitan para encontrarte y escribirte.</p>
         {% include "components/campo.html" with nombre="tagline" etiqueta="Frase corta" valor=ajustes.tagline maximo=120 marcador="Ej. Hamburguesas al carbón desde 2015" %}
@@ -70,18 +43,18 @@
           <div class="campo"><label for="c-abre">Abres a las</label><input id="c-abre" name="abre" type="time" value="{{ abre }}"></div>
           <div class="campo"><label for="c-cierra">Cierras a las</label><input id="c-cierra" name="cierra" type="time" value="{{ cierra }}"></div>
         </div>
-        <p class="dim small">¿Horario partido o distinto el fin de semana? Lo ajustas después en Personalizar → Horario.</p>
+        <p class="dim small">¿Horario partido o distinto el fin de semana? Lo ajustas después en Personalizar → Datos del negocio → Horario.</p>
 
-        {% elif paso == 3 %}
+        {% elif paso == 2 %}
         <h1 class="titulo-paso">Tu primera categoría</h1>
-        <p class="dim">Agrupa tus productos. Empieza por una; las demás las creas en «Mi menú».</p>
+        <p class="dim">Agrupa tus productos. Empieza por una; las demás las creas en «Personalizar».</p>
         {% include "components/campo.html" with nombre="categoria" etiqueta="Nombre de la categoría" maximo=80 requerido=True marcador="Ej. Platos fuertes" %}
         <div class="sugerencias" role="group" aria-label="Ideas">
           {% for s in sugerencias %}<button type="button" class="chip" data-sugerencia="{{ s }}">{{ s }}</button>{% endfor %}
         </div>
         {% if categorias %}<p class="dim small">Ya tienes: {% for c in categorias %}{{ c.name }}{% if not forloop.last %}, {% endif %}{% endfor %}. Si escribes una de esas, la usamos.</p>{% endif %}
 
-        {% elif paso == 4 %}
+        {% elif paso == 3 %}
         <h1 class="titulo-paso">Agrega tu primer producto</h1>
         <p class="dim">Con foto, nombre y precio basta. Lo demás lo completas después.</p>
         <div class="basico-grid">
@@ -100,7 +73,7 @@
           <select id="c-categoria-producto" name="category">
             {% for c in categorias %}<option value="{{ c.uuid }}"{% if c.uuid|stringformat:"s" == categoria_elegida %} selected{% endif %}>{{ c.name }}</option>{% endfor %}
           </select>
-          {% if creada_en_paso_3 %}<div class="ayuda">{% icono "check" "ico sm" %} La que creaste en el paso 3.</div>{% endif %}
+          {% if creada_en_el_paso_anterior %}<div class="ayuda">{% icono "check" "ico sm" %} La que creaste en el paso 2.</div>{% endif %}
           {% else %}
           <input id="c-categoria-producto" name="nueva_categoria" value="Platos" maxlength="80">
           {% endif %}
@@ -109,7 +82,7 @@
 
         <div class="bienvenida-acciones">
           {% if paso > 1 %}<a class="btn fantasma" href="?paso={{ paso|add:-1 }}">Atrás</a>{% endif %}
-          <button class="btn grad lg" type="submit">{% if paso == 4 %}Terminar{% else %}Continuar{% endif %} {% icono "derecha" %}</button>
+          <button class="btn grad lg" type="submit">{% if paso == pasos|length %}Terminar{% else %}Continuar{% endif %} {% icono "derecha" %}</button>
         </div>
       </form>
     </div>
@@ -124,7 +97,7 @@
         <p class="dim">Imprime este código y ponlo en tus mesas. Tus clientes verán el menú al escanearlo, y los cambios que hagas aquí aparecen en menos de un minuto.</p>
         {% else %}
         <h1 class="titulo-final">¡Tu carta está lista!</h1>
-        <p class="dim">Tus productos, precios y colores ya quedaron guardados. Falta publicar la página de tu menú: cuando esté en línea, aquí verás cómo queda y el código QR para tus mesas.</p>
+        <p class="dim">Tus datos, tus categorías y tus productos ya quedaron guardados. Falta publicar la página de tu menú: cuando esté en línea, aquí verás cómo queda y el código QR para tus mesas.</p>
         {% endif %}
         <div class="card final-qr">
           {% if enlace %}<img src="{% url 'api:qr-menu' 'png' %}" alt="Código QR de tu menú" width="170" height="170">{% endif %}
@@ -145,7 +118,7 @@
       </div>
       <div class="final-vista">
         {% include "components/vista_previa.html" %}
-        {% if vista_previa %}<p class="dim small centro">Tu menú, con tus colores</p>{% endif %}
+        {% if vista_previa %}<p class="dim small centro">Así se ve tu menú</p>{% endif %}
       </div>
     </div>
     {% endif %}
@@ -155,6 +128,5 @@
 
 {% block scripts %}
 <script src="{% static 'panel/js/subir-foto.js' %}"></script>
-<script src="{% static 'panel/js/colores.js' %}"></script>
 <script src="{% static 'panel/js/bienvenida.js' %}"></script>
 {% endblock %}

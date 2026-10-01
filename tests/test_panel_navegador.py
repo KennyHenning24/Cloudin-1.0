@@ -22,8 +22,8 @@ from apps.tenants.models import TenantMembership
 # a la base son cortas y no compiten con el servidor.
 os.environ.setdefault("DJANGO_ALLOW_ASYNC_UNSAFE", "true")
 
-PANTALLAS = ["/panel/", "/panel/mi-menu/", "/panel/mi-menu/producto/nuevo/", "/panel/personalizar/",
-             "/panel/mesas-y-qr/", "/panel/cuenta/", "/panel/bienvenida/?paso=1", "/panel/bienvenida/?paso=4"]
+PANTALLAS = ["/panel/", "/panel/personalizar/", "/panel/personalizar/producto/nuevo/", "/panel/personalizar/datos/",
+             "/panel/mesas-y-qr/", "/panel/cuenta/", "/panel/bienvenida/?paso=1", "/panel/bienvenida/?paso=3"]
 
 
 @pytest.fixture
@@ -72,7 +72,7 @@ def _producto(panel, **filtro):
 
 @pytest.mark.django_db(transaction=True)
 def test_agotar_con_deshacer_en_el_celular(navegador, panel):
-    contexto, page, errores = _abrir(navegador, panel, "/panel/mi-menu/")
+    contexto, page, errores = _abrir(navegador, panel, "/panel/personalizar/")
     fila = page.locator(f'li.producto[data-id="{panel.taco.uuid}"]')
     fila.locator(".switch").click()
     page.get_by_text("Taco de birria quedó agotado").wait_for()
@@ -87,7 +87,7 @@ def test_agotar_con_deshacer_en_el_celular(navegador, panel):
 
 @pytest.mark.django_db(transaction=True)
 def test_precio_en_linea_con_teclado_numerico(navegador, panel):
-    contexto, page, errores = _abrir(navegador, panel, "/panel/mi-menu/", ancho=1440, alto=900)
+    contexto, page, errores = _abrir(navegador, panel, "/panel/personalizar/", ancho=1440, alto=900)
     fila = page.locator(f'li.producto[data-id="{panel.taco.uuid}"]')
     fila.locator("[data-editar-precio]").click()
     campo = fila.locator(".precio-edicion input")
@@ -104,7 +104,7 @@ def test_precio_en_linea_con_teclado_numerico(navegador, panel):
 
 @pytest.mark.django_db(transaction=True)
 def test_buscar_filtra_al_instante(navegador, panel):
-    contexto, page, errores = _abrir(navegador, panel, "/panel/mi-menu/", ancho=1440, alto=900)
+    contexto, page, errores = _abrir(navegador, panel, "/panel/personalizar/", ancho=1440, alto=900)
     page.locator("#buscar").fill("quesa")
     page.wait_for_function("() => document.querySelectorAll('.producto:not([hidden])').length === 1")
     page.locator("#buscar").fill("")
@@ -145,7 +145,7 @@ def menu_externo(panel, tmp_path):
 
 @pytest.mark.django_db(transaction=True)
 def test_el_editor_crea_el_producto_y_la_vista_previa_lo_muestra(navegador, panel, menu_externo):
-    ruta = f"/panel/mi-menu/producto/nuevo/?categoria={panel.cat.uuid}"
+    ruta = f"/panel/personalizar/producto/nuevo/?categoria={panel.cat.uuid}"
     contexto, page, errores = _abrir(navegador, panel, ruta, ancho=1440, alto=900)
     page.locator("#e-nombre").fill("Consomé grande")
     page.locator("#e-precio").fill("6000")
@@ -155,18 +155,18 @@ def test_el_editor_crea_el_producto_y_la_vista_previa_lo_muestra(navegador, pane
     page.get_by_text("«Consomé grande» quedó en tu menú").wait_for()
     nuevo = _producto(panel, name="Consomé grande")
     assert nuevo.price == Decimal("6000") and nuevo.category_id == panel.cat.pk and nuevo.is_available
-    assert page.url.endswith(f"/panel/mi-menu/producto/{nuevo.uuid}/")
+    assert page.url.endswith(f"/panel/personalizar/producto/{nuevo.uuid}/")
     contexto.close()
     assert errores == []
 
 
 @pytest.mark.django_db(transaction=True)
 def test_en_la_tablet_el_editor_se_abre_en_el_cajon(navegador, panel):
-    contexto, page, errores = _abrir(navegador, panel, "/panel/mi-menu/", ancho=768, alto=1024)
+    contexto, page, errores = _abrir(navegador, panel, "/panel/personalizar/", ancho=768, alto=1024)
     page.locator(f'li.producto[data-id="{panel.taco.uuid}"] a.nombre').click()
     cajon = page.locator("#cajon-editor")
     cajon.locator("#e-nombre").wait_for()
-    assert page.url.endswith("/panel/mi-menu/")  # no salió de la lista
+    assert page.url.endswith("/panel/personalizar/")  # no salió de la lista
     cajon.locator("#e-nombre").fill("Taco de birria especial")
     with page.expect_navigation():
         cajon.locator("[data-guardar]").click()
@@ -178,7 +178,7 @@ def test_en_la_tablet_el_editor_se_abre_en_el_cajon(navegador, panel):
 
 @pytest.mark.django_db(transaction=True)
 def test_subir_precios_en_porcentaje_y_deshacer(navegador, panel):
-    contexto, page, errores = _abrir(navegador, panel, "/panel/mi-menu/", ancho=1440, alto=900)
+    contexto, page, errores = _abrir(navegador, panel, "/panel/personalizar/", ancho=1440, alto=900)
     page.locator("#seleccionar").click()
     filas = page.locator(f'.categoria[data-id="{panel.cat.uuid}"] li.producto')
     for i in range(2):
@@ -200,7 +200,7 @@ def test_subir_precios_en_porcentaje_y_deshacer(navegador, panel):
 
 @pytest.mark.django_db(transaction=True)
 def test_ordenar_con_flechas_en_el_celular(navegador, panel):
-    contexto, page, errores = _abrir(navegador, panel, "/panel/mi-menu/")
+    contexto, page, errores = _abrir(navegador, panel, "/panel/personalizar/")
     page.locator("#ordenar").click()
     fila = page.locator(f'li.producto[data-id="{panel.taco.uuid}"]')
     # Sin orden guardado van por nombre: Quesabirria y luego el taco. Se sube el taco.
@@ -214,7 +214,7 @@ def test_ordenar_con_flechas_en_el_celular(navegador, panel):
 
 @pytest.mark.django_db(transaction=True)
 def test_personalizar_guarda_datos_y_horario(navegador, panel):
-    contexto, page, errores = _abrir(navegador, panel, "/panel/personalizar/", ancho=1440, alto=900)
+    contexto, page, errores = _abrir(navegador, panel, "/panel/personalizar/datos/", ancho=1440, alto=900)
     page.locator("#c-tagline").fill("La birria más jugosa de Cali")
     page.locator("#c-whatsapp").fill("310 555 1234")
     page.locator('.dia[data-dia="mon"] .switch').click()  # abre el lunes con un horario
@@ -234,7 +234,7 @@ def test_personalizar_guarda_datos_y_horario(navegador, panel):
 
 @pytest.mark.django_db(transaction=True)
 def test_eliminar_desde_mi_menu_pregunta_antes(navegador, panel):
-    contexto, page, errores = _abrir(navegador, panel, "/panel/mi-menu/", ancho=1440, alto=900)
+    contexto, page, errores = _abrir(navegador, panel, "/panel/personalizar/", ancho=1440, alto=900)
     fila = page.locator(f'li.producto[data-id="{panel.taco.uuid}"]')
 
     def pedir_eliminar():
@@ -258,7 +258,7 @@ def test_eliminar_desde_mi_menu_pregunta_antes(navegador, panel):
 def test_el_menu_del_ultimo_plato_se_ve_entero(navegador, panel, ancho, alto):
     # El «⋯» del último plato, con la fila pegada al borde de abajo: la caja no queda cortada por
     # la tarjeta de la categoría ni tapada por la barra del celular o el botón «+ Producto».
-    contexto, page, errores = _abrir(navegador, panel, "/panel/mi-menu/", ancho=ancho, alto=alto)
+    contexto, page, errores = _abrir(navegador, panel, "/panel/personalizar/", ancho=ancho, alto=alto)
     fila = page.locator("li.categoria").last.locator("li.producto").last
     nombre = fila.get_attribute("data-nombre-producto")
     fila.scroll_into_view_if_needed()
@@ -279,7 +279,7 @@ def test_el_menu_del_ultimo_plato_se_ve_entero(navegador, panel, ancho, alto):
 
 @pytest.mark.django_db(transaction=True)
 def test_etiqueta_nueva_desde_el_editor_del_plato(navegador, panel):
-    contexto, page, errores = _abrir(navegador, panel, f"/panel/mi-menu/producto/{panel.taco.uuid}/",
+    contexto, page, errores = _abrir(navegador, panel, f"/panel/personalizar/producto/{panel.taco.uuid}/",
                                      ancho=1440, alto=900)
     page.locator("details.avanzadas > summary").click()
     page.locator("#e-etiqueta-nueva").fill("Ahumado")
@@ -305,7 +305,7 @@ def test_etiqueta_nueva_desde_el_editor_del_plato(navegador, panel):
 
 @pytest.mark.django_db(transaction=True)
 def test_el_editor_pregunta_antes_de_eliminar(navegador, panel):
-    contexto, page, errores = _abrir(navegador, panel, f"/panel/mi-menu/producto/{panel.taco.uuid}/",
+    contexto, page, errores = _abrir(navegador, panel, f"/panel/personalizar/producto/{panel.taco.uuid}/",
                                      ancho=1440, alto=900)
     page.locator("[data-eliminar]").click()
     page.locator("#dialogo-confirmar[open]").get_by_role("button", name="Cancelar").click()
@@ -314,7 +314,7 @@ def test_el_editor_pregunta_antes_de_eliminar(navegador, panel):
     with page.expect_navigation():
         page.locator("#dialogo-confirmar[open]").get_by_role("button", name="Sí, eliminar").click()
     page.get_by_text("«Taco de birria» salió de tu menú").wait_for()
-    assert "/panel/mi-menu/" in page.url and _producto(panel, pk=panel.taco.pk).eliminado
+    assert "/panel/personalizar/" in page.url and _producto(panel, pk=panel.taco.pk).eliminado
     page.wait_for_load_state("networkidle")  # nada en camino cuando se borra la base de la prueba
     contexto.close()
     assert errores == []
@@ -343,7 +343,7 @@ def _celular_lento(navegador, panel, tmp_path):
 @pytest.mark.django_db(transaction=True)
 def test_guardar_espera_la_foto_que_se_esta_preparando(navegador, panel, tmp_path):
     contexto, page, errores, foto = _celular_lento(navegador, panel, tmp_path)
-    page.goto(panel.url + f"/panel/mi-menu/producto/{panel.taco.uuid}/")
+    page.goto(panel.url + f"/panel/personalizar/producto/{panel.taco.uuid}/")
     page.locator("[data-subir-foto] input[type=file]:not([capture])").set_input_files(foto)
     page.locator("#dialogo-recorte [data-usar]").click()
     page.locator("[data-guardar]").click()  # enseguida: la foto todavía se está preparando
@@ -356,7 +356,7 @@ def test_guardar_espera_la_foto_que_se_esta_preparando(navegador, panel, tmp_pat
 @pytest.mark.django_db(transaction=True)
 def test_el_asistente_espera_la_foto_del_plato(navegador, panel, tmp_path):
     contexto, page, errores, foto = _celular_lento(navegador, panel, tmp_path)
-    page.goto(panel.url + "/panel/bienvenida/?paso=4")
+    page.goto(panel.url + "/panel/bienvenida/?paso=3")
     page.locator("#foto-plato input[type=file]:not([capture])").set_input_files(foto)
     page.locator("#dialogo-recorte [data-usar]").click()
     page.locator('input[name="name"]').fill("Birria con foto")

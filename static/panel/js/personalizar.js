@@ -1,7 +1,7 @@
-/* Cloudin · Personalizar: marca del menú, datos del negocio, contacto, horario, redes y pagos.
+/* Cloudin · Personalizar → Datos del negocio: frase, contacto, horario, redes, servicios y pagos.
  *
- * Todo se guarda de una vez con PATCH /api/v1/staff/settings/ (el logo y la portada se
- * suben aparte, apenas se eligen). La vista previa muestra los cambios antes de guardar.
+ * Todo se guarda de una vez con PATCH /api/v1/staff/settings/. La vista previa muestra los
+ * cambios antes de guardar. El diseño del menú (colores, logo, portada) es de su página.
  */
 (function () {
   "use strict";
@@ -13,7 +13,6 @@
   const URL_AJUSTES = "/api/v1/staff/settings/";
   const estado = $("[data-estado-guardado]", forma);
   const botonGuardar = $("[data-guardar]", forma);
-  const COLORES = ["color_primary", "color_secondary", "color_background", "color_text"];
   const valor = (n) => (forma.elements[n] ? forma.elements[n].value.trim() : "");
 
   // En la tablet y el PC todas las secciones abiertas; en el celular, acordeón.
@@ -80,81 +79,20 @@
     day: dia.dataset.dia, open: $("[data-abre]", t).value, close: $("[data-cierra]", t).value,
   })));
 
-  // ---------------------------------------------------------- contraste
-  function revisarContraste() {
-    const fondo = valor("color_background") || "#FFFFFF";
-    C.revisarContraste($("[data-contraste=texto]", forma), valor("color_text") || "#1D2029", fondo);
-    const aviso = $("[data-contraste=boton]", forma);
-    const principal = valor("color_primary");
-    if (!aviso || !/^#[0-9a-f]{6}$/i.test(principal) || !/^#[0-9a-f]{6}$/i.test(fondo)) return;
-    const bien = C.contraste(principal, fondo) >= 3;
-    aviso.className = "contraste " + (bien ? "bien" : "mal");
-    aviso.textContent = bien ? "Los botones y precios se ven bien" : "El color principal casi no se ve sobre el fondo";
-  }
-  revisarContraste();
-
-  // ------------------------------------------------ sugerir colores del logo
-  $("[data-sugerir-colores]", forma).addEventListener("click", () => {
-    const img = $("#subir-logo img.vista");
-    if (!img || img.hidden || !img.src) return C.aviso("Primero sube tu logo.");
-    const usar = () => {
-      const [p] = C.coloresDeImagen ? C.coloresDeImagen(img) : [];
-      if (!p) return C.aviso("No encontramos colores claros en el logo. Elígelos a mano.");
-      const campos = { color_primary: p.primary, color_secondary: p.secondary, color_background: p.background, color_text: p.text };
-      Object.entries(campos).forEach(([n, v]) => { const i = forma.elements[n]; i.value = v; i.dispatchEvent(new Event("input", { bubbles: true })); });
-      C.aviso("Listo: colores sacados de tu logo. Ajústalos si quieres.");
-    };
-    if (img.complete) usar(); else img.addEventListener("load", usar, { once: true });
-  });
-
-  // --------------------------------------------------- logo y portada
-  const mostrarQuitar = (campo, si) => { const b = $(`[data-quitar-imagen="${campo}"]`, forma); if (b) b.hidden = !si; };
-  // Direcciones completas: la vista previa es el sitio del restaurante (otro dominio).
-  const actual = (sel) => { const i = $(sel); return i && !i.hidden && i.getAttribute("src") ? i.src : null; };
-  const imagenes = { logo: actual("#subir-logo img.vista"), cover: actual("#subir-portada img.vista") };
-  $("#subir-logo").addEventListener("foto-subida", (ev) => {
-    imagenes.logo = (ev.detail && ev.detail.logo) || imagenes.logo;
-    mostrarQuitar("logo", true);
-    enviarVista();
-  });
-  $("#subir-portada").addEventListener("foto-subida", (ev) => {
-    imagenes.cover = (ev.detail && ev.detail.cover) || imagenes.cover;
-    mostrarQuitar("cover", true);
-    enviarVista();
-  });
-  $$("[data-quitar-imagen]", forma).forEach((b) => b.addEventListener("click", async () => {
-    const campo = b.dataset.quitarImagen;
-    try {
-      await C.pedir(`${URL_AJUSTES}${campo}/`, { metodo: "DELETE" });
-      const caja = $(campo === "logo" ? "#subir-logo" : "#subir-portada");
-      const img = $("img.vista", caja);
-      img.hidden = true;
-      img.removeAttribute("src");
-      caja.classList.remove("con-foto");
-      imagenes[campo] = null;
-      mostrarQuitar(campo, false);
-      C.aviso(campo === "logo" ? "Logo quitado" : "Portada quitada");
-      enviarVista();
-    } catch (e) { C.aviso(e.detalle, { tipo: "error" }); }
-  }));
-
   // ----------------------------------------------------------- guardar
   function cambio() {
     forma.dataset.sucio = "1";
     estado.textContent = "Tienes cambios sin guardar";
     estado.classList.remove("listo");
-    revisarContraste();
     programarVista();
   }
   forma.addEventListener("input", cambio);
   forma.addEventListener("change", cambio);
-  forma.addEventListener("cambio-color", cambio);
 
   function datos() {
     const d = {};
     ["tagline", "description", "welcome_message", "whatsapp", "phone", "email", "address", "city", "maps_url",
-      "instagram", "facebook", "tiktok", ...COLORES].forEach((n) => { d[n] = valor(n); });
-    COLORES.forEach((n) => { d[n] = d[n].toUpperCase(); });
+      "instagram", "facebook", "tiktok"].forEach((n) => { d[n] = valor(n); });
     d.services = {};
     $$("input[name=services]", forma).forEach((i) => { d.services[i.value] = i.checked; });
     d.payment_methods = $$("input[name=payment_methods]:checked", forma).map((i) => i.value);
@@ -187,16 +125,12 @@
     if (primero) primero.focus();
   }
   async function guardar() {
-    const colorMalo = COLORES.find((n) => valor(n) && !/^#[0-9a-f]{6}$/i.test(valor(n)));
-    if (colorMalo) { forma.elements[colorMalo].focus(); return C.aviso("Usa colores en formato #RRGGBB.", { tipo: "error" }); }
     const malo = horario().find((h) => !h.open || !h.close || h.open === h.close);
     if (malo) { $("#horario").open = true; return C.aviso("Revisa el horario: cada tramo necesita hora de abrir y de cerrar distintas.", { tipo: "error" }); }
     limpiarErrores();
     botonGuardar.setAttribute("aria-busy", "true");
     estado.textContent = "Guardando…";
     try {
-      // «Guardado» incluye el logo o la portada que todavía se estén subiendo.
-      if (C.fotosPendientes) await C.fotosPendientes(forma);
       const r = await C.pedir(URL_AJUSTES, { metodo: "PATCH", datos: datos() });
       // El servidor lo guarda como +573001234567; se muestra como se escribe: 300 123 4567.
       const celular = (n) => { const d = String(n || "").replace(/\D/g, "").replace(/^57(?=\d{10}$)/, ""); return d.length === 10 ? `${d.slice(0, 3)} ${d.slice(3, 6)} ${d.slice(6)}` : n || ""; };
@@ -227,9 +161,8 @@
   function enviarVista() {
     const d = datos();
     vista.enviar({
-      colores: { primario: d.color_primary, secundario: d.color_secondary, fondo: d.color_background, texto: d.color_text },
       negocio: {
-        tagline: d.tagline || null, description: d.description || null, logo: imagenes.logo, cover: imagenes.cover,
+        tagline: d.tagline || null, description: d.description || null, welcome_message: d.welcome_message || null,
         contact: { whatsapp: internacional(d.whatsapp), phone: internacional(d.phone), email: d.email || null,
                    address: d.address || null, city: d.city || null, maps_url: d.maps_url || null },
         social: { instagram: d.instagram || null, facebook: d.facebook || null, tiktok: d.tiktok || null },

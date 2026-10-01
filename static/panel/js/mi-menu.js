@@ -1,4 +1,4 @@
-/* Cloudin · Mi menú.
+/* Cloudin · Personalizar → Platos y categorías (antes «Mi menú»).
  *
  * - Disponible / agotado en un toque, optimista, con «Deshacer» (también en el Inicio).
  * - Precio en línea con teclado numérico; Enter guarda, Esc cancela.

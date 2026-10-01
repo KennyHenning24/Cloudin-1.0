@@ -5,12 +5,14 @@
   - Las <template data-cloudin-template> son el molde; el HTML de adentro de
     [data-cloudin="menus"] está PRE-RENDERIZADO desde menu.seed.json con la
     misma estructura exacta, así el menú se ve completo aunque Cloudin no responda.
-  - data-cloudin="menus" pinta TODOS los menús de «Mi menú», cada uno con sus categorías:
+  - data-cloudin="menus" pinta TODOS los menús del panel, cada uno con sus categorías:
     un menú nuevo del panel aparece solo.
-  - Todo lo de Personalizar está conectado con business.* en todo el sitio (logo, portada,
-    frase, bienvenida, WhatsApp, teléfono, correo, dirección, mapa, horario, redes, pagos,
-    Recoger y Domicilio) y los 4 colores con var(--cloudin-*). Lo que está vacío en la
-    semilla va pre-renderizado con style="display:none": el runtime lo muestra si llega.
+  - Todo lo de Personalizar está conectado con business.* en todo el sitio (frase,
+    bienvenida, WhatsApp, teléfono, correo, dirección, mapa, horario, redes, pagos, Recoger y
+    Domicilio). Lo que está vacío en la semilla va pre-renderizado con style="display:none":
+    el runtime lo muestra si llega.
+  - El diseño es del sitio: los colores (:root), el logo (assets/brand/logo.svg) y la
+    portada. Cloudin no los toca.
   - Para probarlo en local:
       1) python manage.py import_menu client/example/menu.seed.json --assets client/example --create-tenant
       2) python manage.py runserver
@@ -28,16 +30,16 @@
 <meta name="description" content="Ejemplo de menú digital conectado a Cloudin.">
 <link rel="icon" href="assets/brand/logo.svg">
 <style>
-  /* Los colores de Personalizar (--cloudin-*); el segundo valor, por si no eligió. */
-  :root { --fondo: var(--cloudin-background, #1A1110); --texto: var(--cloudin-text, #FFF6EC);
-          --primario: var(--cloudin-primary, #B3261E); --secundario: var(--cloudin-secondary, #F2C14E);
+  /* Los colores del diseño. carrito.js usa --cloudin-primary en sus botones y --fondo en sus ventanas. */
+  :root { --fondo: #1A1110; --texto: #FFF6EC; --primario: #B3261E; --secundario: #F2C14E;
+          --cloudin-primary: var(--primario);
           --suave: color-mix(in srgb, var(--texto) 72%, transparent); --linea: color-mix(in srgb, var(--texto) 14%, transparent); }
   * { box-sizing: border-box; }
   body { margin: 0; background: var(--fondo); color: var(--texto); font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
   a { color: inherit; }
   .envoltura { max-width: 880px; margin: 0 auto; padding: 0 16px; }
-  /* La portada de Personalizar como fondo; sin portada, un degradado con los colores. */
-  .portada { height: 160px; margin: 0 -16px; background: var(--cloudin-cover, linear-gradient(135deg, var(--primario), var(--secundario))) center / cover; }
+  /* La portada del diseño: un degradado con sus colores (o una foto de assets/). */
+  .portada { height: 160px; margin: 0 -16px; background: linear-gradient(135deg, var(--primario), var(--secundario)) center / cover; }
   .cab { display: flex; gap: 16px; align-items: center; padding: 20px 0; }
   .cab img { width: 72px; height: 72px; border-radius: 50%; object-fit: cover; }
   .cab h1 { margin: 0; font: 700 28px/1.2 Georgia, serif; }
@@ -86,7 +88,7 @@
 <div class="envoltura">
   <div class="portada" role="img" aria-label="Portada del restaurante"></div>
   <header class="cab">
-    <img data-cloudin-if="business.logo" data-cloudin-src="business.logo" src="assets/brand/logo.svg"
+    <img src="assets/brand/logo.svg"
          alt="Logo de Restaurante Ejemplo" width="72" height="72">
     <div>
       <h1 data-cloudin-field="business.name">Restaurante Ejemplo</h1>
@@ -102,7 +104,7 @@
   </header>
   <p class="bienvenida" data-cloudin-if="business.welcome_message" data-cloudin-field="business.welcome_message" style="display:none"></p>
 
-  <!-- Los menús de «Mi menú» (Carta, Almuerzos, Bebidas…): un enlace por menú. -->
+  <!-- Los menús del panel (Carta, Almuerzos, Bebidas…): un enlace por menú. -->
   <nav class="menus-nav" data-cloudin="menu-nav" aria-label="Menús">
     <a href="#menu-carta" data-cloudin-key="carta">Carta</a>
     <template data-cloudin-template="menu-link">

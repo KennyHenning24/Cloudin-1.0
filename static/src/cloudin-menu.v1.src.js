@@ -12,10 +12,8 @@
  *  4. Lee ?mesa= y lo expone en window.Cloudin.table.
  *  5. Pone data-cloudin-state = static | cached | live | error.
  *  6. Dispara cloudin:ready, cloudin:rendered (detail.root) y cloudin:error.
- *  7. Pone los colores del restaurante (business.brand) y su portada (business.cover) como
- *     variables CSS en <html>: --cloudin-primary, --cloudin-secondary, --cloudin-background,
- *     --cloudin-text y --cloudin-cover (un url(…)). El sitio los usa con su valor de siempre de
- *     respaldo: color: var(--cloudin-primary, #B3261E); background-image: var(--cloudin-cover, url(portada.jpg)).
+ *  7. El diseño (colores, logo, portada) es del sitio: Cloudin no lo toca. Si un sitio viejo usa
+ *     var(--cloudin-primary, #B3261E), vale su segundo valor (el color del sitio).
  *  8. Vista previa del panel: con ?cloudin-preview=1 y dentro de un iframe, acepta
  *     (solo del origen de la API) los datos que el dueño está editando y los pinta.
  *  9. Con ?cloudin-check=1 carga el revisor de Cloudin (cloudin-check.v1.js): prueba con
@@ -205,7 +203,7 @@
     for (const t of x.tags || []) etiquetas[t.key] = t.name;
     Cloudin.data = x;
     if (x.table) Cloudin.table = { token: MESA, ...Cloudin.table, number: x.table.number };
-    const n = x.business || {}, base = { business: vNegocio(n), table: vMesa() };
+    const base = { business: vNegocio(x.business || {}), table: vMesa() };
     for (const raiz of todos(zona("menu"))) {
       pintarMenu(raiz, x.menus.find((m) => m.key == raiz.getAttribute("data-cloudin-menu")) || x.menus[0], base);
       evento("rendered", { root: raiz });
@@ -224,12 +222,6 @@
       evento("rendered", { root: cont });
     }
     llenar(d.body, base, 1); // datos del negocio en todo el sitio: header, footer, WhatsApp…
-    // Colores y portada de Personalizar como variables CSS: el sitio decide dónde usarlos.
-    // Sin valor se quita la variable y el sitio usa su respaldo: var(--cloudin-primary, #B3261E).
-    const marca = n.brand || {}, raiz = d.documentElement.style,
-      css = (k, v) => (v ? raiz.setProperty("--cloudin-" + k, v) : raiz.removeProperty("--cloudin-" + k));
-    for (const k of ["primary", "secondary", "background", "text"]) css(k, /^#[\da-f]{6}$/i.test(marca[k]) && marca[k]);
-    css("cover", n.cover && "url(" + JSON.stringify(n.cover) + ")");
     pintado = 1;
     estado(origen);
   }

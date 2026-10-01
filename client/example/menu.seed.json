@@ -7,9 +7,6 @@
     "nit": null,
     "tagline": "Comida casera, en Cali",
     "description": null,
-    "logo": "assets/brand/logo.svg",
-    "cover": null,
-    "brand": { "primary": "#B3261E", "secondary": "#F2C14E", "background": "#1A1110", "text": "#FFF6EC" },
     "contact": {
       "whatsapp": "+573001234567",
       "phone": "+573001234567",

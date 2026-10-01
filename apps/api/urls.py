@@ -56,8 +56,6 @@ urlpatterns = [
     path("staff/catalog/bulk/", catalogo_views.AccionesMasivasView.as_view(), name="catalogo-masivo"),
     path("staff/catalog/history/", catalogo_views.HistorialView.as_view(), name="catalogo-historial"),
     path("staff/settings/", catalogo_views.AjustesView.as_view(), name="ajustes"),
-    path("staff/settings/logo/", catalogo_views.ImagenDeMarcaView.as_view(campo="logo"), name="ajustes-logo"),
-    path("staff/settings/cover/", catalogo_views.ImagenDeMarcaView.as_view(campo="cover"), name="ajustes-portada"),
     path("staff/mesas/", catalogo_views.MesasView.as_view(), name="mesas-qr"),
     path("staff/qr/menu.<str:formato>", catalogo_views.QrView.as_view(), name="qr-menu"),
     path("staff/qr/mesa/<int:mesa_id>.<str:formato>", catalogo_views.QrView.as_view(), name="qr-mesa"),

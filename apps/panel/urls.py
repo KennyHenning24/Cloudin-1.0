@@ -1,5 +1,6 @@
 from django.contrib.auth import views as auth_views
 from django.urls import path
+from django.views.generic import RedirectView
 
 from . import design_system, duenio, menu, meseros, seguridad, views
 
@@ -38,12 +39,19 @@ urlpatterns = [
     # Guía viva del sistema de diseño (solo con DEBUG=True)
     path("design-system/", design_system.pagina, name="design-system"),
 
-    # Panel del dueño: el menú digital
+    # Panel del dueño: el menú digital. Personalizar tiene dos pestañas: «Platos y
+    # categorías» (la vista mi_menu, nombre de ruta «mi-menu») y «Datos del negocio»
+    # (la vista personalizar). Las direcciones de antes, /panel/mi-menu/…, llevan aquí.
     path("bienvenida/", duenio.bienvenida, name="bienvenida"),
-    path("mi-menu/", duenio.mi_menu, name="mi-menu"),
-    path("mi-menu/producto/nuevo/", duenio.producto, name="carta-producto-nuevo"),
-    path("mi-menu/producto/<uuid:producto>/", duenio.producto, name="carta-producto"),
-    path("personalizar/", duenio.personalizar, name="personalizar"),
+    path("personalizar/", duenio.mi_menu, name="mi-menu"),
+    path("personalizar/producto/nuevo/", duenio.producto, name="carta-producto-nuevo"),
+    path("personalizar/producto/<uuid:producto>/", duenio.producto, name="carta-producto"),
+    path("personalizar/datos/", duenio.personalizar, name="personalizar"),
+    path("mi-menu/", RedirectView.as_view(pattern_name="panel:mi-menu", query_string=True)),
+    path("mi-menu/producto/nuevo/", RedirectView.as_view(pattern_name="panel:carta-producto-nuevo",
+                                                         query_string=True)),
+    path("mi-menu/producto/<uuid:producto>/", RedirectView.as_view(pattern_name="panel:carta-producto",
+                                                                   query_string=True)),
     path("mesas-y-qr/", duenio.mesas_y_qr, name="qr"),
     path("cuenta/", duenio.cuenta, name="cuenta"),
 

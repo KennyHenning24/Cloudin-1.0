@@ -8,7 +8,7 @@
  *   <iframe data-vista-previa src="https://x.pages.dev/menu.html?cloudin-preview=1"
  *           data-api="/api/public/<slug>/menu/?vista=panel">
  *   Cloudin.vistaPrevia(iframe).enviar({ producto, categoria, menu })   ← editor de producto
- *   Cloudin.vistaPrevia(iframe).enviar({ colores, negocio })            ← Personalizar
+ *   Cloudin.vistaPrevia(iframe).enviar({ negocio })                     ← Personalizar
  *
  * El panel toma los datos guardados de la API, les aplica lo que se está editando y le
  * manda al sitio el menú completo (cloudin.menu/v1) para que lo pinte con sus plantillas.
@@ -17,24 +17,14 @@
   "use strict";
   const C = (window.Cloudin = window.Cloudin || {});
   const copia = (x) => JSON.parse(JSON.stringify(x));
-  const COLOR = /^#[0-9a-f]{6}$/i;
 
   /* Los datos guardados + lo que se está editando = lo que el sitio debe pintar. */
   function combinar(base, m) {
     const d = copia(base);
     let foco = null;
-    if (m.colores) {
-      const c = m.colores;
-      d.business.brand = {
-        primary: COLOR.test(c.primario || "") ? c.primario : null,
-        secondary: COLOR.test(c.secundario || "") ? c.secundario : null,
-        background: COLOR.test(c.fondo || "") ? c.fondo : null,
-        text: COLOR.test(c.texto || "") ? c.texto : null,
-      };
-    }
     if (m.negocio) {
       const n = m.negocio, b = d.business;
-      ["tagline", "description", "logo", "cover"].forEach((k) => { if (k in n) b[k] = n[k]; });
+      ["tagline", "description", "welcome_message"].forEach((k) => { if (k in n) b[k] = n[k]; });
       if (n.contact) Object.assign(b.contact, n.contact);
       if (n.social) Object.assign(b.social, n.social);
       if (n.hours) b.hours = n.hours;

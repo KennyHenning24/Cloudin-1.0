@@ -335,18 +335,26 @@ def test_nombres_largos_y_ocho_variantes(entorno):
     assert page.text_content("#menu [data-cloudin-key=hamburguesa-clasica] h4").startswith("Hamburguesa triple")
 
 
-def test_los_colores_del_panel_quedan_como_variables_css(entorno):
+def test_el_runtime_no_toca_los_colores_ni_la_portada_del_sitio(entorno):
+    """El diseño es del sitio: aunque una carta (de antes) traiga colores o portada, el runtime
+    no pone variables --cloudin-…, y un CSS viejo con var(--cloudin-…, X) se queda con X."""
     abrir, api, page, errores = entorno
-    page = abrir()
-    colores = page.evaluate("""() => ['primary', 'secondary', 'background', 'text'].map(k =>
+    api.datos["business"].update(cover="https://cloudin.test/media/portada.webp", brand={
+        "primary": "#C2410C", "secondary": "#F59E0B", "background": "#FFFFFF", "text": "#1D2029"})
+    page = abrir(cuerpo=MENUS)  # con el #portada de un sitio viejo: var(--cloudin-cover, url(portada.jpg))
+    variables = page.evaluate("""() => ['primary', 'secondary', 'background', 'text', 'cover'].map(k =>
         getComputedStyle(document.documentElement).getPropertyValue('--cloudin-' + k).trim())""")
-    assert colores == ["#B3261E", "#F2C14E", "#1A1110", "#FFF6EC"]
-    # El dueño cambia el color principal en Personalizar y borra el secundario.
+    assert variables == ["", "", "", "", ""]
+    assert "--cloudin" not in (page.get_attribute("html", "style") or "")
+    fondo = "getComputedStyle(document.querySelector('#portada')).backgroundImage"
+    assert "sitio.test/assets/portada.jpg" in page.evaluate(fondo)
+    # Otra versión de la carta tampoco los pone.
     api.etag = 'W/"ejemplo-2"'
-    api.datos["business"]["brand"].update(primary="#0B6E4F", secondary=None)
+    api.datos["business"]["brand"]["primary"] = "#0B6E4F"
+    pintadas = _pintadas(page)
     page.evaluate("Cloudin.refresh()")
-    page.wait_for_function("() => document.documentElement.style.getPropertyValue('--cloudin-primary') === '#0B6E4F'")
-    assert page.evaluate("document.documentElement.style.getPropertyValue('--cloudin-secondary')") == ""
+    page.wait_for_function(f"() => window.__eventos.filter(e => e.tipo === 'rendered').length > {pintadas}")
+    assert "--cloudin" not in (page.get_attribute("html", "style") or "")
     assert errores == []
 
 
@@ -356,7 +364,7 @@ def _visibles(page, *selectores):
 
 def test_todos_los_menus_y_un_menu_nuevo_aparece_sin_recargar(entorno):
     abrir, api, page, errores = entorno
-    # Un menú sin platos todavía no sale (el dueño lo acaba de crear en Mi menú).
+    # Un menú sin platos todavía no sale (el dueño lo acaba de crear en Personalizar).
     api.datos["menus"].append({"id": "m3", "key": "postres", "name": "Postres", "description": None, "categories": []})
     page = abrir(cuerpo=MENUS, live=1)
     assert page.eval_on_selector_all("#menus > section", "s => s.map(x => x.id)") == ["menu-carta", "menu-desayunos"]
@@ -368,7 +376,7 @@ def test_todos_los_menus_y_un_menu_nuevo_aparece_sin_recargar(entorno):
     assert textos(page, "#menu-desayunos .del-menu") == ["Desayunos"]  # el plato sabe de qué menú es
     assert page.query_selector("#menu-desayunos .menu-desc") is None  # sin descripción: no se pone
     assert {"tipo": "rendered", "raiz": "menus"} in page.evaluate("window.__eventos")
-    # En el panel: Mi menú → Nuevo menú «Almuerzos», con su categoría y su plato.
+    # En el panel: Personalizar → Nuevo menú «Almuerzos», con su categoría y su plato.
     api.etag = 'W/"ejemplo-2"'
     plato = {**DATOS["menus"][1]["categories"][0]["products"][0], "id": "p9", "key": "bandeja-paisa",
              "name": "Bandeja paisa", "price": 25000}
@@ -390,9 +398,9 @@ def test_lo_de_personalizar_se_esconde_y_vuelve_sin_recargar(entorno):
     assert _visibles(page, *todo) == ["#pagos", "#recoger"]  # Domicilio apagado; sin correo ni redes
     assert page.text_content("#pagos").strip() == "Pagos: Efectivo"
     fondo = "getComputedStyle(document.querySelector('#portada')).backgroundImage"
-    assert "portada.jpg" in page.evaluate(fondo)  # sin portada en el panel: la del sitio
-    # En Personalizar: correo, Facebook, TikTok, mapa, bienvenida y portada; enciende Domicilio y
-    # apaga Recoger.
+    assert "portada.jpg" in page.evaluate(fondo)  # la portada es del sitio
+    # En Personalizar: correo, Facebook, TikTok, mapa y bienvenida; enciende Domicilio y apaga
+    # Recoger. (Una portada en la carta, de antes, no cambia la del sitio.)
     api.etag = 'W/"ejemplo-2"'
     b = api.datos["business"]
     b["contact"].update(email="hola@ejemplo.co", maps_url="https://maps.app.goo.gl/abc")
@@ -405,12 +413,12 @@ def test_lo_de_personalizar_se_esconde_y_vuelve_sin_recargar(entorno):
     assert page.text_content("#correo").strip() == "hola@ejemplo.co"
     assert page.get_attribute("#facebook", "href") == "https://facebook.com/ejemplo"
     assert page.text_content("#bienvenida") == "¡Bienvenido! Pide desde tu mesa."
-    assert 'url("https://cloudin.test/media/portada.webp")' in page.evaluate(fondo)
-    # Lo vuelve a apagar: se esconde otra vez, y la portada vuelve a la del sitio.
+    assert "portada.jpg" in page.evaluate(fondo)
+    # Lo vuelve a apagar: se esconde otra vez.
     api.etag = 'W/"ejemplo-3"'
     b["contact"]["email"] = None
     b["social"].update(facebook=None, tiktok=None)
-    b.update(cover=None, services={"dine_in": True, "takeaway": True, "delivery": False})
+    b.update(services={"dine_in": True, "takeaway": True, "delivery": False})
     page.wait_for_function("() => document.querySelector('#domicilio').offsetParent === null", timeout=5000)
     assert _visibles(page, *todo) == ["#bienvenida", "#mapa", "#pagos", "#recoger"]
     assert "portada.jpg" in page.evaluate(fondo)
@@ -477,12 +485,11 @@ def test_horario_igual_que_en_python(entorno, cuando):
 
 REVISOR = (Path(__file__).resolve().parent.parent / "static" / "cloudin-check.v1.js").read_text(encoding="utf-8")
 
-# Todo lo de Personalizar conectado (con data-cloudin-if: si queda vacío, no se ve) y los 4
-# colores en el CSS.
+# Todo lo de Personalizar conectado (con data-cloudin-if: si queda vacío, no se ve). El diseño
+# (colores, logo) es del sitio.
 NEGOCIO = """
 <header class="marca">
-  <img class="logo" data-cloudin-if="business.logo" data-cloudin-src="business.logo" alt="">
-  <img class="portada" data-cloudin-if="business.cover" data-cloudin-src="business.cover" alt="">
+  <img class="logo" src="/assets/logo.png" alt="Restaurante Ejemplo">
   <p data-cloudin-if="business.tagline" data-cloudin-field="business.tagline"></p>
   <p data-cloudin-if="business.welcome_message" data-cloudin-field="business.welcome_message"></p>
 </header>
@@ -500,9 +507,10 @@ NEGOCIO = """
   <p data-cloudin-if="business.delivery">Te lo llevamos a domicilio</p>
 </footer>
 <style>
-  body { background: var(--cloudin-background, #fff); color: var(--cloudin-text, #111); }
-  .dish__price { color: var(--cloudin-primary, #B3261E); }
-  h3 { color: var(--cloudin-secondary, #F2C14E); }
+  :root { --fondo: #fff; --cloudin-primary: #B3261E; }
+  body { background: var(--fondo); color: #111; }
+  .dish__price { color: #B3261E; }
+  h3 { color: #F2C14E; }
 </style>
 """
 
@@ -540,10 +548,10 @@ CONECTADO = """
 # Lo mismo con la carta a la antigua (una raíz data-cloudin="menu" fija): un menú nuevo no sale.
 UN_MENU_FIJO = CUERPO + NEGOCIO
 
-NEGOCIO_IDS = ("negocio-nombre", "negocio-frase", "negocio-descripcion", "negocio-bienvenida", "negocio-logo",
-               "negocio-portada", "negocio-whatsapp", "negocio-telefono", "negocio-correo", "negocio-direccion",
+NEGOCIO_IDS = ("negocio-nombre", "negocio-frase", "negocio-descripcion", "negocio-bienvenida",
+               "negocio-whatsapp", "negocio-telefono", "negocio-correo", "negocio-direccion",
                "negocio-ciudad", "negocio-mapa", "negocio-horario", "negocio-instagram", "negocio-facebook",
-               "negocio-tiktok", "negocio-pagos", "servicio-takeaway", "servicio-delivery", "colores")
+               "negocio-tiktok", "negocio-pagos", "servicio-takeaway", "servicio-delivery")
 
 # Un menú «conectado» a medias: carga el runtime, pero la carta y el negocio están escritos a mano.
 A_MANO = """
@@ -605,6 +613,7 @@ def test_el_revisor_aprueba_un_menu_conectado(navegador):
     for id_ in ("carta", "carrito", "menu-nuevo", "plato-nuevo", "categoria-nueva", "barra", "cambiar-nombre",
                 "cambiar-precio", "cambiar-descripcion", "cambiar-foto", "eliminar", "agotado", "a-mano", *NEGOCIO_IDS):
         assert r[id_]["estado"] == "ok", r[id_]
+    assert not {"negocio-logo", "negocio-portada", "colores"} & set(r)  # el diseño es del sitio: no se revisa
     # Al terminar queda la carta real (los dos menús), y el informe está a la vista.
     assert textos(page, "[data-cloudin=menus] .dish h4") == [
         "Hamburguesa clásica", "Hamburguesa vegetariana", "Limonada de coco", "Calentado paisa"]
@@ -648,7 +657,7 @@ def test_el_revisor_encuentra_lo_escrito_a_mano(navegador):
     # Lo escrito a mano se distingue de lo que no se muestra.
     for id_ in ("negocio-correo", "negocio-facebook", "negocio-whatsapp", "negocio-direccion", "servicio-delivery"):
         assert "escrit" in r[id_]["texto"] and "a mano" in r[id_]["texto"], r[id_]
-    for id_ in ("negocio-portada", "negocio-tiktok", "negocio-pagos"):
+    for id_ in ("negocio-tiktok", "negocio-pagos"):
         assert "no se ve" in r[id_]["texto"], r[id_]
     assert 'data-cloudin-if="business.takeaway"' in r["servicio-takeaway"]["texto"]
     assert informe["texto"].splitlines()[1].startswith("❌ Hay ")  # el resumen, listo para pegarle a Claude Code

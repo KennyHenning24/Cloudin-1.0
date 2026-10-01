@@ -65,8 +65,9 @@ def test_todos_tienen_pedidos_mesas_cocina_y_meseros(client, menu_digital):
     for nombre in ("tables", "kitchen", "mensajes", "meseros", "configuracion"):
         assert client.get(reverse(f"panel:{nombre}")).status_code == 200, nombre
     html = client.get(reverse("panel:inicio")).content.decode()
-    for seccion in ("Mi menú", "Personalizar", "Códigos QR", "Meseros", "Mesas", "Cocina"):
+    for seccion in ("Personalizar", "Códigos QR", "Meseros", "Mesas", "Cocina"):
         assert seccion in html, seccion
+    assert "Mi menú" not in html  # ahora es una pestaña de Personalizar
     assert "Pedidos y mesas" in html and 'id="campana"' in html and 'class="fab"' in html
     assert "barra-inferior" not in html
 
@@ -81,6 +82,7 @@ def test_inicio_con_estado_pendientes_y_qr(client, menu_digital):
     html = client.get(reverse("panel:inicio")).content.decode()
     assert "En línea" in html  # página publicada y un producto disponible con precio
     assert "Completa tu menú" in html and "Precio de 1 producto" in html
+    assert "Logo y colores" not in html  # el diseño es de la página del menú
     assert reverse("api:qr-menu", args=["png"]) in html
     assert "https://birria-lucho.pages.dev/" in html  # «Ver mi menú» lleva a su página
 
@@ -116,6 +118,7 @@ def test_el_equipo_solo_marca_agotados(client, menu_digital, crear_usuario):
     html = client.get(reverse("panel:mi-menu")).content.decode()
     assert "data-disponible" in html
     assert "data-editar-precio" not in html and 'id="seleccionar"' not in html
+    assert "pestanas-seccion" not in html  # los datos del negocio son solo del administrador
     for nombre in ("personalizar", "carta-producto-nuevo", "bienvenida"):
         assert client.get(reverse(f"panel:{nombre}")).status_code == 403, nombre
     url = f"/api/v1/staff/catalog/products/{menu_digital.taco.uuid}/"
@@ -142,21 +145,22 @@ def test_la_primera_vez_empieza_por_el_asistente_y_se_puede_saltar(client, menu_
 def test_el_asistente_completo_deja_el_menu_listo(client, menu_digital, en_restaurante):
     client.force_login(menu_digital.dueno)
     url = reverse("panel:bienvenida")
-    r = client.post(url, {"paso": 1, "color_primary": "#b3261e", "color_secondary": "#F2C14E",
-                          "color_background": "#1A1110", "color_text": "#FFF6EC"})
-    assert r.url == f"{url}?paso=2"
-    r = client.post(url, {"paso": 2, "tagline": "Birria de verdad", "whatsapp": "300 123 4567", "city": "Cali",
+    # 3 pasos: el diseño (colores, logo, portada) es de la página del menú y no se pide.
+    html = client.get(f"{url}?paso=1").content.decode()
+    assert "Paso 1 de 3" in html and "Datos de tu negocio" in html and "color_primary" not in html
+    r = client.post(url, {"paso": 1, "tagline": "Birria de verdad", "whatsapp": "300 123 4567", "city": "Cali",
                           "address": "Cra 1 # 2-3", "dias": ["0", "1", "2", "3", "4"], "abre": "12:00", "cierra": "21:00"})
+    assert r.url == f"{url}?paso=2"
+    r = client.post(url, {"paso": 2, "categoria": "Tacos"})
     assert r.url == f"{url}?paso=3"
-    r = client.post(url, {"paso": 3, "categoria": "Tacos"})
-    assert r.url == f"{url}?paso=4"
     with en_restaurante(menu_digital.tenant):
         tacos = Category.objects.get(name="Tacos")
-    html = client.get(f"{url}?paso=4").content.decode()
-    assert f'value="{tacos.uuid}" selected' in html  # la categoría del paso 3 queda elegida
-    r = client.post(url, {"paso": 4, "name": "Taco dorado", "price": "$ 8.000", "category": str(tacos.uuid),
+    html = client.get(f"{url}?paso=3").content.decode()
+    assert f'value="{tacos.uuid}" selected' in html  # la categoría del paso 2 queda elegida
+    assert "Terminar" in html
+    r = client.post(url, {"paso": 3, "name": "Taco dorado", "price": "$ 8.000", "category": str(tacos.uuid),
                           "foto": _foto_jpg()})
-    assert r.url == f"{url}?paso=5"
+    assert r.url == f"{url}?paso=4"
     # Sin página publicada no se promete un QR ni se muestra un teléfono en blanco.
     final = client.get(r.url).content.decode()
     assert "¡Tu carta está lista!" in final and "Tu menú todavía no está publicado" in final
@@ -168,7 +172,7 @@ def test_el_asistente_completo_deja_el_menu_listo(client, menu_digital, en_resta
     assert 'src="https://birria-lucho.pages.dev/?cloudin-preview=1"' in final
     with en_restaurante(menu_digital.tenant):
         ajustes = RestaurantSettings.load()
-        assert ajustes.onboarding_done_at is not None and ajustes.color_primary == "#B3261E"
+        assert ajustes.onboarding_done_at is not None and ajustes.onboarding_step == 4
         assert ajustes.whatsapp == "+573001234567" and ajustes.tagline == "Birria de verdad"
         assert OpeningHours.objects.count() == 5
         taco = Product.objects.get(name="Taco dorado")
@@ -180,10 +184,48 @@ def test_el_asistente_completo_deja_el_menu_listo(client, menu_digital, en_resta
 def test_el_asistente_explica_lo_que_falta(client, menu_digital):
     client.force_login(menu_digital.dueno)
     url = reverse("panel:bienvenida")
-    r = client.post(url, {"paso": 2, "whatsapp": "123"}, follow=True)
+    r = client.post(url, {"paso": 1, "whatsapp": "123"}, follow=True)
     assert "celular de 10 dígitos" in r.content.decode()
-    r = client.post(url, {"paso": 3, "categoria": ""}, follow=True)
+    r = client.post(url, {"paso": 2, "categoria": ""}, follow=True)
     assert "primera categoría" in r.content.decode()
+
+
+# ------------------------------------------------------------ Personalizar
+
+
+@pytest.mark.django_db
+def test_personalizar_tiene_los_platos_y_los_datos_del_negocio(client, menu_digital):
+    """Una sola entrada «Personalizar» con dos pestañas; sin colores, logo ni portada."""
+    client.force_login(menu_digital.dueno)
+    assert reverse("panel:mi-menu") == "/panel/personalizar/"
+    assert reverse("panel:personalizar") == "/panel/personalizar/datos/"
+    platos = client.get(reverse("panel:mi-menu")).content.decode()
+    assert "<h1>Personalizar</h1>" in platos and "Taco de birria" in platos
+    assert f'<a href="{reverse("panel:mi-menu")}" aria-current="page">' in platos
+    assert f'<a href="{reverse("panel:personalizar")}">' in platos
+    datos = client.get(reverse("panel:personalizar")).content.decode()
+    assert f'<a href="{reverse("panel:personalizar")}" aria-current="page">' in datos
+    for campo in ("tagline", "whatsapp", "email", "instagram", "services", "payment_methods"):
+        assert f'name="{campo}"' in datos, campo
+    for diseno in ('id="marca"', 'id="portada"', "color_primary", "subir-foto", "colores.js"):
+        assert diseno not in datos, diseno
+    # En la barra lateral, «Personalizar» queda marcada en las dos pestañas y en el editor.
+    editor = client.get(reverse("panel:carta-producto", args=[menu_digital.taco.uuid])).content.decode()
+    for html in (platos, datos, editor):
+        assert f'<a href="{reverse("panel:mi-menu")}" class="libre on">' in html
+    assert "Volver a Personalizar" in editor
+
+
+@pytest.mark.django_db
+def test_las_direcciones_de_mi_menu_llevan_a_personalizar(client, menu_digital):
+    client.force_login(menu_digital.dueno)
+    r = client.get("/panel/mi-menu/?estado=sin_foto")
+    assert r.status_code == 302 and r.url == "/panel/personalizar/?estado=sin_foto"
+    r = client.get(f"/panel/mi-menu/producto/nuevo/?categoria={menu_digital.cat.uuid}")
+    assert r.status_code == 302 and r.url == f"/panel/personalizar/producto/nuevo/?categoria={menu_digital.cat.uuid}"
+    r = client.get(f"/panel/mi-menu/producto/{menu_digital.taco.uuid}/")
+    assert r.status_code == 302 and r.url == f"/panel/personalizar/producto/{menu_digital.taco.uuid}/"
+    assert client.get(r.url).status_code == 200
 
 
 # ----------------------------------------------------------------- cuenta
