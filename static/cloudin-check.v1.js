@@ -5,11 +5,12 @@
  * carga este archivo desde Cloudin.
  *
  * Sin guardar nada, le pasa al runtime cartas de prueba (Cloudin.render) y mira si la página
- * cambia. De Mi menú: un menú, una categoría y un plato nuevos; un plato con otro nombre,
- * precio, descripción y foto; uno eliminado; uno agotado; todos los platos quitados (lo que siga
- * en la página está escrito a mano). De Personalizar: nombre, frase, descripción, bienvenida,
- * logo, portada, WhatsApp, teléfono, correo, dirección, ciudad, mapa, horario, Instagram,
- * Facebook, TikTok, medios de pago, Recoger y Domicilio (encendidos y apagados) y los 4 colores.
+ * cambia. De Personalizar → Platos y categorías: un menú, una categoría y un plato nuevos; un
+ * plato con otro nombre, precio, descripción y foto; uno eliminado; uno agotado; todos los platos
+ * quitados (lo que siga en la página está escrito a mano). De Personalizar → Datos del negocio:
+ * nombre, frase, descripción, bienvenida, WhatsApp, teléfono, correo, dirección, ciudad, mapa,
+ * horario, Instagram, Facebook, TikTok, medios de pago, y Recoger y Domicilio (encendidos y
+ * apagados). El diseño (colores, logo, portada) es del sitio: no se revisa.
  * Al final vuelve a pintar la carta real y muestra el informe:
  * ✅ bien · ❌ hay que arreglarlo · ⚠️ revisar.
  *
@@ -71,9 +72,6 @@
   const imgs = (url) => (url ? [...d.querySelectorAll("img")].filter((i) => i.getAttribute("src") === url && !oculto(i)) : []);
   const imagen = (url) => imgs(url).some((i) => !tapada(i));
   const imagenTapada = (url) => imgs(url).some(tapada);
-  // …o como fondo (background-image: var(--cloudin-cover, …)), también en ::before y ::after.
-  const fondo = (url) => !!url && [...d.body.querySelectorAll("*")].slice(0, 4000).some((el) =>
-    [null, "::before", "::after"].some((p) => getComputedStyle(el, p).backgroundImage.includes(url)));
 
   const esperar = (cond, ms) => new Promise((listo) => {
     const inicio = Date.now();
@@ -211,7 +209,7 @@
     };
     let x;
 
-    // 1. Un menú nuevo (Mi menú → Nuevo menú), con su categoría y su plato.
+    // 1. Un menú nuevo (Personalizar → Nuevo menú), con su categoría y su plato.
     const menuNuevo = {
       id: `cloudin-check-menu-${sello}`, key: `cloudin-check-${sello}`, name: `Menú nuevo ${sello}`, description: null,
       categories: [{
@@ -228,7 +226,7 @@
     anotar("menu-nuevo", menuSale && menuConNombre ? "ok" : "falla", menuSale && menuConNombre
       ? "Un menú nuevo del panel aparece con su nombre, sus categorías y sus platos."
       : menuSale ? 'Un menú nuevo del panel sale sin su nombre: ponle data-cloudin-field="menu.name" en <template data-cloudin-template="menu"> (y, si hay barra de menús, data-cloudin="menu-nav").'
-      : `Un menú nuevo del panel (Mi menú → Nuevo menú) NO aparece: la carta muestra un solo menú fijo. Usa data-cloudin="menus" con <template data-cloudin-template="menu">, y dentro data-cloudin="categories"${porque}.`);
+      : `Un menú nuevo del panel (Personalizar → Nuevo menú) NO aparece: la carta muestra un solo menú fijo. Usa data-cloudin="menus" con <template data-cloudin-template="menu">, y dentro data-cloudin="categories"${porque}.`);
 
     // 2. Una categoría nueva, con su plato (y su enlace en la barra de categorías).
     const menu = menuDe(real);
@@ -261,7 +259,7 @@
     const disponibles = menu ? (menu.categories || []).flatMap((c) => visibles(c).filter((q) => q.available !== false)
       .map((q) => ({ c, q }))) : [];
     if (!disponibles.length) {
-      anotar("sin-platos", "aviso", "La carta no tiene platos disponibles para probar cambios en los platos: agrega uno en el panel (Mi menú) y repite.");
+      anotar("sin-platos", "aviso", "La carta no tiene platos disponibles para probar cambios en los platos: agrega uno en el panel (Personalizar → Platos y categorías) y repite.");
     } else {
       platos(disponibles);
     }
@@ -357,8 +355,8 @@
         : "Ningún plato está escrito a mano: todos salen de Cloudin.");
     }
 
-    // 8. Personalizar: todo lo que el dueño cambia ahí tiene que verse en el menú. Si un dato
-    //    queda vacío en el panel, su elemento se esconde solo (data-cloudin-if).
+    // 8. Personalizar (datos del negocio): lo que el dueño cambia ahí tiene que verse en el
+    //    menú. Si un dato queda vacío en el panel, su elemento se esconde solo (data-cloudin-if).
     function negocio() {
       x = copia(real);
       const b = (x.business = x.business || {});
@@ -366,7 +364,7 @@
       b.social = { ...(b.social || {}) };
       Object.assign(b, {
         name: `Negocio ${sello}`, tagline: `Frase del panel ${sello}`, description: `Descripción del negocio ${sello}`,
-        welcome_message: `Bienvenida del panel ${sello}`, logo: foto("logo"), cover: foto("portada"),
+        welcome_message: `Bienvenida del panel ${sello}`,
         payment_methods: ["efectivo", "nequi"], payment_methods_text: `Medios de pago ${sello}`,
         services: { dine_in: true, takeaway: true, delivery: true },
       });
@@ -379,7 +377,6 @@
         tiktok: `https://tiktok.com/@cloudincheck${sello}`,
       });
       b.hours = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"].map((day) => ({ day, open: "01:23", close: "23:45" }));
-      b.brand = { primary: "#0A7C66", secondary: "#7B2D8E", background: "#FBF7E4", text: "#20243A" };
       pintar(x);
       const c0 = b0.contact || {};
       // ✅ si se ve el dato de prueba; ❌ si sigue el viejo escrito a mano o si no se muestra.
@@ -398,19 +395,6 @@
         "La descripción del negocio", 'Usa data-cloudin-field="business.description" (con data-cloudin-if), p. ej. en «Nosotros».');
       dato("negocio-bienvenida", contiene(b.welcome_message), !!b0.welcome_message && contiene(b0.welcome_message),
         "El mensaje de bienvenida", 'Usa data-cloudin-field="business.welcome_message" (con data-cloudin-if), p. ej. arriba de la carta.');
-      const logoAMano = !!d.querySelector("header img")
-        || [...d.querySelectorAll("img")].some((i) => /logo/i.test(`${i.getAttribute("src")} ${i.alt} ${i.className}`));
-      if (imagenTapada(b.logo) && !imagen(b.logo)) {
-        anotar("negocio-logo", "falla", 'El logo de Cloudin queda tapado: su <img> tiene srcset o está en un <picture> con <source>. Quítalos: deja solo data-cloudin-src="business.logo".');
-      } else {
-        dato("negocio-logo", imagen(b.logo), logoAMano, "El logo", 'Usa <img data-cloudin-if="business.logo" data-cloudin-src="business.logo">.');
-      }
-      if (imagenTapada(b.cover) && !imagen(b.cover) && !fondo(b.cover)) {
-        anotar("negocio-portada", "falla", 'La portada de Cloudin queda tapada: su <img> tiene srcset o está en un <picture> con <source>. Quítalos: deja solo data-cloudin-src="business.cover".');
-      } else {
-        dato("negocio-portada", imagen(b.cover) || fondo(b.cover), false, "La portada",
-          'Usa <img data-cloudin-if="business.cover" data-cloudin-src="business.cover"> o, si es un fondo, background-image: var(--cloudin-cover, url(tu-portada.jpg)).');
-      }
       dato("negocio-whatsapp", enlace("https://wa.me/573009998877"), enlaceA(/wa\.me|whatsapp/i), "El botón de WhatsApp",
         'Usa <a data-cloudin-if="business.whatsapp_link" data-cloudin-href="business.whatsapp_link">.');
       dato("negocio-telefono", enlace("tel:+573009998877") || hay("+573009998877"), enlaceA(/^tel:/i), "El teléfono",
@@ -433,29 +417,6 @@
       }
       dato("negocio-pagos", contiene(b.payment_methods_text), /\bnequi\b|\bdaviplata\b|\befectivo\b|\btransferencia\b/i.test(textoPagina()),
         "Los medios de pago", 'Usa data-cloudin-field="business.payment_methods_text" (con data-cloudin-if): viene escrito, «Efectivo, Nequi y Tarjeta».');
-
-      // Los 4 colores: en el estilo calculado de la página o en su CSS (p. ej. solo en :hover).
-      const buscados = { principal: "rgb(10, 124, 102)", secundario: "rgb(123, 45, 142)", fondo: "rgb(251, 247, 228)", texto: "rgb(32, 36, 58)" };
-      const variables = { principal: "primary", secundario: "secondary", fondo: "background", texto: "text" };
-      const usados = new Set();
-      for (const el of [d.documentElement, d.body, ...d.body.querySelectorAll("*")].slice(0, 5000)) {
-        const s = getComputedStyle(el);
-        const valores = [s.color, s.backgroundColor, s.borderTopColor, s.borderBottomColor, s.borderLeftColor, s.outlineColor,
-          s.fill, s.stroke, s.backgroundImage, s.boxShadow, s.textDecorationColor];
-        for (const [k, v] of Object.entries(buscados)) if (valores.some((y) => y && y.includes(v))) usados.add(k);
-        if (usados.size === 4) break;
-      }
-      let css = [...d.body.querySelectorAll("[style]")].map((e) => e.getAttribute("style")).join("\n");
-      for (const hoja of d.styleSheets) {
-        try { css += [...hoja.cssRules].map((r) => r.cssText).join("\n"); } catch (e) { /* hoja de otro dominio */ }
-      }
-      for (const [k, v] of Object.entries(variables)) if (css.includes(`var(--cloudin-${v}`)) usados.add(k);
-      const faltan = Object.keys(buscados).filter((k) => !usados.has(k));
-      const ayuda = "Escribe var(--cloudin-primary, #tu-color) en botones y precios, var(--cloudin-secondary, …) en detalles y títulos, var(--cloudin-background, …) en el fondo y var(--cloudin-text, …) en el texto.";
-      anotar("colores", faltan.length ? "falla" : "ok", !faltan.length
-        ? "Los 4 colores de Personalizar se usan (principal, secundario, fondo y texto)."
-        : usados.size ? `Solo se usa${usados.size > 1 ? "n" : ""} el color ${[...usados].join(", ")} de Personalizar; cambiar ${faltan.join(", ")} no hace nada. ${ayuda}`
-        : `Los colores de Personalizar NO se usan: el CSS tiene colores fijos. ${ayuda}`);
 
       // Recoger y Domicilio: encendidos se ofrecen; apagados en Personalizar, desaparecen. Se
       // prueba sin platos: lo que diga «domicilio» sin data-cloudin-if está escrito a mano.

@@ -1,0 +1,7 @@
+{% load cloudin %}{# Las dos pestañas de Personalizar: «Platos y categorías» (mi_menu.html) y «Datos del negocio» (personalizar.html). Los datos son solo del dueño o el administrador: al equipo no se le muestran pestañas. #}
+{% if es_admin or pestana == "datos" %}
+<nav class="pestanas-seccion" aria-label="Personalizar">
+  <a href="{% url 'panel:mi-menu' %}"{% if pestana == "platos" %} aria-current="page"{% endif %}>{% icono "menu-lista" %}Platos y categorías</a>
+  <a href="{% url 'panel:personalizar' %}"{% if pestana == "datos" %} aria-current="page"{% endif %}>{% icono "tienda" %}Datos del negocio</a>
+</nav>
+{% endif %}

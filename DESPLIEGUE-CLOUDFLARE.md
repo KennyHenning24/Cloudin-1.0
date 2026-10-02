@@ -241,6 +241,7 @@ completo Worker → contenedor → Django funciona (redirecciones, login con CSR
 | `DATABASE_URL` | Sí | La de Neon (§4.2) |
 | `DJANGO_SUPERUSER_USERNAME` | Primer arranque | p. ej. `juan` |
 | `DJANGO_SUPERUSER_PASSWORD` | Primer arranque | Una nueva y larga (no `cloudin2026`) |
+| `DJANGO_SUPERUSER_RESET` | No | `1` para que el arranque le ponga al superusuario la clave de `DJANGO_SUPERUSER_PASSWORD` (si se perdió). Quítala después |
 | `DJANGO_SUPERUSER_EMAIL` | No | Tu correo |
 | `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET`, `R2_PUBLIC_DOMAIN` | Para ver fotos | §4.3 (`R2_BUCKET=cloudin-fotos`) |
 | `EMAIL_HOST`, `EMAIL_PORT`, `EMAIL_HOST_USER`, `EMAIL_HOST_PASSWORD`, `DEFAULT_FROM_EMAIL` | No | Sin ellas los correos van al registro |

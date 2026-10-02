@@ -76,7 +76,7 @@
         {% if es_admin %}<a class="acceso" href="{% url 'panel:carta-producto-nuevo' %}"><span class="chip-ico sm durazno">{% icono "mas" %}</span>Agregar producto</a>{% endif %}
         <a class="acceso" href="{% url 'panel:mi-menu' %}?estado=disponibles"><span class="chip-ico sm durazno">{% icono "agotado" %}</span>Marcar agotados</a>
         {% if es_admin %}<a class="acceso" href="{% url 'panel:mi-menu' %}?seleccionar=1"><span class="chip-ico sm durazno">{% icono "porcentaje" %}</span>Cambiar precios</a>
-        <a class="acceso" href="{% url 'panel:personalizar' %}"><span class="chip-ico sm durazno">{% icono "paleta" %}</span>Personalizar</a>{% else %}
+        <a class="acceso" href="{% url 'panel:personalizar' %}"><span class="chip-ico sm durazno">{% icono "tienda" %}</span>Datos del negocio</a>{% else %}
         <a class="acceso" href="{% url 'panel:qr' %}"><span class="chip-ico sm durazno">{% icono "qr" %}</span>Códigos QR</a>{% endif %}
       </div>
     </section>
@@ -100,7 +100,7 @@
         {% endfor %}
       </ul>
       {% else %}
-      <p class="dim small" style="margin-top:8px">Nada agotado. Cuando algo se acabe, lo marcas en «Mi menú» con un toque.</p>
+      <p class="dim small" style="margin-top:8px">Nada agotado. Cuando algo se acabe, lo marcas en «Personalizar» con un toque.</p>
       {% endif %}
     </section>
   </div>

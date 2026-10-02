@@ -287,7 +287,7 @@ Las piezas que lo sostienen, en `apps/tenants/`:
 | Archivo | Pantallas |
 |---|---|
 | `views.py` | Decorador `panel_view` (acceso, legal, soporte), Inicio, mesas, detalle de mesa, cocina, mensajes, configuración, QR de mesas e impresiones (comanda y precuenta) |
-| `duenio.py` | Las pantallas del dueño: Inicio del menú, bienvenida, Mi menú, producto, Personalizar, Códigos QR («Mesas y QR») y Cuenta |
+| `duenio.py` | Las pantallas del dueño: Inicio del menú, bienvenida, Personalizar (pestañas «Platos y categorías» y «Datos del negocio»), producto, Códigos QR («Mesas y QR») y Cuenta |
 | `menu.py` | Producto nuevo, editar, eliminar e importar la carta del sitio |
 | `meseros.py` | Modo de servicio, cuentas de mesero y ver la clave de un mesero |
 | `seguridad.py` | Login con topes, recuperar contraseña y modo soporte del superusuario |
@@ -311,7 +311,7 @@ superusuario.
 | `templates/panel/_form_page.html` | Tarjeta centrada para pantallas de alta y edición |
 | `templates/panel/_auth_base.html` | Login y recuperación de contraseña |
 | `templates/panel/print_order.html`, `print_bill.html` | Tirillas de 80 mm: comanda y precuenta («Documento no válido como factura») |
-| `templates/panel/duenio/*.html` | Pantallas del dueño: inicio, mi menú, producto, personalizar, mesas y QR, cuenta |
+| `templates/panel/duenio/*.html` | Pantallas del dueño: inicio, mi_menu (Personalizar → Platos y categorías), producto, personalizar (→ Datos del negocio), mesas y QR, cuenta |
 | `templates/mesero/app.html` | La app del mesero completa (HTML, CSS y JS en un archivo) |
 | `templates/master/*.html` | Panel maestro |
 | `templates/legal/*.html` | Términos, privacidad, datos del restaurante y aceptación |
@@ -566,7 +566,7 @@ reales del restaurante del dueño.
 ## 9. Estado actual y qué sigue
 
 **Funcionando y verificado:** multi-tenancy, panel maestro, panel del restaurante
-(Inicio, Mesas, Mensajes, Cocina, Mi menú, Personalizar, Códigos QR, Meseros,
+(Inicio, Mesas, Mensajes, Cocina, Personalizar, Códigos QR, Meseros,
 Configuración) con tema claro y oscuro, carta pública `cloudin.menu/v1` con el
 runtime de los menús, pedidos desde el menú digital con carrito compartido por mesa
 (probado de punta a punta en el navegador con la carta real de Cultura Brisket),

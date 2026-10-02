@@ -187,7 +187,7 @@ def test_foto_del_producto_en_webp(client, local, en_restaurante):
 @pytest.mark.django_db
 def test_ajustes_del_negocio(client, local):
     client.force_login(local["dueno"])
-    r = client.patch(B + "settings/", {"whatsapp": "300 123 4567", "color_primary": "#B3261E",
+    r = client.patch(B + "settings/", {"whatsapp": "300 123 4567", "color_primary": "#0B6E4F",
                                        "payment_methods": ["efectivo", "nequi"],
                                        "services": {"dine_in": True, "delivery": False},
                                        "hours": [{"day": "tue", "open": "12:00", "close": "21:00"},
@@ -196,17 +196,19 @@ def test_ajustes_del_negocio(client, local):
     assert r.status_code == 200, r.content
     datos = r.json()
     assert datos["whatsapp"] == "+573001234567"
+    # El diseño (colores, logo, portada) es de la página del menú: el panel no lo cambia.
+    assert not {"color_primary", "logo", "cover"} & set(datos)
     # Solo Recoger y Domicilio; el que no viene queda como estaba (encendido por defecto).
     assert datos["services"] == {"takeaway": True, "delivery": False}
     assert datos["hours"][1] == {"day": "sat", "open": "18:00", "close": "02:00"}
     assert client.patch(B + "settings/", {"whatsapp": "123"}, content_type="application/json").status_code == 400
-    assert client.patch(B + "settings/", {"color_primary": "rojo"}, content_type="application/json").status_code == 400
     assert client.patch(B + "settings/", {"payment_methods": ["bitcoin"]},
                         content_type="application/json").status_code == 400
-    r = client.post(B + "settings/logo/", {"file": foto_png(600, 600)})
-    assert r.status_code == 200 and r.json()["logo"].endswith(".webp")
+    for ruta in ("settings/logo/", "settings/cover/"):
+        assert client.post(B + ruta, {"file": foto_png(600, 600)}).status_code == 404, ruta
     publico = client.get(f"/api/public/{local['t'].slug}/menu/").json()["business"]
-    assert publico["contact"]["whatsapp"] == "+573001234567" and publico["logo"].endswith(".webp")
+    assert publico["contact"]["whatsapp"] == "+573001234567" and publico["logo"] is None
+    assert publico["brand"] == {"primary": None, "secondary": None, "background": None, "text": None}
     assert publico["services"] == {"dine_in": True, "takeaway": True, "delivery": False}
     assert publico["payment_methods_text"] == "Efectivo y Nequi"
     r = client.patch(B + "settings/", {"services": {"takeaway": False}, "welcome_message": "¡Bienvenido!"},

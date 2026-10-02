@@ -74,7 +74,7 @@ Norteamérica Este, cerca de Render y Neon). Falta:
    |---|---|
    | `DATABASE_URL` | La dirección de Neon (3.1) |
    | `DJANGO_SUPERUSER_USERNAME` | Tu usuario del panel maestro, p. ej. `juan` |
-   | `DJANGO_SUPERUSER_PASSWORD` | Una contraseña nueva y larga (no la vieja del `.rar`) |
+   | `DJANGO_SUPERUSER_PASSWORD` | Una contraseña nueva y larga (no la vieja del `.rar`). Solo se usa en el primer arranque: si la pierdes, §4 |
    | `R2_BUCKET` | `cloudin-fotos` |
    | `R2_ACCOUNT_ID` | El Account ID (3.2) |
    | `R2_ACCESS_KEY_ID` | El Access Key ID (3.2) |
@@ -109,7 +109,7 @@ para cuando haya presupuesto.
    encendidos y el restaurante los apaga o enciende en su panel). El panel maestro muestra una sola vez el usuario, la contraseña y el enlace del panel
    (`https://<tu-servicio>.onrender.com/panel/login/`: Cloudin toma la dirección del
    servicio de `RENDER_EXTERNAL_HOSTNAME`, que Render define solo).
-3. Entra al panel con esos datos: **Códigos QR** para crear las mesas y **Mi menú** para
+3. Entra al panel con esos datos: **Códigos QR** para crear las mesas y **Personalizar** para
    la carta y las fotos. Al subir una foto, su dirección empieza con
    `https://pub-….r2.dev/`: así sabes que quedó en R2.
 4. El recorrido completo, con el menú en Cloudflare Pages y el pedido de prueba:
@@ -126,6 +126,21 @@ para cuando haya presupuesto.
 - **Cambiar una variable:** servicio → **Environment** → editar → guardar (reinicia el
   servicio). **Nunca cambies `CREDENTIAL_KEY`**: las contraseñas guardadas para el panel
   maestro quedarían ilegibles.
+- **No puedo entrar al panel maestro** (`/master/`, o `/admin/`: la pantalla «Cloudin ·
+  datos en crudo», «…para obtener cuenta de personal»). Es solo para el superusuario: el
+  usuario y la contraseña de `DJANGO_SUPERUSER_USERNAME` y `DJANGO_SUPERUSER_PASSWORD`
+  **del primer arranque** (servicio → **Environment**; el ojo muestra el valor). Ojo con
+  las mayúsculas de la contraseña. Cambiar `DJANGO_SUPERUSER_PASSWORD` después **no**
+  cambia la clave. Para ponerle una nueva:
+  1. **Environment** → `DJANGO_SUPERUSER_PASSWORD` = la clave nueva, y agrega
+     `DJANGO_SUPERUSER_RESET` = `1` → guardar (Render reinicia el servicio).
+  2. En **Logs** sale «Superusuario «…»: su contraseña es ahora la de
+     DJANGO_SUPERUSER_PASSWORD». Entra con ella.
+  3. Borra `DJANGO_SUPERUSER_RESET` y guarda.
+
+  Cinco claves equivocadas seguidas bloquean ese usuario 15 minutos (el reinicio también
+  lo desbloquea). Los restaurantes entran por `/panel/login/` y los meseros por
+  `/mesero/<slug>/`: esas cuentas no sirven en `/admin/`.
 - **Correr un comando de `manage.py`:** Render gratis no trae consola. Se corre desde tu
   PC apuntando a Neon, igual que en `DESPLIEGUE-CLOUDFLARE.md` §5: `DATABASE_URL` la de
   Neon, `CREDENTIAL_KEY` la misma del servidor (se copia en **Environment**) y las `R2_*`

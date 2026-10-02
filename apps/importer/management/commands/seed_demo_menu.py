@@ -61,7 +61,9 @@ class Command(BaseCommand):
             if opts["con_asistente"]:
                 ajustes.onboarding_step, ajustes.onboarding_done_at = 0, None
             elif ajustes.onboarding_done_at is None:
-                ajustes.onboarding_step, ajustes.onboarding_done_at = 5, timezone.now()
+                from apps.panel.duenio import PASOS
+
+                ajustes.onboarding_step, ajustes.onboarding_done_at = len(PASOS) + 1, timezone.now()
             ajustes.save(update_fields=["onboarding_step", "onboarding_done_at", "updated_at"])
 
         self.stdout.write(self.style.SUCCESS("\nRestaurante de demostración listo"))

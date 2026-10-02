@@ -4,7 +4,7 @@ Sesión de Django + CSRF (el panel vive en el mismo dominio). Permisos:
 - leer: todo el equipo del restaurante;
 - marcar agotado / disponible: todo el equipo;
 - crear, editar, reordenar, borrar, precios, ajustes y mesas: dueño o administrador.
-Lo usa el panel del dueño (Mi menú, Personalizar, Mesas y QR).
+Lo usa el panel del dueño (Personalizar: platos, categorías y datos del negocio; Mesas y QR).
 
 Todo se identifica por el UUID público (`id`). Borrar es lógico y se puede deshacer.
 """
@@ -262,33 +262,6 @@ class AjustesView(APIView):
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response(s.SettingsSerializer(RestaurantSettings.load(), context={"request": request}).data)
-
-
-class ImagenDeMarcaView(APIView):
-    """POST (multipart `file`) o DELETE del logo o la portada del menú."""
-
-    permission_classes = [AdministraLaCarta]
-    parser_classes = [MultiPartParser]
-    campo = "logo"
-
-    def post(self, request):
-        if "file" not in request.FILES:
-            return Response({"detail": "Elige una imagen."}, status=400)
-        lado = images.LADO_LOGO if self.campo == "logo" else images.LADO_PORTADA
-        try:
-            archivo = images.a_webp(request.FILES["file"], lado, self.campo)
-        except ErrorDjango as e:
-            return _error(e)
-        ajustes = RestaurantSettings.load()
-        setattr(ajustes, self.campo, archivo)
-        ajustes.save()
-        return Response(s.SettingsSerializer(ajustes, context={"request": request}).data)
-
-    def delete(self, request):
-        ajustes = RestaurantSettings.load()
-        setattr(ajustes, self.campo, "")
-        ajustes.save()
-        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 # --------------------------------------------------------------- mesas y QR

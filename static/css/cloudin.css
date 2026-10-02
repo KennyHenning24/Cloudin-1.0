@@ -942,7 +942,17 @@ a.kpi-menu:hover{border-color:var(--brand-line)}
 .actividad li{display:flex;gap:10px;align-items:flex-start;font-size:14px}
 .actividad li>span:last-child{display:grid;gap:2px;min-width:0;overflow-wrap:anywhere}
 
-/* ---------- Mi menú ---------- */
+/* ---------- Personalizar: «Platos y categorías» y «Datos del negocio» ---------- */
+.pestanas-seccion{display:flex;gap:var(--space-1);margin:0 0 var(--space-4);border-bottom:1px solid var(--line);
+  overflow-x:auto;scrollbar-width:none}
+.pestanas-seccion::-webkit-scrollbar{display:none}
+.pestanas-seccion a{flex:none;display:inline-flex;align-items:center;gap:8px;min-height:var(--toque);padding:0 14px;
+  margin-bottom:-1px;border-bottom:3px solid transparent;color:var(--text-2);font:700 14.5px var(--fuente)}
+.pestanas-seccion a:hover{color:var(--text)}
+.pestanas-seccion a[aria-current="page"]{color:var(--text);border-bottom-color:var(--color-brand)}
+.pestanas-seccion .ico{width:18px;height:18px}
+
+/* ---------- Platos y categorías ---------- */
 .menus-cab{display:flex;align-items:center;gap:var(--space-2);margin-bottom:var(--space-3)}
 .menus-cab .pestanas{flex:1;min-width:0}
 .pestanas a,.pestanas button{flex:none;min-height:40px;padding:0 16px;border-radius:var(--radius-pill);border:1px solid var(--line);
@@ -1135,17 +1145,6 @@ body.vista-abierta::after{content:"";position:fixed;inset:0;background:var(--ove
 .seccion-ajustes>summary h2{flex:1;font-size:var(--fs-16);font-weight:800}
 .seccion-cuerpo{display:grid;gap:var(--space-3);padding:0 var(--space-4) var(--space-4)}
 .seccion-cuerpo .campo{margin:0}
-.logo-fila{display:flex;gap:var(--space-4);align-items:center;flex-wrap:wrap}
-.logo-fila .subir-foto{width:140px;height:140px;min-height:0;border-radius:50%;padding:var(--space-2)}
-.logo-fila .subir-foto .indicaciones div{display:none}
-.logo-fila .subir-foto .botones{position:absolute;bottom:14px}
-.logo-fila .subir-foto:not(.con-foto) .botones{position:relative;bottom:auto}
-.logo-fila .subir-foto .botones .btn{min-height:32px;padding:0 10px;font-size:12px}
-.logo-fila>.stack-sm{flex:1;min-width:180px}
-#portada .subir-foto{aspect-ratio:2/1;min-height:0}
-.colores{display:grid;gap:var(--space-3);grid-template-columns:repeat(auto-fit,minmax(180px,1fr))}
-.colores .campo{margin:0}
-.contrastes{display:flex;flex-wrap:wrap;gap:var(--space-2) var(--space-4)}
 .contraste:empty{display:none}
 .horario{display:grid}
 .dia{display:grid;grid-template-columns:44px minmax(0,1fr) auto;gap:var(--space-3);align-items:center;padding:var(--space-2) 0;border-bottom:1px solid var(--line-soft)}
@@ -1206,26 +1205,6 @@ body.vista-abierta::after{content:"";position:fixed;inset:0;background:var(--ove
 .bienvenida-tarjeta form{display:grid;gap:var(--space-3);margin-top:var(--space-3)}
 .bienvenida-tarjeta .campo{margin:0}
 .titulo-paso{font-size:var(--fs-24);font-weight:800;letter-spacing:-.02em;line-height:1.2}
-.logo-circulo{display:grid;place-items:center;margin:var(--space-2) 0}
-.logo-circulo .subir-foto{width:150px;height:150px;min-height:0;border-radius:50%;padding:var(--space-2)}
-.logo-circulo .subir-foto .indicaciones div{display:none}
-.logo-circulo .subir-foto .botones .btn{min-height:32px;padding:0 10px;font-size:12px}
-.logo-circulo .subir-foto.con-foto .botones{bottom:12px}
-.paletas{display:flex;flex-wrap:wrap;gap:var(--space-2);margin-top:var(--space-2)}
-.paleta{display:inline-flex;gap:0;padding:4px;border-radius:14px;border:2px solid var(--line);background:var(--surface);cursor:pointer}
-.paleta i{width:30px;height:30px;display:block;border:1px solid rgba(0,0,0,.08)}
-.paleta i:first-child{border-radius:9px 0 0 9px}
-.paleta i:last-child{border-radius:0 9px 9px 0}
-.paleta[aria-pressed="true"]{border-color:var(--text);box-shadow:0 0 0 2px var(--surface),0 0 0 4px var(--text)}
-.elegir-otros>summary{cursor:pointer;display:inline-block;margin-bottom:var(--space-2)}
-.cabecera-muestra{display:flex;align-items:center;gap:var(--space-3);flex-wrap:wrap;padding:var(--space-3);border-radius:14px;
-  background:var(--m-fondo,#fff);color:var(--m-texto,#1d2029);border:1px solid var(--line)}
-.cabecera-muestra>span:nth-child(2){display:grid;flex:1;min-width:140px}
-.cabecera-muestra small{opacity:.75}
-.muestra-logo{width:44px;height:44px;border-radius:50%;overflow:hidden;display:grid;place-items:center;background:var(--m-primario,#c2410c);
-  color:var(--m-fondo,#fff);font-weight:800;flex:none}
-.muestra-logo img{width:100%;height:100%;object-fit:cover}
-.muestra-boton{background:var(--m-primario,#c2410c);color:var(--m-fondo,#fff);border-radius:10px;padding:6px 12px;font-weight:800;font-size:13px}
 .sugerencias{display:flex;flex-wrap:wrap;gap:6px}
 .sugerencias .chip{cursor:pointer;min-height:36px;padding:4px 14px;font-size:13px}
 .dias-chip .chip-opcion span{min-width:52px;justify-content:center}
@@ -1258,10 +1237,6 @@ body.vista-abierta::after{content:"";position:fixed;inset:0;background:var(--ove
 .guardar-barra .fin{flex:1}
 @media (hover:hover) and (pointer:fine){.solo-tactil{display:none!important}}
 .subir-foto .botones{gap:6px}
-/* Logo en círculo: un solo botón pequeño abajo, sin tapar el logo. */
-.logo-circulo .subir-foto.con-foto .botones,.logo-fila .subir-foto.con-foto .botones{bottom:8px}
-.logo-circulo .subir-foto.con-foto .botones .btn,.logo-fila .subir-foto.con-foto .botones .btn{min-height:28px;
-  padding:0 10px;background:color-mix(in srgb,var(--surface) 88%,transparent)}
 /* La foto del producto: cuadrada cuando hay foto; sin foto, lo que ocupen las indicaciones. */
 .basico-foto .subir-foto:not(.con-foto){aspect-ratio:auto;min-height:180px}
 @media (min-width:640px){
@@ -1269,7 +1244,7 @@ body.vista-abierta::after{content:"";position:fixed;inset:0;background:var(--ove
   .basico-foto .subir-foto:not(.con-foto){min-height:240px}
   .basico-foto .subir-foto .indicaciones .dim{display:none}
 }
-/* Mi menú en el celular: buscar, estados, y después categoría + ordenar + seleccionar. */
+/* Platos y categorías en el celular: buscar, estados, y después categoría + ordenar + seleccionar. */
 @media (max-width:639px){
   .filtros .buscar{order:0}
   .filtros .segmento{order:1}

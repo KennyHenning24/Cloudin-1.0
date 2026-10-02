@@ -1,7 +1,7 @@
 """La carta de antes en el panel: eliminar desde el menú rápido e importar la
 carta desde el sitio web del restaurante.
 
-La ficha del producto ahora es el editor de Mi menú (duenio.py); las rutas
+La ficha del producto ahora es el editor de Personalizar (duenio.py); las rutas
 viejas llevan allá para no romper enlaces guardados.
 """
 
@@ -23,7 +23,7 @@ def _volver():
 
 @panel_view(solo_admin=True)
 def producto_nuevo(request):
-    """La ficha de antes: ahora los productos se crean en el editor de Mi menú."""
+    """La ficha de antes: ahora los productos se crean en el editor de Personalizar."""
     destino = reverse("panel:carta-producto-nuevo")
     categoria = Category.objects.filter(pk=request.GET.get("categoria") or 0).first() \
         if str(request.GET.get("categoria", "")).isdigit() else None

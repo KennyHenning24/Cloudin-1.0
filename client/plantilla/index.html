@@ -8,9 +8,10 @@
     1. <servidor-cloudin>  → la dirección de tu servidor (p. ej. cloudin-abcd.onrender.com), en 2 lugares.
     2. <slug>              → el identificador del restaurante (p. ej. la-casa), en 2 lugares.
     3. apiKey              → la API key del restaurante (ck_…) si recibe pedidos por QR; si no, "".
-  El diseño (CSS y HTML) es libre, siempre que conserves los atributos data-cloudin-* y
-  las variables var(--cloudin-…): así TODO lo que el dueño cambia en su panel (Mi menú y
-  Personalizar) se ve aquí sin volver a publicar la página.
+  El diseño (CSS y HTML) es libre, siempre que conserves los atributos data-cloudin-*: así
+  TODO lo que el dueño cambia en su panel (Personalizar: platos, categorías y datos del
+  negocio) se ve aquí sin volver a publicar la página. Los colores, el logo y la portada son
+  del diseño: cámbialos aquí (Cloudin no los toca).
 -->
 <html lang="es">
 <head>
@@ -18,9 +19,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Menú</title>
 <style>
-  /* Los 4 colores de Personalizar (--cloudin-*); el segundo valor, por si no eligió. */
-  :root { --fondo: var(--cloudin-background, #1A1110); --texto: var(--cloudin-text, #FFF6EC);
-          --primario: var(--cloudin-primary, #B3261E); --secundario: var(--cloudin-secondary, #F2C14E);
+  /* Los colores del diseño: pon los del restaurante. carrito.js usa --cloudin-primary en sus
+     botones y --fondo en sus ventanas. */
+  :root { --fondo: #1A1110; --texto: #FFF6EC; --primario: #B3261E; --secundario: #F2C14E;
+          --cloudin-primary: var(--primario);
           --suave: color-mix(in srgb, var(--texto) 72%, transparent); --linea: color-mix(in srgb, var(--texto) 14%, transparent); }
   * { box-sizing: border-box; }
   body { margin: 0; background: var(--fondo); color: var(--texto); font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
@@ -73,10 +75,11 @@
 
   <!-- DATOS DEL NEGOCIO (Personalizar): data-cloudin-field="business.…" funciona en cualquier parte
        de la página. data-cloudin-if esconde el elemento si el dato está vacío (o el servicio
-       apagado) y lo vuelve a mostrar, sin recargar, si el dueño lo llena. -->
-  <img class="portada" data-cloudin-if="business.cover" data-cloudin-src="business.cover" alt="">
+       apagado) y lo vuelve a mostrar, sin recargar, si el dueño lo llena.
+       El logo y la portada son del diseño: archivos del sitio, p. ej.
+       <img class="portada" src="assets/portada.jpg" alt="">  y, dentro de la cabecera,
+       <img src="assets/logo.png" alt="">  (sin data-cloudin). -->
   <header class="cab">
-    <img data-cloudin-if="business.logo" data-cloudin-src="business.logo" alt="">
     <div>
       <h1 data-cloudin-field="business.name">Menú</h1>
       <p data-cloudin-if="business.tagline" data-cloudin-field="business.tagline"></p>
@@ -90,7 +93,7 @@
   </header>
   <p class="bienvenida" data-cloudin-if="business.welcome_message" data-cloudin-field="business.welcome_message"></p>
 
-  <!-- MENÚS: un enlace por menú de «Mi menú» (Carta, Almuerzos, Bebidas…). -->
+  <!-- MENÚS: un enlace por menú del panel (Carta, Almuerzos, Bebidas…). -->
   <nav class="menus-nav" data-cloudin="menu-nav" aria-label="Menús">
     <template data-cloudin-template="menu-link">
       <a data-cloudin-href="menu.anchor" data-cloudin-field="menu.name"></a>

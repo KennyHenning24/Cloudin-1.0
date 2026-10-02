@@ -56,7 +56,7 @@ def test_la_demo_queda_lista_y_reimportar_no_duplica(client, bases_creadas_en_la
     from apps.tenants.models import AceptacionLegal
 
     AceptacionLegal.objects.create(user=dueno, version=settings.LEGAL_VERSION)
-    r = client.get("/panel/mi-menu/")
+    r = client.get("/panel/personalizar/")
     assert r.status_code == 200, (r.status_code, r.get("Location"))
     html = r.content.decode()
     assert "Tacos de birria" in html and "Desayunos" in html

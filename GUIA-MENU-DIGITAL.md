@@ -58,7 +58,7 @@
 
 | Quién | Qué hace | Dónde |
 |---|---|---|
-| El restaurante | Edita la carta: productos, precios, fotos, agotados, colores | Panel → **Mi menú** y **Personalizar** |
+| El restaurante | Edita la carta (productos, precios, fotos, agotados) y sus datos (contacto, WhatsApp, horario) | Panel → **Personalizar** (pestañas **Platos y categorías** y **Datos del negocio**) |
 | El menú digital | Muestra la carta tal como está en el panel, sin volver a publicarlo | Cloudflare Pages |
 | El cliente | Arma el pedido con los de su mesa y lo envía | Menú digital (QR) |
 | El restaurante | Ve la mesa ocupada, el pedido en **Mensajes** y la comanda en **Cocina**; cierra la cuenta | Panel → **Mesas**, **Mensajes**, **Cocina** |
@@ -149,7 +149,7 @@ simple, `client/plantilla/index.html` (la plantilla mínima, comentada) junto co
 menu-culturabrisket/
 ├── index.html      ← la carta: tu diseño + las plantillas data-cloudin (sección 5.4)
 ├── carrito.js      ← copia de client/example/carrito.js
-├── assets/         ← logo, fuentes e imágenes del diseño
+├── assets/         ← el diseño: logo, portada, fuentes e imágenes
 └── _headers        ← opcional (4.7)
 ```
 
@@ -315,9 +315,9 @@ GET https://<servidor-cloudin>/api/public/<slug>/menu/?table=<token>
     "name": "La Casa",
     "tagline": "Comida casera",
     "description": null,
-    "logo": "https://<servidor-cloudin>/media/…/logo.webp",
+    "logo": null,
     "cover": null,
-    "brand": { "primary": "#B3261E", "secondary": "#F2C14E", "background": "#1A1110", "text": null },
+    "brand": { "primary": null, "secondary": null, "background": null, "text": null },
     "contact": { "whatsapp": null, "phone": "+573001234567", "email": null,
                  "address": "Cra 1 # 2-3", "city": "Cali", "maps_url": null },
     "social": { "instagram": null, "facebook": null, "tiktok": null },
@@ -379,9 +379,9 @@ GET https://<servidor-cloudin>/api/public/<slug>/menu/?table=<token>
 | `options[].price` | **Lo que suma** al precio (0 si no cambia). |
 | `image` | Dirección absoluta, lista para `<img src>`. |
 | `tags` | Claves; el nombre para mostrar está en `tags` de la raíz. |
-| `business.*` | Datos del negocio (todo lo de Personalizar) para el encabezado, el pie, WhatsApp, el horario, las redes y los medios de pago. |
+| `business.*` | Datos del negocio (todo lo de Personalizar) para el encabezado, el pie, WhatsApp, el horario, las redes y los medios de pago. `logo`, `cover` y `brand` no se usan: los colores, el logo y la portada son del diseño del sitio (`brand` llega en `null`). |
 | `business.services` | `takeaway` (Recoger) y `delivery` (Domicilio): encendidos salvo que el restaurante los apague; lo apagado no se ofrece. `dine_in` siempre `true`. |
-| `menus[]` | Todos los menús de «Mi menú» (uno nuevo llega aquí), cada uno con sus categorías. |
+| `menus[]` | Todos los menús del panel (Personalizar → Platos y categorías; uno nuevo llega aquí), cada uno con sus categorías. |
 | `meta.version` | Sube con cada cambio de la carta (es parte del `ETag`). |
 
 El precio de una línea se calcula así, **igual que lo calcula Cloudin**:
@@ -402,8 +402,9 @@ El runtime pinta la carta dentro de tu diseño con plantillas HTML. Lo mínimo:
   plantillas `"category"`, `"product"`, `"variant"` y `"tag"` (y `"category-link"` para la
   barra de categorías `data-cloudin="category-nav"`, `"menu-link"` para la de menús
   `data-cloudin="menu-nav"`).
-- Todo lo de Personalizar con `business.*` y los colores y la portada con las variables
-  `--cloudin-*` (lista completa: `CLAUDE-MENU-DIGITAL.md`, tabla 4.8).
+- Todo lo de Personalizar con `business.*` (lista completa: `CLAUDE-MENU-DIGITAL.md`,
+  tabla 4.8). Los colores, el logo y la portada son del diseño y van en el sitio: Cloudin no
+  los cambia (sección 4.9 de ese archivo).
 - Campos: `data-cloudin-field="product.name"`, `"product.price"`, `"category.name"`,
   `"business.name"`…; imágenes con `data-cloudin-src="product.image"`; enlaces con
   `data-cloudin-href="business.whatsapp_link"`; condiciones con
@@ -779,7 +780,8 @@ Para usarlo en otro diseño:
 
 - Inclúyelo **después** del runtime, con `CLOUDIN_CONFIG.apiKey` puesto (4.2).
 - Colores: toma `--cloudin-primary` (o `#B3261E`) para los botones y `--fondo` para los
-  diálogos. Cambia el CSS del principio del archivo si el diseño lo pide.
+  diálogos; defínelas en el `:root` del sitio con los colores del diseño (Cloudin no las
+  pone). Cambia el CSS del principio del archivo si el diseño lo pide.
 - Textos: están en español dentro del archivo; cámbialos ahí.
 - Todo texto que viene de Cloudin pasa por `esc()` antes de ir al HTML. Si lo modificas,
   mantenlo así.
@@ -834,7 +836,7 @@ Después cierra la cuenta de prueba en el panel para dejar la mesa libre.
 ## 12. Checklist por cliente
 
 - [ ] El restaurante existe en `/master/` y tiene sus mesas creadas.
-- [ ] La carta está completa en su panel (**Mi menú**): precios, fotos, opciones obligatorias.
+- [ ] La carta está completa en su panel (**Personalizar** → **Platos y categorías**): precios, fotos, opciones obligatorias.
 - [ ] El proyecto de Pages publica y `CLOUDIN_CONFIG` apunta al servidor y al slug correctos.
 - [ ] **Página del menú** registrada (panel maestro → «Menú digital»; y el dominio propio en «Otras direcciones autorizadas»).
 - [ ] **Pedidos desde el QR de la mesa** encendidos en su panel, si va a pedir por QR.

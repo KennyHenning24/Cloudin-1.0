@@ -33,7 +33,8 @@ Necesitas:
    (`DJANGO_SUPERUSER_USERNAME` y `DJANGO_SUPERUSER_PASSWORD`).
 3. **Una cuenta de GitHub y una de Cloudflare**, las dos gratis.
 4. **Del restaurante**: su nombre, el correo de quien lo administra, cuántas mesas tiene, la
-   carta (platos, precios y fotos), el logo y sus datos de contacto y horario.
+   carta (platos, precios y fotos) y sus datos de contacto y horario. Su logo y sus colores
+   van en el diseño del menú (Parte 3), no en Cloudin.
 
 Nombres que se repiten en la guía:
 
@@ -113,12 +114,12 @@ contraseña de Cloudin → **Entrar en modo soporte**.
 3. La primera vez aparece «Hola, … Antes de empezar…»: marca las dos casillas (términos y
    condiciones, y política de privacidad) → **Acepto y continúo**.
 
-La primera vez, el panel abre el asistente «Empecemos por tu marca» (logo y colores,
-datos del negocio, primera categoría y primer producto). Se puede seguir o tocar
-**Saltar por ahora**; se retoma desde el Inicio.
+La primera vez, el panel abre un asistente de 3 pasos (datos del negocio, primera categoría
+y primer producto). Se puede seguir o tocar **Saltar por ahora**; se retoma desde el Inicio.
 
-En la barra lateral verás: *Día a día* (Inicio, Mesas, Mensajes, Cocina), *Tu menú* (Mi
-menú, Personalizar, Códigos QR) y *Administración* (Meseros, Configuración). Todos los
+En la barra lateral verás: *Día a día* (Inicio, Mesas, Mensajes, Cocina), *Tu menú*
+(Personalizar y Códigos QR) y *Administración* (Meseros, Configuración). **Personalizar**
+tiene dos pestañas: **Platos y categorías** (la carta) y **Datos del negocio**. Todos los
 restaurantes tienen todo: no hay planes.
 
 ### 2.2 Las mesas
@@ -131,7 +132,7 @@ publicado.» Aparecen en la Parte 6.
 
 ### 2.3 La carta
 
-En **Mi menú**:
+En **Personalizar** → **Platos y categorías**:
 
 1. **+ Categoría** → Nombre (p. ej. `Hamburguesas`) → **Crear categoría**. Repite por cada
    categoría.
@@ -170,20 +171,17 @@ abre los ve al instante, y quien ya lo tiene abierto, en máximo 15 segundos (la
 vivo», `live`). Esto funciona solo si el menú pinta la carta con las plantillas de Cloudin;
 compruébalo con `https://<tu-menu>/?cloudin-check=1` (Parte 3.8).
 
-**Otro menú** (Almuerzos, Bebidas…): **Mi menú** → **Nuevo menú**, y dentro sus categorías y
+**Otro menú** (Almuerzos, Bebidas…): **Platos y categorías** → **Nuevo menú**, y dentro sus categorías y
 platos. Sale en la carta como otra sección, con su nombre, en cuanto tiene su primer plato.
 **Una etiqueta nueva:** en el editor del plato, «Nueva etiqueta» → **Agregar**; queda en la
 lista para todos los platos.
 
 ### 2.4 Los datos del negocio
 
-En **Personalizar** (se guarda solo: arriba dice «Todo guardado»):
+En **Personalizar** → **Datos del negocio** (al terminar, **Guardar cambios**):
 
 | Sección | Campo | En el menú (Parte 3) |
 |---|---|---|
-| Logo y colores | Logo (cuadrado; se ve redondo) | `business.logo` |
-| Logo y colores | Principal, Secundario, Fondo, Texto | Las variables CSS `--cloudin-primary`, `--cloudin-secondary`, `--cloudin-background` y `--cloudin-text` |
-| Portada | Una foto horizontal | `business.cover` (en un `<img>`) o la variable CSS `--cloudin-cover` (como fondo) |
 | Datos del negocio | Frase corta | `business.tagline` |
 | Datos del negocio | Descripción | `business.description` |
 | Datos del negocio | Mensaje de bienvenida | `business.welcome_message` |
@@ -196,9 +194,10 @@ En **Personalizar** (se guarda solo: arriba dice «Todo guardado»):
 | Servicios y medios de pago | **Recoger** y **Domicilio** (los dos vienen encendidos) | `business.takeaway` y `business.delivery`: si apagas uno, el menú deja de ofrecerlo (en la carta de la mesa y en la de domicilios) |
 | Servicios y medios de pago | Medios de pago | `business.payment_methods_text` («Efectivo, Nequi y Tarjeta») |
 
-El **nombre** del restaurante no está en Personalizar: es el de la Parte 1. Todo lo de esta
-tabla tiene que verse en el menú: si cambias algo aquí y el menú no cambia, el menú no está
-conectado del todo (Parte 3.8).
+El **nombre** del restaurante no está en Personalizar: es el de la Parte 1. Los **colores,
+el logo y la portada** tampoco: son del diseño del menú (Parte 3) y se cambian en el sitio.
+Todo lo de esta tabla tiene que verse en el menú: si cambias algo aquí y el menú no cambia,
+el menú no está conectado del todo (Parte 3.8).
 
 ### 2.5 Quién toma los pedidos
 
@@ -280,17 +279,17 @@ datos de Cloudin cada vez que alguien la abre.
    <script src="carrito.js" defer></script>
    ```
 
-4. Cambia el diseño como quieras: colores, fuentes, orden, textos fijos, imágenes propias
-   (en una carpeta `assets/`). La regla es **conservar los atributos `data-cloudin…` y las
-   `<template>`**.
+4. Cambia el diseño como quieras: colores, fuentes, orden, textos fijos, el logo, la portada
+   e imágenes propias (en una carpeta `assets/`). El diseño es tuyo: Cloudin no lo cambia.
+   La regla es **conservar los atributos `data-cloudin…` y las `<template>`**.
 
-La plantilla ya trae **todo lo del panel**: portada, logo, nombre, frase, horario de hoy,
+La plantilla ya trae **todo lo del panel**: nombre, frase, horario de hoy,
 Recoger y Domicilio, botón de WhatsApp y mensaje de bienvenida; todos los menús (con su
 barra, que se esconde si hay uno solo) y la barra de categorías de cada uno; cada plato con
 foto, descripción, etiquetas, presentaciones, precio y «Agotado»; y pie con descripción,
 dirección, ciudad, Google Maps, teléfono, correo, Instagram, Facebook, TikTok y medios de
-pago. Usa los 4 colores de Personalizar. Lo que el restaurante no llenó en su panel (o
-apagó) no se ve, y aparece solo, sin recargar, cuando lo llena (por eso cada dato opcional
+pago. Sus colores están al principio del CSS (`:root`): pon los del restaurante. Lo que el
+restaurante no llenó en su panel (o apagó) no se ve, y aparece solo, sin recargar, cuando lo llena (por eso cada dato opcional
 lleva `data-cloudin-if`).
 
 ### 3.2 Camino largo: conectar un menú que ya diseñaste
@@ -300,7 +299,7 @@ Si ya tienes un menú hecho (con los platos escritos a mano en el HTML), convié
 1. **Configuración y scripts.** Pega antes de `</body>` el bloque de 3.1 (paso 3) con tus
    datos, y copia `carrito.js` junto a tu `index.html`.
 2. **La raíz.** Al elemento que envuelve toda la carta (p. ej. tu `<main>`) ponle
-   `data-cloudin="menus"`: ahí se pintan **todos** los menús de «Mi menú».
+   `data-cloudin="menus"`: ahí se pintan **todos** los menús del panel.
 3. **La plantilla de menú.** Dentro de la raíz, `<template data-cloudin-template="menu">`
    con **un** elemento (p. ej. `<section>`) que tenga el título del menú
    (`data-cloudin-field="menu.name"`) y una caja vacía con `data-cloudin="categories"`. Esa
@@ -320,15 +319,15 @@ Si ya tienes un menú hecho (con los platos escritos a mano en el HTML), convié
 6. **Borra los platos escritos a mano** que quedaron en la raíz, o déjalos como respaldo: el
    runtime borra todo lo que hay ahí (menos las `<template>`) y pinta la carta real en cuanto
    Cloudin responde.
-7. **Encabezado y pie: todo lo de Personalizar** (tabla de 2.4). Cambia el nombre, el logo,
-   la portada, el teléfono, el correo, la dirección, las redes, Recoger y Domicilio, etc. por
-   sus campos `business.…` (tabla de 3.5). Esos funcionan en cualquier parte de la página.
-8. **Los colores.** En tu CSS, cambia los colores de la marca por
-   `var(--cloudin-primary, <tu color>)`, `var(--cloudin-secondary, …)`,
-   `var(--cloudin-background, …)` y `var(--cloudin-text, …)`, y define `--fondo` con el
-   fondo (`:root { --fondo: var(--cloudin-background, #1A1110); }`). La ventana del carrito
-   usa ese fondo y el color de texto de tu página: si no lo defines, sale oscura (`#1A1110`)
-   y en una página clara el texto queda ilegible.
+7. **Encabezado y pie: todo lo de Personalizar** (tabla de 2.4). Cambia el nombre, la frase,
+   el teléfono, el correo, la dirección, las redes, Recoger y Domicilio, etc. por sus campos
+   `business.…` (tabla de 3.5). Esos funcionan en cualquier parte de la página. El logo y la
+   portada se quedan como están: son del diseño.
+8. **Los colores son del diseño** y se quedan en tu CSS. Define en `:root` dos variables que
+   usa el carrito: `--fondo` (el fondo de tu página) y `--cloudin-primary` (el color de tus
+   botones), p. ej. `:root { --fondo: #1A1110; --cloudin-primary: #B3261E; }`. La ventana del
+   carrito usa ese fondo y el color de texto de tu página: sin `--fondo` sale oscura
+   (`#1A1110`) y en una página clara el texto queda ilegible.
 
 El esqueleto mínimo que funciona (todo lo demás es diseño):
 
@@ -424,8 +423,6 @@ Lo que el runtime les pone a las copias (para tu CSS o tu JavaScript):
 | Cada menú | `id="menu-<clave>"` | El destino de los enlaces de la barra de menús (`#menu-almuerzos`) |
 | Cada categoría | `id="cat-<clave>"` | El destino de los enlaces de la barra (`#cat-hamburguesas`) |
 | `<html>` | `data-cloudin-state="static"`, `"cached"`, `"live"` o `"error"` | `[data-cloudin-state="error"] .cargando::after { content: "…"; }` |
-| `<html>` | Las variables `--cloudin-primary`, `--cloudin-secondary`, `--cloudin-background`, `--cloudin-text` | `color: var(--cloudin-primary, #B3261E);` (el segundo valor es por si el restaurante no eligió color) |
-| `<html>` | La variable `--cloudin-cover` (la portada, `url(…)`) | `background-image: var(--cloudin-cover, url(portada.jpg));` |
 
 Los estados: `static` = todavía no hay datos; `cached` = se pintó la carta guardada en el
 teléfono; `live` = se pintó la carta que acaba de responder Cloudin; `error` = Cloudin no
@@ -442,7 +439,7 @@ cuando no hay ninguno):
 <style>.destacados:not(:has([data-cloudin-key])) { display: none; }</style>
 ```
 
-Varios menús (p. ej. «Desayunos» y «Carta», creados en **Mi menú** → **Nuevo menú**): la
+Varios menús (p. ej. «Desayunos» y «Carta», creados en **Personalizar** → **Nuevo menú**): la
 zona `menus` los pinta todos, cada uno con su plantilla `menu`, en el orden del panel. Uno
 nuevo aparece solo en cuanto tiene platos. La barra de menús, escondida si hay uno solo:
 
@@ -482,8 +479,7 @@ suyas.
 | `business.tagline` | Frase corta |
 | `business.description` | Descripción |
 | `business.welcome_message` | Mensaje de bienvenida |
-| `business.logo` | Dirección de la imagen del logo (para `data-cloudin-src`) |
-| `business.cover` | Dirección de la foto de portada (para `data-cloudin-src`; como fondo, `var(--cloudin-cover)`) |
+| `business.logo`, `business.cover` | No los uses: el logo y la portada son del diseño (archivos en `assets/`). Siguen ahí solo por los menús de antes |
 | `business.address`, `business.city` | Dirección y ciudad |
 | `business.phone` | Teléfono, como lo guarda Cloudin (`+573001234567`) |
 | `business.phone_link` | `tel:+573001234567` (para `data-cloudin-href`) |
@@ -537,7 +533,8 @@ suyas.
    el restaurante tiene encendidos los pedidos por QR (Parte 2.5).
 8. **El QR lleva el token, no el número.** `?mesa=td8vIrnwaZPF` permite pedir; `?mesa=3`
    muestra «Mesa 3» pero no deja pedir. Los QR de la Parte 6 ya traen el token.
-9. **Define `--fondo`** con el color de fondo de tu página (Parte 3.2, paso 8).
+9. **Define `--fondo` y `--cloudin-primary`** en `:root`: el fondo de tu página y el color de
+   tus botones, para el carrito (Parte 3.2, paso 8).
 10. **No impidas que Cloudin muestre tu página en un marco** (nada de
     `X-Frame-Options: DENY`): la **Vista previa en vivo** de Personalizar y del editor de
     productos abre tu menú dentro del panel.
@@ -560,10 +557,10 @@ se puede leer desde cualquier dirección). Los pedidos se prueban después de pu
 ### 3.8 ¿Está conectado de verdad? La revisión `?cloudin-check=1`
 
 Un menú puede verse bien y aun así tener la carta **escrita a mano** en su HTML. Entonces lo
-que cambies en el panel (un menú o un plato nuevo, una foto, un precio, un color, la
-portada, el correo, Facebook, Domicilio apagado) no aparece, y a lo sumo se notan los
-agotados. Para saberlo, abre el menú con `?cloudin-check=1` al final de la dirección (revisa
-cada cosa de Mi menú y de Personalizar, una por una):
+que cambies en el panel (un menú o un plato nuevo, una foto, un precio, el correo,
+Facebook, Domicilio apagado) no aparece, y a lo sumo se notan los agotados. Para saberlo,
+abre el menú con `?cloudin-check=1` al final de la dirección (revisa cada cosa de
+Personalizar, una por una):
 
 - En tu computador: `http://localhost:8080/?cloudin-check=1`
 - Ya publicado: `https://<tu-menu>.pages.dev/?cloudin-check=1`
@@ -584,9 +581,10 @@ conectado del todo. **Copiar informe** lo deja listo para pegárselo a Claude Co
    que cambio en el panel de Cloudin no se ve. Conviértelo siguiendo la sección 0, sin
    cambiar el diseño: todos los menús (uno nuevo tiene que aparecer solo), categorías,
    platos, precios, fotos, etiquetas, agotados, y todo lo de Personalizar de la tabla 4.8
-   (logo, portada, los 4 colores, frase, descripción, bienvenida, WhatsApp, teléfono, correo,
-   dirección, Maps, horario, Instagram, Facebook, TikTok, medios de pago, Recoger y
-   Domicilio) tienen que salir de Cloudin y actualizarse solos, sin recargar la página.
+   (frase, descripción, bienvenida, WhatsApp, teléfono, correo, dirección, Maps, horario,
+   Instagram, Facebook, TikTok, medios de pago, Recoger y Domicilio) tienen que salir de
+   Cloudin y actualizarse solos, sin recargar la página. Los colores, el logo y la portada
+   son del diseño: déjalos como están (sección 4.9).
    Servidor: https://<servidor-cloudin> · restaurante: <slug>. Este es el bloque de
    conexión: <pega lo de «Copiar código» del panel maestro>. Trabaja en una rama y no
    publiques sin preguntarme. Termina cuando http://localhost:8080/?cloudin-check=1
@@ -597,8 +595,8 @@ conectado del todo. **Copiar informe** lo deja listo para pegárselo a Claude Co
    dirección publicada.
 4. La prueba real: abre el menú en tu teléfono, agota un plato en el panel y míralo sin
    tocar nada: en máximo 15 segundos sale «Agotado». Vuelve a ponerlo disponible y regresa.
-   Haz lo mismo con un menú nuevo (con una categoría y un plato), otro color, otra portada,
-   tu correo y tu Facebook, y apagando y encendiendo Domicilio.
+   Haz lo mismo con un menú nuevo (con una categoría y un plato), otro precio, tu correo y
+   tu Facebook, y apagando y encendiendo Domicilio.
 
 ---
 
@@ -727,22 +725,23 @@ Para ver los errores del menú en el computador: abre la página → clic derech
 | Se ve tu diseño con las secciones vacías | Una `<template>` está mal: fuera de su zona, con dos elementos, o sin `data-cloudin="products"` dentro de la categoría | Compara con el esqueleto de 3.2 |
 | Un dato no aparece (p. ej. el horario) | No está lleno en Personalizar, o el atributo está mal escrito | Parte 2.4; revisa el nombre en la tabla 3.5 |
 | No aparece **Agregar** en ningún plato | Falta `?mesa=<token>` en la dirección, o `apiKey` está vacía o equivocada, o no se cargó `carrito.js` (en la consola: 404), o los pedidos por QR están apagados | Abre desde un QR de la Parte 6; revisa `apiKey` contra la del panel maestro; revisa que `carrito.js` esté junto a `index.html`; enciende los pedidos por QR (Parte 2.5) |
-| **Agregar** falta en un solo plato | Está agotado o no tiene precio | Mi menú → el plato → Precio y Disponible |
+| **Agregar** falta en un solo plato | Está agotado o no tiene precio | Personalizar → Platos y categorías → el plato → Precio y Disponible |
 | En la consola: «blocked by CORS policy» | La dirección desde la que abriste el menú no coincide **exactamente** con «Página del menú (QR)» (`http` o `https`, `www`, otra dirección de Pages) | Corrige la Parte 5. Abre el menú con `https://<proyecto>.pages.dev`, no con la dirección de un despliegue (la que tiene letras y números antes del nombre del proyecto) |
 | Dice «Enviaste muchos pedidos seguidos…» | Más de 20 envíos (o 240 cambios al carrito) en 10 minutos desde la misma conexión; el wifi del local cuenta como una sola | Esperar unos minutos (`GUIA-MENU-DIGITAL.md` §8) |
 | En Códigos QR: «Su QR aparece cuando tu menú digital esté publicado.», o en el panel «Tu menú todavía no está publicado» | «Página del menú (QR)» está vacía: Cloudin no detecta el menú solo | Parte 5 |
 | La ficha dice **Sin conexión todavía** aunque el menú está publicado | El menú no tiene el código de la Parte 3, o su `api` apunta a otro servidor o a otro identificador | Parte 3.1: **Copiar código** en la tarjeta Menú digital y pégalo en el menú; publícalo otra vez |
 | El enlace del panel sale como `https://<slug>.localhost/panel/login/` | El servidor todavía no tiene el arreglo que usa la dirección de Render | El enlace correcto es `https://<servidor-cloudin>/panel/login/`. Para que el panel maestro lo muestre bien: en Render → el servicio → **Environment** → agrega `CLOUDIN_PUBLIC_URL` = `https://<servidor-cloudin>` → guardar |
 | La ventana del carrito sale oscura con letra oscura | Falta `--fondo` en tu CSS | Parte 3.2, paso 8 |
+| Los botones del carrito salen rojos | Falta `--cloudin-primary` en tu CSS | Parte 3.2, paso 8 |
 | Un cambio de diseño no se ve | No se subió a `main`, o el navegador tiene la página vieja | Revisa en Pages → el proyecto → **Deployments**; recarga la página |
 | Un cambio de precio no se ve | Espera 15 segundos: el menú abierto se actualiza solo | Si no cambia nunca, la carta está escrita a mano en el menú: `?cloudin-check=1` lo dice (Parte 3.8) |
 | En el panel se crea un plato o se cambia una foto y el menú no cambia (solo los agotados, o nada) | El menú tiene la carta escrita a mano en su HTML | Parte 3.8: la revisión y cómo pedirle a Claude Code que lo convierta |
 | **Nuevo menú** no agrega nada a la carta | El menú usa la raíz vieja `data-cloudin="menu"` (un solo menú), o el menú nuevo no tiene platos todavía | Parte 3.4 (`data-cloudin="menus"`); agrégale una categoría y un plato |
-| Cambiar colores, portada o logo en Personalizar no hace nada | El diseño tiene los colores y las imágenes escritos a mano | Parte 3.2, pasos 7 y 8; `?cloudin-check=1` dice cuál falta |
+| Los colores del menú se ven mal o cambiaron después de conectarlo, o el logo o la portada no salen | El CSS usa `var(--cloudin-…)` sin el color del diseño, o la imagen depende de `business.logo` / `business.cover` (Cloudin ya no manda colores, logo ni portada) | Pídele a Claude Code: «Lee CLAUDE.md, sección 4.9: deja los colores, el logo y la portada en el diseño del sitio, sin depender de Cloudin» |
 | El correo, Facebook o TikTok no salen | El menú no tiene un lugar para ese dato | Tabla de 2.4: todo tiene que estar en el menú |
 | Apagué Domicilio (o Recoger) y el menú lo sigue ofreciendo | Ese aviso está escrito a mano, sin `data-cloudin-if="business.delivery"` | Parte 3.8 |
 | En la vista previa del panel el menú se corta a la derecha | El menú no se ajusta a un teléfono | Usa la barra de abajo de la vista previa para verlo entero; que Claude Code lo arregle para 390 px de ancho |
-| Las fotos no salen | No se subieron en Mi menú, o R2 no tiene la dirección pública | `DESPLIEGUE-GRATIS.md` §3.2 |
+| Las fotos no salen | No se subieron en Personalizar → Platos y categorías, o R2 no tiene la dirección pública | `DESPLIEGUE-GRATIS.md` §3.2 |
 
 ---
 
@@ -753,8 +752,9 @@ Para ver los errores del menú en el computador: abre la página → clic derech
 [ ] 1. Copiados: usuario, contraseña, enlace del panel y API key (ck_…)
 [ ] 2. Términos aceptados en su panel
 [ ] 2. Mesas creadas (Códigos QR → ¿Cuántas mesas tienes?)
-[ ] 2. Categorías y productos con precio y foto (Mi menú)
-[ ] 2. Logo, colores, portada, contacto, WhatsApp, horario, redes, Recoger/Domicilio y pagos (Personalizar)
+[ ] 2. Categorías y productos con precio y foto (Personalizar → Platos y categorías)
+[ ] 2. Contacto, WhatsApp, horario, redes, Recoger/Domicilio y pagos (Personalizar → Datos del negocio)
+[ ] 3. Colores, logo y portada del restaurante en el diseño del menú (index.html y assets/)
 [ ] 3. https://<menú>/?cloudin-check=1 sin ❌ (todo lo del panel se ve en el menú)
 [ ] 2. Pedidos por QR encendidos (Inicio); cuentas de meseros si los van a usar (Meseros)
 [ ] 2. https://<servidor-cloudin>/api/public/<slug>/menu/ muestra la carta

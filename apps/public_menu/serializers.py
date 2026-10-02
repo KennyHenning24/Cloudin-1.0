@@ -63,12 +63,9 @@ def negocio(tenant, ajustes, tramos, construir_url=None) -> dict:
         "welcome_message": ajustes.welcome_message or None,
         "logo": _url(ajustes.logo, construir_url),
         "cover": _url(ajustes.cover, construir_url),
-        "brand": {
-            "primary": ajustes.color_primary or None,
-            "secondary": ajustes.color_secondary or None,
-            "background": ajustes.color_background or None,
-            "text": ajustes.color_text or None,
-        },
+        # Los colores son del diseño de cada menú, no del panel: van vacíos (el campo sigue
+        # porque hay menús que lo leen, y con null usan los suyos).
+        "brand": {"primary": None, "secondary": None, "background": None, "text": None},
         "contact": {
             "whatsapp": ajustes.whatsapp or None,
             "phone": ajustes.phone or None,

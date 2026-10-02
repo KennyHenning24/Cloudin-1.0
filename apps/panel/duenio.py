@@ -1,6 +1,7 @@
-"""Panel del dueño: el menú digital (Inicio · Mi menú · Personalizar · Mesas y QR ·
-Cuenta). Las pantallas de pedidos, mesas, cocina y meseros están en views.py y
-meseros.py. Sigue los wireframes aprobados (docs/wireframes/).
+"""Panel del dueño: el menú digital (Inicio · Personalizar · Mesas y QR · Cuenta).
+Personalizar tiene dos pestañas: «Platos y categorías» y «Datos del negocio». Las
+pantallas de pedidos, mesas, cocina y meseros están en views.py y meseros.py.
+Sigue los wireframes aprobados (docs/wireframes/).
 
 Las pantallas pintan el estado inicial y el JavaScript del panel guarda los
 cambios con la API /api/v1/staff/ (apps/api/catalogo_views.py). El asistente de
@@ -47,14 +48,14 @@ from apps.tenants.models import TenantMembership
 
 from .views import panel_view, resumen_del_servicio
 
-PASOS = ["Logo y colores", "Datos del negocio", "Primera categoría", "Primer producto"]
+# El diseño del menú (colores, logo, portada) es de su página: el asistente no lo pide.
+PASOS = ["Datos del negocio", "Primera categoría", "Primer producto"]
 SUGERENCIAS_CATEGORIA = ["Entradas", "Platos fuertes", "Hamburguesas", "Bebidas", "Postres", "Para compartir"]
 ROLES_EQUIPO = {
     TenantMembership.ROLE_OWNER: "Dueño",
     TenantMembership.ROLE_ADMIN: "Administrador",
     TenantMembership.ROLE_STAFF: "Equipo",
 }
-COLOR = re.compile(r"^#[0-9A-Fa-f]{6}$")
 HORA = re.compile(r"^([01]\d|2[0-3]):[0-5]\d$")
 
 
@@ -100,8 +101,6 @@ def _pendientes(ajustes, resumen) -> list[dict]:
     personalizar = reverse("panel:personalizar")
     sin_foto, sin_precio, total = resumen["sin_foto"], resumen["sin_precio"], resumen["total"]
     return [
-        {"texto": "Logo y colores", "hecho": bool(ajustes.logo and ajustes.color_primary),
-         "accion": "Agregar", "href": f"{personalizar}#marca"},
         {"texto": "Datos del negocio y horario",
          "hecho": bool((ajustes.address or ajustes.city) and OpeningHours.objects.exists()),
          "accion": "Completar", "href": f"{personalizar}#horario"},
@@ -193,7 +192,7 @@ def inicio_menu(request):
     })
 
 
-# ---------------------------------------------------------------- Mi menú
+# ------------------------------------------- Personalizar → Platos y categorías
 
 
 @panel_view()
@@ -257,7 +256,7 @@ def producto(request, producto=None):
     """El editor: lo básico arriba, las opciones avanzadas plegadas y la vista previa.
 
     `?fragmento=1` devuelve solo el formulario, para abrirlo en el cajón lateral
-    de la tablet sin salir de Mi menú."""
+    de la tablet sin salir de la lista de platos."""
     _solo_admin(request)
     actual = None
     if producto is not None:
@@ -296,7 +295,7 @@ def producto(request, producto=None):
     return con_vista_previa(render(request, plantilla, contexto), request.tenant)
 
 
-# ------------------------------------------------------------ Personalizar
+# ---------------------------------------------- Personalizar → Datos del negocio
 
 
 def _horario_por_dia() -> list[dict]:
@@ -309,14 +308,12 @@ def _horario_por_dia() -> list[dict]:
 
 @panel_view()
 def personalizar(request):
-    """Marca del menú, datos del negocio, contacto, horario, redes y pagos."""
+    """Personalizar → Datos del negocio: frase, contacto, horario, redes, servicios y pagos."""
     _solo_admin(request)
     ajustes = RestaurantSettings.load()
     return con_vista_previa(render(request, "panel/duenio/personalizar.html", {
         "seccion": "personalizar",
         "ajustes": ajustes,
-        "logo_url": ajustes.logo.url if ajustes.logo else "",
-        "portada_url": ajustes.cover.url if ajustes.cover else "",
         "dias": _horario_por_dia(),
         "servicios": [(k, v, servicios_de(ajustes)[k]) for k, v in SERVICIOS.items()],
         "medios": [(k, v, k in (ajustes.payment_methods or [])) for k, v in MEDIOS_DE_PAGO.items()],
@@ -478,7 +475,7 @@ def _paso_valido(valor, maximo: int) -> int:
 
 @panel_view()
 def bienvenida(request):
-    """4 pasos y el final. Se puede saltar en cualquier momento y se retoma
+    """3 pasos y el final. Se puede saltar en cualquier momento y se retoma
     desde el Inicio donde iba (RestaurantSettings.onboarding_step)."""
     _solo_admin(request)
     ajustes = RestaurantSettings.load()
@@ -519,7 +516,6 @@ def bienvenida(request):
         "pasos": PASOS,
         "titulo_paso": PASOS[paso - 1] if paso < final else "Todo listo",
         "ajustes": ajustes,
-        "logo_url": ajustes.logo.url if ajustes.logo else "",
         "tenant": request.tenant,
         "dias": dias,
         "hay_horario": any(d["tramos"] for d in dias),
@@ -528,24 +524,10 @@ def bienvenida(request):
         "sugerencias": SUGERENCIAS_CATEGORIA,
         "categorias": categorias,
         "categoria_elegida": elegida or (str(categorias[-1].uuid) if categorias else ""),
-        "creada_en_paso_3": bool(elegida),
+        "creada_en_el_paso_anterior": bool(elegida),
         "enlace": qr.enlace_del_menu(request.tenant),
         **vista_previa(request.tenant),
     }), request.tenant)
-
-
-def _paso_marca(request, ajustes) -> int:
-    cambios = []
-    for campo in ("color_primary", "color_secondary", "color_background", "color_text"):
-        valor = request.POST.get(campo, "").strip().upper()
-        if valor and not COLOR.match(valor):
-            raise ValidationError("Usa colores en formato #RRGGBB.")
-        if valor and valor != getattr(ajustes, campo):
-            setattr(ajustes, campo, valor)
-            cambios.append(campo)
-    if cambios:
-        ajustes.save(update_fields=[*cambios, "updated_at"])
-    return 2
 
 
 def _paso_negocio(request, ajustes) -> int:
@@ -569,7 +551,7 @@ def _paso_negocio(request, ajustes) -> int:
         from apps.catalog.services import subir_version_del_menu
 
         subir_version_del_menu()
-    return 3
+    return 2
 
 
 def _paso_categoria(request, ajustes) -> int:
@@ -584,7 +566,7 @@ def _paso_categoria(request, ajustes) -> int:
         categoria = Category.objects.create(
             menu=menu, name=nombre, position=siguiente_posicion(Category.objects.filter(menu=menu)))
     request.session["bienvenida_categoria"] = str(categoria.uuid)
-    return 4
+    return 3
 
 
 def _paso_producto(request, ajustes) -> int:
@@ -612,7 +594,7 @@ def _paso_producto(request, ajustes) -> int:
     return len(PASOS) + 1
 
 
-GUARDAR_PASO = {1: _paso_marca, 2: _paso_negocio, 3: _paso_categoria, 4: _paso_producto}
+GUARDAR_PASO = {1: _paso_negocio, 2: _paso_categoria, 3: _paso_producto}
 
 
 # -------------------------------------------------------------------- PWA
@@ -639,8 +621,8 @@ def manifest(request):
              "purpose": "maskable"},
         ],
         "shortcuts": [
-            {"name": "Mi menú", "url": "/panel/mi-menu/"},
-            {"name": "Agregar producto", "url": "/panel/mi-menu/producto/nuevo/"},
+            {"name": "Personalizar", "url": "/panel/personalizar/"},
+            {"name": "Agregar producto", "url": "/panel/personalizar/producto/nuevo/"},
         ],
     }
     return HttpResponse(json.dumps(contenido, ensure_ascii=False), content_type="application/manifest+json")

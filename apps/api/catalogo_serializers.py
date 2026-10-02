@@ -207,10 +207,9 @@ class HorarioSerializer(serializers.Serializer):
 
 
 class SettingsSerializer(serializers.ModelSerializer):
-    """Datos del negocio y horario. Los colores y el logo son los del MENÚ del restaurante."""
+    """Datos del negocio y horario (Personalizar → Datos del negocio). El diseño del menú
+    (colores, logo y portada) es de su página: el panel no lo cambia."""
 
-    logo = serializers.SerializerMethodField()
-    cover = serializers.SerializerMethodField()
     hours = serializers.SerializerMethodField()
     hours_input = HorarioSerializer(many=True, write_only=True, required=False, source="horas")
     whatsapp = serializers.CharField(required=False, allow_blank=True, max_length=30)
@@ -218,8 +217,7 @@ class SettingsSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = RestaurantSettings
-        fields = ["logo", "cover", "color_primary", "color_secondary", "color_background", "color_text",
-                  "tagline", "description", "welcome_message", "whatsapp", "phone", "email", "address", "city",
+        fields = ["tagline", "description", "welcome_message", "whatsapp", "phone", "email", "address", "city",
                   "maps_url", "instagram", "facebook", "tiktok", "services", "payment_methods",
                   "onboarding_step", "onboarding_done_at", "hours", "hours_input"]
         read_only_fields = ["onboarding_done_at"]
@@ -228,12 +226,6 @@ class SettingsSerializer(serializers.ModelSerializer):
         datos = super().to_representation(ajustes)
         datos["services"] = servicios_de(ajustes)  # los que nunca se tocaron salen encendidos
         return datos
-
-    def get_logo(self, obj):
-        return _url(self.context.get("request"), obj.logo)
-
-    def get_cover(self, obj):
-        return _url(self.context.get("request"), obj.cover)
 
     def get_hours(self, obj):
         return [{"day": DIAS[h.day], "open": h.opens.strftime("%H:%M"), "close": h.closes.strftime("%H:%M")}

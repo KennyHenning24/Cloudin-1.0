@@ -1,4 +1,4 @@
-{% load cloudin %}{# Editor de producto. Se usa en su propia página y, en la tablet, dentro del cajón lateral de Mi menú (?fragmento=1). #}
+{% load cloudin %}{# Editor de producto. Se usa en su propia página y, en la tablet, dentro del cajón lateral de Personalizar → Platos y categorías (?fragmento=1). #}
 <div class="editor-raiz" data-editor-raiz data-cajon="{{ fragmento|yesno:'1,0' }}">
 {{ config|json_script:"editor-config" }}
 <form class="editor-producto" data-editor-producto novalidate autocomplete="off">

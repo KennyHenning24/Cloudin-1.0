@@ -1,6 +1,6 @@
 """Panel del restaurante: mesas, mensajes, cocina, configuración e impresión.
 
-Las pantallas del menú digital (Mi menú, Personalizar, Mesas y QR, Cuenta) viven
+Las pantallas del menú digital (Personalizar, Mesas y QR, Cuenta) viven
 en apps/panel/duenio.py; las de meseros en apps/panel/meseros.py.
 """
 
