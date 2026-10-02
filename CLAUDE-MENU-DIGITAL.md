@@ -8,11 +8,18 @@
 > síguelo al pie de la letra: cada ruta, campo y atributo de aquí existe en Cloudin y
 > está probado.
 >
-> **Para la persona:** copia este archivo a la raíz del repositorio del menú con el
-> nombre `CLAUDE.md` (Claude Code lo lee solo al empezar), o dile a Claude Code «lee
-> `CLAUDE-MENU-DIGITAL.md` antes de empezar». Si el menú ya existe con los platos escritos
-> a mano, pídele: «Convierte este menú siguiendo la sección 0 de CLAUDE.md, sin cambiar el
-> diseño, hasta que `?cloudin-check=1` salga sin ❌».
+> **Para la persona:** este mismo archivo sirve para todos los menús. Cópialo a la raíz del
+> repositorio de cada menú con el nombre `CLAUDE.md` (Claude Code lo lee solo al empezar) y
+> pídele una de estas dos cosas, llenando lo que va entre `< >`:
+>
+> - **Un menú nuevo:** «Crea el menú digital de <restaurante> siguiendo CLAUDE.md. Diseño:
+>   <colores, estilo; el logo y las fotos del diseño están en assets/>. Este es el bloque de
+>   conexión: <pega lo de «Copiar código» del panel maestro>. La carta: <ya está en el panel
+>   / cárgala por importación (sección 7.2) desde este PDF o estas fotos>. Trabaja en una
+>   rama, no publiques sin preguntarme y termina cuando `?cloudin-check=1` salga sin ❌.»
+> - **Un menú que ya existe con los platos escritos a mano:** «Convierte este menú siguiendo
+>   la sección 0 de CLAUDE.md, sin cambiar el diseño, hasta que `?cloudin-check=1` salga
+>   sin ❌.»
 >
 > El código de Cloudin está en `https://github.com/KennyHenning24/Cloudin-1.0`. Si
 > trabajas dentro de ese repositorio, las piezas están en `client/plantilla/index.html`,
@@ -162,10 +169,10 @@ el diseño**, en este orden:
 | Dato | Ejemplo | Dónde lo ve el usuario |
 |---|---|---|
 | **Dirección del servidor Cloudin** | `https://cloudin-x7k2.onrender.com` | Render → el servicio `cloudin` → arriba, debajo del nombre. Es la misma con la que entra a `/master/` |
-| **Identificador (slug) del restaurante** | `culturabrisket` | Panel maestro (`/master/`) → la lista de restaurantes |
+| **Identificador (slug) del restaurante** | `la-casa` | Panel maestro (`/master/`) → la lista de restaurantes |
 | **API key del restaurante** (`ck_…`) | `ck_bc6axscYu3K6…` | Panel maestro → el restaurante → tarjeta **Acceso** → «API key (para su sitio web)» |
 | **¿Recibe pedidos por el QR?** | Sí | Todos los restaurantes tienen Cloudin completo; lo decide el interruptor «Pedidos desde el QR de la mesa» del panel del restaurante (sección 9.3). El panel maestro muestra cómo está |
-| **Dirección donde se publicará el menú** | `https://culturabrisket.pages.dev/` | Cloudflare Pages, después de publicar (sección 9) |
+| **Dirección donde se publicará el menú** | `https://la-casa.pages.dev/` | Cloudflare Pages, después de publicar (sección 9) |
 | Token de superadmin (`cld_…`), **solo si vas a cargar la carta por importación** (sección 7.2) | `cld_…` | Panel maestro → **Tokens de API** → Crear token. Pídele que lo ponga en una variable de entorno (`CLOUDIN_ADMIN_TOKEN`), no en el chat ni en archivos |
 
 **Atajo:** en el panel maestro → el restaurante → tarjeta **«Menú digital»** → **Copiar
